@@ -81,7 +81,13 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       'Text box',
       'String Input',
       'Text Input',
+      // 模型加载节点
       'CheckpointLoaderSimple',
+      'UNETLoader',
+      'CLIPLoader',
+      'VAELoader',
+      'LoraLoader',
+      'LoraLoaderModelOnly',
     };
 
     jsonMap.forEach((nodeId, nodeData) {
@@ -352,6 +358,13 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       'batch_size': '生成数量',
       'positive': '正向提示词',
       'negative': '负向提示词',
+      'ckpt_name': 'Checkpoint 模型',
+      'unet_name': 'UNet 模型',
+      'clip_name': 'CLIP 模型',
+      'vae_name': 'VAE 模型',
+      'lora_name': 'LoRA 模型',
+      'control_net_name': 'ControlNet',
+      'upscale_model': '放大模型',
     };
     return map[key] ?? (isDefaultTitle ? t : t);
   }

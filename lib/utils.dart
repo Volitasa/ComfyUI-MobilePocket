@@ -77,6 +77,12 @@ const Set<String> highFreqParams = {
   'width',
   'height',
   'batch_size',
+  // 模型加载参数（默认暴露，便于切换模型）
+  'ckpt_name',
+  'unet_name',
+  'clip_name',
+  'vae_name',
+  'lora_name',
 };
 
 /// 已知枚举型参数名：这些参数的值在 API JSON 里是字符串（当前选中项），
