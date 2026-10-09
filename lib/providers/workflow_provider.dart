@@ -108,6 +108,10 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
       return null;
     }
   }
+  // 断开连接时清空列表和选中的缓存数据
+  void clearList() {
+    state = state.copyWith(workflowList: [], currentWorkflowData: null);
+  }
 }
 
 final workflowProvider = NotifierProvider<WorkflowNotifier, WorkflowState>(() {

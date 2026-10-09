@@ -141,20 +141,28 @@ class TaskManagerNotifier extends Notifier<TaskState> {
         }
       }
     } else if (type == 'executed') {
-      // 关键修复：加入 try-catch 和安全的 List.map 类型映射
       try {
-        if (data['output'] != null) {
-          if (data['output']['images'] != null) {
-            final List imgs = data['output']['images'];
-            task.images.addAll(imgs.map((e) => Map<String, dynamic>.from(e)).toList());
+        final output = data['output'];
+        final newMedia = <Map<String, dynamic>>[];
+
+        // 1. 安全提取新生成的媒体数据
+        if (output != null) {
+          if (output['images'] != null) {
+            newMedia.addAll((output['images'] as List).map((e) => Map<String, dynamic>.from(e)));
           }
-          if (data['output']['gifs'] != null) {
-            final List gifs = data['output']['gifs'];
-            task.images.addAll(gifs.map((e) => Map<String, dynamic>.from(e)).toList());
+          if (output['gifs'] != null) {
+            newMedia.addAll((output['gifs'] as List).map((e) => Map<String, dynamic>.from(e)));
           }
         }
+
+        // 2. 语法最优化：使用展开操作符 [...] 瞬间合并旧图和新图
+        final combinedImages = [...task.images, ...newMedia];
+
+        // 3. 赋值（注：如果未来发现 UI 不刷新，需将 TaskHistory 改造为 copyWith 模式）
+        task.images = combinedImages;
         task.status = '已完成';
         task.nodeInfo = '✅ 生成成功';
+        
         print('=== 🎉 成功获取到媒体文件: ${task.images.length} 张 ===');
       } catch (e) {
         print('=== ❌ 解析图片数据失败: $e ===');
@@ -166,7 +174,7 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     updatedList[taskIndex] = task;
     _saveHistory(updatedList);
   }
-
+}
 final taskManagerProvider = NotifierProvider<TaskManagerNotifier, TaskState>(() {
   return TaskManagerNotifier();
 });

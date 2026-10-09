@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/workflow_provider.dart';
 import '../builder/workflow_view.dart'; 
+import '../main_screen.dart';
 
 class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
@@ -83,8 +84,8 @@ class _HomeViewState extends ConsumerState<HomeView> {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () {
-                // 暂时用弹窗提示，之后整合 BottomNavigationBar 可直接切 Tab
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请切换到底部[设置]进行连接')));
+                // 直接通过 Provider 将底部导航栏硬切到“设置”页 (索引为 2)
+                ref.read(mainTabIndexProvider.notifier).state = 2;
               },
               child: const Text('前往设置'),
             ),

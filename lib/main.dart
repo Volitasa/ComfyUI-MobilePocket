@@ -16,13 +16,13 @@ void main() async {
         // 覆盖 provider，注入已实例化的 SharedPreferences
         sharedPreferencesProvider.overrideWithValue(prefs),
       ],
-      child: const ComfyRemoteApp(),
+      child: const ComfyUI_MobilePocket(),
     ),
   );
 }
 
-class ComfyRemoteApp extends StatelessWidget {
-  const ComfyRemoteApp({super.key});
+class ComfyUI_MobilePocket extends StatelessWidget {
+  const ComfyUI_MobilePocket({super.key});
 
   @override
   Widget build(BuildContext context) {

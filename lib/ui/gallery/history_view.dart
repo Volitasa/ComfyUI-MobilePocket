@@ -232,7 +232,7 @@ class _MediaViewerState extends State<MediaViewer> {
       // 下载并保存
       final bytes = await http.readBytes(Uri.parse(url));
       final extension = widget.isVideoChecker(currentMedia['filename']) ? 'mp4' : 'jpg';
-      final file = await Gal.putImageBytes(bytes, name: 'comfy_${DateTime.now().millisecondsSinceEpoch}.$extension');
+      await Gal.putImageBytes(bytes, name: 'comfy_${DateTime.now().millisecondsSinceEpoch}.$extension');
       
       if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ 已保存到手机相册')));
     } catch (e) {
