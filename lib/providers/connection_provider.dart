@@ -1,101 +1,107 @@
-import 'dart:async';
+import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
-import 'workflow_provider.dart'; 
-import 'ws_event_provider.dart';
-
-// 【标准规范 1】：定义全局 SharedPreferences 依赖注入点
+// 用于全局注入 SharedPreferences 实例
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('必须在 main.dart 的 ProviderScope 中通过 overrideWithValue 初始化');
+  throw UnimplementedError('须在 main.dart 中初始化');
 });
 
-// 【标准规范 2】：纯净的状态模型
-class ConnectionState {
+// 状态实体 (对应 Pinia 中的 state)
+class ConfigState {
   final String comfyUrl;
   final bool isConnected;
   final bool isTesting;
+  final String clientId;
+  final String? testResultMessage;
 
-  ConnectionState({
-    this.comfyUrl = '',
+  ConfigState({
+    this.comfyUrl = 'http://127.0.0.1:8190',
     this.isConnected = false,
     this.isTesting = false,
+    this.clientId = '',
+    this.testResultMessage,
   });
 
-  ConnectionState copyWith({
+  ConfigState copyWith({
     String? comfyUrl,
     bool? isConnected,
     bool? isTesting,
+    String? clientId,
+    String? testResultMessage,
   }) {
-    return ConnectionState(
+    return ConfigState(
       comfyUrl: comfyUrl ?? this.comfyUrl,
       isConnected: isConnected ?? this.isConnected,
       isTesting: isTesting ?? this.isTesting,
+      clientId: clientId ?? this.clientId,
+      testResultMessage: testResultMessage,
     );
   }
 }
 
-// 【标准规范 3】：统一的状态控制器
-class ConnectionNotifier extends Notifier<ConnectionState> {
+// 状态控制器 (对应 Pinia 中的 actions)
+class ConnectionNotifier extends Notifier<ConfigState> {
+  late SharedPreferences _prefs;
+
   @override
-  ConnectionState build() {
-    // 规范做法：依赖注入后可以直接【同步读取】，抛弃繁琐的 await
-    final prefs = ref.read(sharedPreferencesProvider);
-    final savedUrl = prefs.getString('comfy_url') ?? '';
-    
-    if (savedUrl.isNotEmpty) {
-      // 触发异步连接，且不阻塞应用初始化渲染
-      Future.microtask(() => testAndConnect(savedUrl));
-      return ConnectionState(comfyUrl: savedUrl); // 直接将取到的值设为初始状态
+  ConfigState build() {
+    _prefs = ref.watch(sharedPreferencesProvider);
+    return ConfigState(
+      comfyUrl: _prefs.getString('comfyUrl') ?? 'http://127.0.0.1:8190',
+      clientId: _getOrCreateClientId(),
+    );
+  }
+
+  // 保证 App 单次运行期间及持久化维度的身份凭证一致性
+  String _getOrCreateClientId() {
+    String? id = _prefs.getString('comfy_client_id');
+    if (id == null) {
+      final randomStr = Random().nextInt(9999999).toRadixString(36);
+      id = 'mobile_${randomStr}_${DateTime.now().millisecondsSinceEpoch}';
+      _prefs.setString('comfy_client_id', id);
     }
-    
-    return ConnectionState();
+    return id;
   }
 
-  // 供输入框使用的同步方法
-  void setUrl(String url) {
-    state = state.copyWith(comfyUrl: url);
-  }
+  // 测试并保存连接
+  Future<void> testConnection(String url) async {
+    state = state.copyWith(isTesting: true, isConnected: false, testResultMessage: null);
 
-  // 规范的断开与数据清理流程
-  Future<void> disconnect() async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    await prefs.remove('comfy_url');
-    
-    state = ConnectionState();
-    ref.read(workflowProvider.notifier).clearList(); // 联动清理工作流
-  }
+    // 移除末尾的反斜杠
+    final cleanUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
 
-  // 核心连接逻辑
-  Future<bool> testAndConnect(String url) async {
-    state = state.copyWith(isTesting: true);
     try {
-      final uri = Uri.parse('$url/system_stats');
-      final response = await http.get(uri).timeout(const Duration(seconds: 3));
+      final uri = Uri.parse('$cleanUrl/system_stats');
+      // 设置 5 秒超时防止卡死
+      final response = await http.get(uri).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        state = state.copyWith(isConnected: true, isTesting: false, comfyUrl: url);
-        
-        // 统一使用 ref.read 同步读取持久化实例
-        final prefs = ref.read(sharedPreferencesProvider);
-        await prefs.setString('comfy_url', url);
-        
-        // 联动其他 Provider：拉列表 + 连 WebSocket
-        ref.read(workflowProvider.notifier).fetchRemoteList();
-        ref.read(wsProvider.notifier).connect();
-        
-        return true;
+        await _prefs.setString('comfyUrl', cleanUrl);
+        state = state.copyWith(
+          comfyUrl: cleanUrl,
+          isConnected: true,
+          isTesting: false,
+          testResultMessage: '连接成功！',
+        );
+      } else {
+        state = state.copyWith(
+          isTesting: false,
+          isConnected: false,
+          testResultMessage: '连接失败: HTTP ${response.statusCode}',
+        );
       }
     } catch (e) {
-      print('=== 连接失败: $e ===');
+      state = state.copyWith(
+        isTesting: false,
+        isConnected: false,
+        testResultMessage: '无法连接到服务器，请检查地址或网络跨域设置。',
+      );
     }
-    
-    state = state.copyWith(isConnected: false, isTesting: false);
-    return false;
   }
 }
 
-final connectionProvider = NotifierProvider<ConnectionNotifier, ConnectionState>(() {
+final connectionProvider = NotifierProvider<ConnectionNotifier, ConfigState>(() {
   return ConnectionNotifier();
 });
