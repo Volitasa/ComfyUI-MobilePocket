@@ -7,6 +7,7 @@ import '../../providers/workflow_provider.dart';
 import '../../utils.dart';
 import '../builder/workflow_view.dart';
 import '../builder/run_view.dart';
+import '../widgets/connection_status_badge.dart';
 import '../main_screen.dart';
 
 class HomeView extends ConsumerStatefulWidget {
@@ -82,13 +83,18 @@ class _HomeViewState extends ConsumerState<HomeView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的功能卡片', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('工作流', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           if (configState.isConnected)
             IconButton(
               icon: const Icon(Icons.refresh),
+              tooltip: '刷新工作流列表',
               onPressed: () => ref.read(workflowProvider.notifier).fetchRemoteList(),
             ),
+          ConnectionStatusBadge(
+            onTap: () => ref.read(mainTabIndexProvider.notifier).state = 2,
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: _buildBody(configState, workflowState),
@@ -101,14 +107,19 @@ class _HomeViewState extends ConsumerState<HomeView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('尚未连接到服务器', style: TextStyle(color: Colors.black54)),
-            const SizedBox(height: 16),
-            FilledButton(
+            Icon(Icons.cloud_off, size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 12),
+            const Text('尚未连接到服务器', style: TextStyle(color: Colors.black54, fontSize: 16)),
+            const SizedBox(height: 4),
+            const Text('请先配置并启用一个服务器连接', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              icon: const Icon(Icons.settings),
               onPressed: () {
-                // 直接通过 Provider 将底部导航栏硬切到“设置”页 (索引为 2)
+                // 直接通过 Provider 将底部导航栏硬切到“服务器配置”页 (索引为 2)
                 ref.read(mainTabIndexProvider.notifier).state = 2;
               },
-              child: const Text('前往设置'),
+              label: const Text('前往配置'),
             ),
           ],
         ),
@@ -124,9 +135,25 @@ class _HomeViewState extends ConsumerState<HomeView> {
             child: Center(child: CircularProgressIndicator()),
           )
         else if (workflowState.workflowList.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(40.0),
-            child: Text('未在服务器找到带有 _api.json 后缀的工作流。', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
+          Padding(
+            padding: const EdgeInsets.all(40.0),
+            child: Column(
+              children: [
+                Icon(Icons.inbox_outlined, size: 48, color: Colors.grey.shade400),
+                const SizedBox(height: 12),
+                const Text(
+                  '未找到工作流',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54, fontSize: 16),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  '服务器上没有找到 _api.json 后缀的工作流',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
           )
         else
           ...workflowState.workflowList.map((file) => _buildWorkflowCard(file)),

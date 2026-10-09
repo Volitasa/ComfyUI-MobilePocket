@@ -1,0 +1,47 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../theme.dart';
+import '../../providers/connection_provider.dart';
+import '../../providers/ws_event_provider.dart';
+
+/// 连接状态指示：显示当前连接的服务器名 + 连接状态点。
+/// 首页与生成记录页顶部复用，保证两处一致性。
+class ConnectionStatusBadge extends ConsumerWidget {
+  final VoidCallback? onTap;
+  const ConnectionStatusBadge({super.key, this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final config = ref.watch(connectionProvider);
+    final wsState = ref.watch(wsProvider);
+
+    final activeServer = config.servers.where((s) => s.id == config.activeServerId).toList();
+    final name = activeServer.isNotEmpty ? activeServer.first.name : '未连接';
+    final connected = config.isConnected && wsState.isConnected;
+    final color = connected ? AppColors.success : AppColors.danger;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              name,
+              style: const TextStyle(fontSize: 12, color: Colors.black87),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

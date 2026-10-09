@@ -5,9 +5,13 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io';
+import '../../theme.dart';
 import '../../providers/task_manager.dart';
 import '../../providers/ws_event_provider.dart';
 import '../../providers/connection_provider.dart';
+import '../../models/task_history.dart';
+import '../widgets/connection_status_badge.dart';
+import '../main_screen.dart';
 
 class HistoryView extends ConsumerStatefulWidget {
   const HistoryView({super.key});
@@ -23,6 +27,49 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(wsProvider.notifier).connect();
     });
+  }
+
+  // 任务状态 → 展示色（成功绿 / 失败红 / 中断灰 / 进行中橙）
+  Color _statusColor(String status) {
+    switch (status) {
+      case '已完成':
+        return AppColors.success;
+      case '已失败':
+        return AppColors.danger;
+      case '已中断':
+        return AppColors.neutral;
+      default:
+        return AppColors.warning;
+    }
+  }
+
+  // 本地化的时间显示（yyyy-MM-dd HH:mm）
+  String _formatTime(int timestamp) {
+    final dt = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${dt.year}-${two(dt.month)}-${two(dt.day)} ${two(dt.hour)}:${two(dt.minute)}';
+  }
+
+  // 删除确认
+  Future<void> _confirmDelete(TaskHistory task) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除记录'),
+        content: Text('确定删除「${task.title}」这条生成记录吗？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      ref.read(taskManagerProvider.notifier).removeTask(task.promptId);
+    }
   }
 
   String _getMediaUrl(Map<String, dynamic> mediaObj) {
@@ -57,19 +104,15 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   @override
   Widget build(BuildContext context) {
     final tasks = ref.watch(taskManagerProvider).history;
-    final wsState = ref.watch(wsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('生成记录', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20.0),
-            child: CircleAvatar(
-              radius: 6,
-              backgroundColor: wsState.isConnected ? Colors.green : Colors.redAccent,
-            ),
-          )
+          ConnectionStatusBadge(
+            onTap: () => ref.read(mainTabIndexProvider.notifier).state = 2,
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: tasks.isEmpty
@@ -80,6 +123,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
               itemBuilder: (context, index) {
                 final task = tasks[index];
                 final isDone = task.status == '已完成';
+                final statusColor = _statusColor(task.status);
                 final progress = task.progressMax > 0 ? (task.progressValue / task.progressMax) : 0.0;
 
                 return Card(
@@ -89,97 +133,112 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(color: Colors.grey.shade200),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                  clipBehavior: Clip.antiAlias,
+                  child: IntrinsicHeight(
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // 状态色条：一屏内快速区分成功/失败/中断/进行中
+                        Container(width: 4, color: statusColor),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      task.title,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(14.0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        task.title,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        '${task.status} · ${task.nodeInfo}',
+                                        style: TextStyle(fontSize: 13, color: statusColor),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (!isDone) ...[
+                                        const SizedBox(height: 8),
+                                        LinearProgressIndicator(
+                                          value: progress,
+                                          backgroundColor: Colors.grey.shade200,
+                                          color: statusColor,
+                                          minHeight: 4,
+                                        ),
+                                      ],
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        _formatTime(task.timestamp),
+                                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                      ),
+                                    ],
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.close, size: 18, color: Colors.grey),
-                                    onPressed: () => ref.read(taskManagerProvider.notifier).removeTask(task.promptId),
-                                    constraints: const BoxConstraints(),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${task.status} - ${task.nodeInfo}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDone ? Colors.green : Colors.orange,
                                 ),
-                              ),
-                              if (!isDone) ...[
-                                const SizedBox(height: 8),
-                                LinearProgressIndicator(
-                                  value: progress,
-                                  backgroundColor: Colors.grey.shade200,
-                                  color: Colors.green,
+                                const SizedBox(width: 14),
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () => _openViewer(task.images, 0),
+                                      child: Container(
+                                        width: 72,
+                                        height: 72,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade300),
+                                        ),
+                                        clipBehavior: Clip.hardEdge,
+                                        child: task.images.isNotEmpty
+                                            ? Stack(
+                                                fit: StackFit.expand,
+                                                children: [
+                                                  _isVideo(task.images[0]['filename'])
+                                                      ? const Center(child: Icon(Icons.videocam, color: Colors.grey))
+                                                      : Image.network(_getMediaUrl(task.images[0]), fit: BoxFit.cover),
+                                                  if (task.images.length > 1)
+                                                    Positioned(
+                                                      right: 4,
+                                                      bottom: 4,
+                                                      child: Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.black.withValues(alpha: 0.6),
+                                                          borderRadius: BorderRadius.circular(10),
+                                                        ),
+                                                        child: Text('${task.images.length}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                                      ),
+                                                    )
+                                                ],
+                                              )
+                                            : Center(
+                                                child: isDone
+                                                    ? const Text('无图', style: TextStyle(fontSize: 12, color: Colors.grey))
+                                                    : const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    // 删除按钮移到底部，避免紧贴标题误触
+                                    InkWell(
+                                      onTap: () => _confirmDelete(task),
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(2),
+                                        child: Icon(Icons.delete_outline, size: 16, color: Colors.grey),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
-                              const SizedBox(height: 8),
-                              Text(
-                                DateTime.fromMillisecondsSinceEpoch(task.timestamp).toString().substring(0, 16),
-                                style: const TextStyle(fontSize: 11, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        GestureDetector(
-                          onTap: () => _openViewer(task.images, 0),
-                          child: Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey.shade300),
                             ),
-                            clipBehavior: Clip.hardEdge,
-                            child: task.images.isNotEmpty
-                                ? Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      _isVideo(task.images[0]['filename'])
-                                          ? const Center(child: Icon(Icons.videocam, color: Colors.grey))
-                                          : Image.network(_getMediaUrl(task.images[0]), fit: BoxFit.cover),
-                                      if (task.images.length > 1)
-                                        Positioned(
-                                          right: 4,
-                                          bottom: 4,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Colors.black.withValues(alpha: 0.6),
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                            child: Text('${task.images.length}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                          ),
-                                        )
-                                    ],
-                                  )
-                                : Center(
-                                    child: isDone
-                                        ? const Text('无图', style: TextStyle(fontSize: 12, color: Colors.grey))
-                                        : const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                                  ),
                           ),
                         ),
                       ],

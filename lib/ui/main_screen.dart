@@ -32,9 +32,9 @@ class MainScreen extends ConsumerWidget {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: '首页',
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: '工作流',
           ),
           NavigationDestination(
             icon: Icon(Icons.history_outlined),
@@ -44,7 +44,7 @@ class MainScreen extends ConsumerWidget {
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
-            label: '设置',
+            label: '服务器配置',
           ),
         ],
       ),
