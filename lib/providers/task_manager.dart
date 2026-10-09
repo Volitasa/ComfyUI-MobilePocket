@@ -15,6 +15,8 @@ class TaskState {
 
 class TaskManagerNotifier extends Notifier<TaskState> {
   late SharedPreferences _prefs;
+  // 各任务当前正在执行的节点（promptId → 节点显示名），供 progress 事件拼装文案
+  final Map<String, String> _currentNode = {};
 
   @override
   TaskState build() {
@@ -146,22 +148,32 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     final data = msg['data'];
 
     if (type == 'execution_start') {
+      _currentNode.remove(promptId);
       task.status = '生成中';
       task.nodeInfo = '🚀 任务开始...';
     } else if (type == 'execution_cached') {
       task.status = '生成中';
       task.nodeInfo = '⚡ 命中缓存...';
     } else if (type == 'progress') {
+      // 任何执行活动都意味着任务已不在排队（execution_start 可能因竞态被错过）
+      task.status = '生成中';
       final v = data['value'] ?? 0;
       final m = data['max'] ?? 0;
       task.progressValue = v;
       task.progressMax = m;
-      task.nodeInfo = m > 0 ? '🔄 处理中 ${(v / m * 100).round()}%' : '🔄 处理节点...';
+      final node = _currentNode[promptId];
+      task.nodeInfo = m > 0
+          ? (node != null ? '🔄 $node · ${(v / m * 100).round()}%' : '🔄 处理中 ${(v / m * 100).round()}%')
+          : (node != null ? '🔄 $node' : '🔄 处理节点...');
     } else if (type == 'executing') {
       if (data['node'] != null) {
-        // 用节点标题代替裸节点 ID，更直观（如“执行: K 采样器”）
-        task.nodeInfo = '执行: ${_nodeLabel(task.workflowId, data['node'])}';
+        // 记住当前节点供 progress 事件拼装文案；用节点标题代替裸节点 ID
+        final label = _nodeLabel(task.workflowId, data['node']);
+        _currentNode[promptId] = label;
+        task.status = '生成中';
+        task.nodeInfo = '执行: $label';
       } else {
+        _currentNode.remove(promptId);
         task.status = '已完成';
         task.progressValue = task.progressMax;
         // 防止流程结束的提示覆盖掉成功的提示
@@ -170,11 +182,13 @@ class TaskManagerNotifier extends Notifier<TaskState> {
         }
       }
     } else if (type == 'execution_error') {
+      _currentNode.remove(promptId);
       // 服务端执行出错：必须终结任务状态，否则 UI 会永远停留在“生成中”
       task.status = '已失败';
       final errMsg = data['exception_message'] ?? data['exception_type'] ?? '未知错误';
       task.nodeInfo = '❌ 执行出错: $errMsg';
     } else if (type == 'execution_interrupted') {
+      _currentNode.remove(promptId);
       task.status = '已中断';
       task.nodeInfo = '⏹️ 任务已被中断';
     } else if (type == 'executed') {
