@@ -78,6 +78,11 @@ class _HomeViewState extends ConsumerState<HomeView> {
     // 监听连接状态：连接成功（false→true）时建立 WS 并拉取工作流列表，
     // 断开（true→false）时关闭 WS，统一在此维护连接生命周期
     ref.listen(connectionProvider, (prev, next) {
+      // 切换了服务器连接：清空旧服务器的工作流列表与缓存（本地历史/画廊不受影响）
+      if (prev?.activeServerId != null && prev?.activeServerId != next.activeServerId) {
+        ref.read(workflowProvider.notifier).clearList();
+      }
+
       if (next.isConnected && !(prev?.isConnected ?? false)) {
         ref.read(wsProvider.notifier).connect();
         ref.read(workflowProvider.notifier).fetchRemoteList();

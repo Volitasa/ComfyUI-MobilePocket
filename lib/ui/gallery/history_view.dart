@@ -87,7 +87,15 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
         return Image.file(f, fit: BoxFit.cover);
       }
     }
-    return Image.network(_getMediaUrl(media), fit: BoxFit.cover);
+    // 回退网络：切换服务器后旧 URL 可能失效，用占位图兜底避免报错
+    return Image.network(
+      _getMediaUrl(media),
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => Container(
+        color: Colors.grey.shade200,
+        child: const Center(child: Icon(Icons.broken_image, size: 20, color: Colors.grey)),
+      ),
+    );
   }
 
   bool _isVideo(String? filename) {

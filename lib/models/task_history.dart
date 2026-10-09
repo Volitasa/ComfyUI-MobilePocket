@@ -8,6 +8,10 @@ class TaskHistory {
   String nodeInfo;
   List<Map<String, dynamic>> images;
   final int timestamp;
+  /// 任务提交时所属的服务器连接 ID。
+  /// 用于切换服务器时区分任务归属：对新服务器的对账不应该
+  /// 把旧服务器上正在跑的任务误判为“已中断”。旧数据为空。
+  final String? serverId;
 
   TaskHistory({
     required this.promptId,
@@ -19,6 +23,7 @@ class TaskHistory {
     this.nodeInfo = '等待执行...',
     this.images = const [],
     int? timestamp,
+    this.serverId,
   }) : timestamp = timestamp ?? DateTime.now().millisecondsSinceEpoch;
 
   factory TaskHistory.fromJson(Map<String, dynamic> json) {
@@ -32,6 +37,7 @@ class TaskHistory {
       nodeInfo: json['nodeInfo'] ?? '',
       images: List<Map<String, dynamic>>.from(json['images'] ?? []),
       timestamp: json['timestamp'],
+      serverId: json['serverId'],
     );
   }
 
@@ -45,5 +51,6 @@ class TaskHistory {
         'nodeInfo': nodeInfo,
         'images': images,
         'timestamp': timestamp,
+        'serverId': serverId,
       };
 }

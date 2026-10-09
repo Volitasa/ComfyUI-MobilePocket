@@ -43,8 +43,15 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   }
 
   void createNewTask(String promptId, String workflowId) {
+    // 记住任务所属的服务器连接，切换服务器时不会把旧服务器的任务误判
+    final config = ref.read(connectionProvider);
     final title = workflowDisplayName(workflowId);
-    final newTask = TaskHistory(promptId: promptId, workflowId: workflowId, title: title);
+    final newTask = TaskHistory(
+      promptId: promptId,
+      workflowId: workflowId,
+      title: title,
+      serverId: config.activeServerId,
+    );
 
     final updatedList = [newTask, ...state.history];
     if (updatedList.length > 50) {
@@ -164,8 +171,13 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   /// 对账未终结任务：App 崩溃/重启或断线期间错过的终态事件无法通过 WS 补收，
   /// 这里主动向 ComfyUI 的 /history 与 /queue 查询，纠正卡在"排队中/生成中"的任务。
   Future<void> reconcilePendingTasks() async {
+    final currentServerId = ref.read(connectionProvider).activeServerId;
     final pending = state.history
         .where((t) => t.status == '排队中' || t.status == '生成中')
+        // 只处理属于当前服务器（或旧数据无归属）的任务：
+        // 其它服务器上正在跑的任务在新服务器上查不到，
+        // 不能据此判定为中断，否则会污染本地已有记录
+        .where((t) => t.serverId == null || t.serverId == currentServerId)
         .toList();
     if (pending.isEmpty) return;
 
