@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/workflow_provider.dart';
 import '../../providers/ws_event_provider.dart';
+import '../../providers/task_manager.dart';
 import '../../utils.dart';
 import '../builder/workflow_view.dart';
 import '../builder/run_view.dart';
@@ -80,6 +81,8 @@ class _HomeViewState extends ConsumerState<HomeView> {
       if (next.isConnected && !(prev?.isConnected ?? false)) {
         ref.read(wsProvider.notifier).connect();
         ref.read(workflowProvider.notifier).fetchRemoteList();
+        // 对账未终结任务：崩溃/断线期间错过的终态事件无法经 WS 补收
+        ref.read(taskManagerProvider.notifier).reconcilePendingTasks();
       } else if (!next.isConnected && (prev?.isConnected ?? false)) {
         ref.read(wsProvider.notifier).disconnect();
       }

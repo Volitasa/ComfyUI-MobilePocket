@@ -144,9 +144,128 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     _saveHistory(updatedList);
   }
 
+  // 从 executed/history 的 outputs 结构里提取媒体条目
+  List<Map<String, dynamic>> _extractOutputs(dynamic outputs) {
+    final media = <Map<String, dynamic>>[];
+    if (outputs is Map) {
+      for (final nodeOut in outputs.values) {
+        if (nodeOut is! Map) continue;
+        if (nodeOut['images'] is List) {
+          media.addAll((nodeOut['images'] as List).map((e) => Map<String, dynamic>.from(e)));
+        }
+        if (nodeOut['gifs'] is List) {
+          media.addAll((nodeOut['gifs'] as List).map((e) => Map<String, dynamic>.from(e)));
+        }
+      }
+    }
+    return media;
+  }
+
+  /// 对账未终结任务：App 崩溃/重启或断线期间错过的终态事件无法通过 WS 补收，
+  /// 这里主动向 ComfyUI 的 /history 与 /queue 查询，纠正卡在"排队中/生成中"的任务。
+  Future<void> reconcilePendingTasks() async {
+    final pending = state.history
+        .where((t) => t.status == '排队中' || t.status == '生成中')
+        .toList();
+    if (pending.isEmpty) return;
+
+    final config = ref.read(connectionProvider);
+    if (!config.isConnected) return;
+
+    // 1. 拉取服务端历史（含已完成任务及其输出）
+    Map<String, dynamic> historyData = {};
+    try {
+      final resp = await http
+          .get(Uri.parse('${config.comfyUrl}/history'))
+          .timeout(const Duration(seconds: 15));
+      if (resp.statusCode != 200) return;
+      final decoded = jsonDecode(resp.body);
+      if (decoded is Map) historyData = Map<String, dynamic>.from(decoded);
+    } catch (_) {
+      return; // 拉取失败则不动状态，避免误判
+    }
+
+    // 2. 拉取队列（区分仍在运行/仍在排队）
+    final running = <String>{};
+    final queued = <String>{};
+    try {
+      final q = await http
+          .get(Uri.parse('${config.comfyUrl}/queue'))
+          .timeout(const Duration(seconds: 15));
+      if (q.statusCode == 200) {
+        final data = jsonDecode(q.body);
+        if (data is Map) {
+          for (final item in (data['queue_running'] as List? ?? [])) {
+            if (item is List && item.length > 1) running.add(item[1].toString());
+          }
+          for (final item in (data['queue_pending'] as List? ?? [])) {
+            if (item is List && item.length > 1) queued.add(item[1].toString());
+          }
+        }
+      }
+    } catch (_) {
+      // 队列拉取失败不影响历史对账
+    }
+
+    var changed = false;
+    final toLocalize = <String, List<Map<String, dynamic>>>{};
+
+    for (final task in pending) {
+      final entry = historyData[task.promptId];
+      if (entry is Map) {
+        // 服务端已有该任务的终态记录
+        final status = entry['status'];
+        final statusStr = status is Map ? status['status_str']?.toString() : null;
+        final messages = status is Map ? status['messages'] : null;
+        final interrupted = messages is List &&
+            messages.any((m) => m is List && m.isNotEmpty && m.first == 'execution_interrupted');
+
+        if (interrupted) {
+          task.status = '已中断';
+          task.nodeInfo = '⏹️ 任务已被中断';
+        } else if (statusStr == 'success') {
+          final media = _extractOutputs(entry['outputs']);
+          if (media.isNotEmpty) {
+            final existing = task.images.map((m) => m['filename']).toSet();
+            final fresh = media.where((m) => !existing.contains(m['filename'])).toList();
+            if (fresh.isNotEmpty) {
+              task.images = [...task.images, ...fresh];
+              toLocalize[task.promptId] = fresh;
+            }
+          }
+          task.status = '已完成';
+          task.progressValue = task.progressMax;
+          task.nodeInfo = '✅ 生成成功';
+        } else {
+          task.status = '已失败';
+          task.nodeInfo = '❌ 执行出错（服务端记录）';
+        }
+        changed = true;
+      } else if (running.contains(task.promptId)) {
+        task.status = '生成中';
+        changed = true;
+      } else if (queued.contains(task.promptId)) {
+        task.status = '排队中';
+        task.nodeInfo = '等待执行...';
+        changed = true;
+      } else {
+        // 既不在历史也不在队列：服务端已重启或任务丢失，终结避免永久卡住
+        task.status = '已中断';
+        task.nodeInfo = '⏹️ 未在服务端找到该任务（可能已重启）';
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      _saveHistory(List<TaskHistory>.from(state.history));
+    }
+    for (final e in toLocalize.entries) {
+      unawaited(_localizeMedia(e.key, e.value));
+    }
+  }
+
   // 节点 ID → 可读名称：优先用工作流映射里保存的节点标题，无则回退"类名(ID)"
-  String _nodeLabel(String workflowId, dynamic nodeId) {
-    final idStr = nodeId?.toString() ?? '';
+  String _nodeLabel(String workflowId, dynamic nodeId) {    final idStr = nodeId?.toString() ?? '';
     final config = ref.read(workflowProvider.notifier).getMappingConfig(workflowId);
     if (config != null) {
       for (final n in config) {
