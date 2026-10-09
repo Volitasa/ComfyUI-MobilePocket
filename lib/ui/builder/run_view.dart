@@ -7,6 +7,7 @@ import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
 import '../../providers/task_manager.dart';
 import '../../providers/ws_event_provider.dart';
+import '../../providers/connection_provider.dart';
 import '../../utils.dart';
 import '../main_screen.dart';
 import 'workflow_view.dart';
@@ -516,19 +517,28 @@ class _RunViewState extends ConsumerState<RunView> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (serverImage != null && !hasImage) ...[
-              Row(
-                children: [
-                  const Icon(Icons.image_outlined, size: 16, color: Colors.grey),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      '已用图: $serverImage',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+            // 工作流自带的服务器图片：显示预览（从服务器 /view 拉取）
+            if (serverImage != null && serverImage.isNotEmpty && !hasImage) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  _serverImageUrl(serverImage),
+                  height: 120,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    height: 120,
+                    width: double.infinity,
+                    color: Colors.grey.shade100,
+                    child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
                   ),
-                ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '已用图: $serverImage',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
             ],
@@ -552,5 +562,13 @@ class _RunViewState extends ConsumerState<RunView> {
           ],
         );
     }
+  }
+
+  // 组装服务器图片的查看 URL（用于工作流自带参考图的预览）
+  String _serverImageUrl(String filename) {
+    final config = ref.read(connectionProvider);
+    final encoded = Uri.encodeComponent(filename);
+    // LoadImage 的图片通常在 input 目录；type 默认 input
+    return '${config.comfyUrl}/view?filename=$encoded&type=input';
   }
 }

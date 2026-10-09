@@ -60,11 +60,21 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       final uri = Uri.parse('${config.comfyUrl}/upload/image');
       final request = http.MultipartRequest('POST', uri);
 
+      // 按文件扩展名推断正确的 Content-Type，避免 PNG 被误标为 jpeg
+      final ext = filename.split('.').last.toLowerCase();
+      final contentType = switch (ext) {
+        'png' => MediaType('image', 'png'),
+        'webp' => MediaType('image', 'webp'),
+        'gif' => MediaType('image', 'gif'),
+        'bmp' => MediaType('image', 'bmp'),
+        _ => MediaType('image', 'jpeg'),
+      };
+
       final multipartFile = http.MultipartFile.fromBytes(
         'image',
         fileBytes,
         filename: filename,
-        contentType: MediaType('image', 'jpeg'), // 泛用型兜底
+        contentType: contentType,
       );
 
       request.files.add(multipartFile);
