@@ -6,6 +6,7 @@ import '../../providers/connection_provider.dart';
 import '../../providers/workflow_provider.dart';
 import '../../utils.dart';
 import '../builder/workflow_view.dart';
+import '../builder/run_view.dart';
 import '../main_screen.dart';
 
 class HomeView extends ConsumerStatefulWidget {
@@ -58,7 +59,12 @@ class _HomeViewState extends ConsumerState<HomeView> {
   }
 
   void _onCardTap(String filename) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => WorkflowView(workflowId: filename)));
+    // 已配置过的工作流直接进入运行页；未配置的先进配置面板
+    final hasConfig = ref.read(workflowProvider.notifier).hasMappingConfig(filename);
+    final Widget page = hasConfig
+        ? RunView(workflowId: filename)
+        : WorkflowView(workflowId: filename);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
   }
 
   @override

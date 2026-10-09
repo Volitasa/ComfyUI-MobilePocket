@@ -103,13 +103,18 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
   List<WorkflowNode>? getMappingConfig(String workflowId) {
     final dataString = _prefs.getString('mapping_$workflowId');
     if (dataString == null) return null;
-    
+
     try {
       final List<dynamic> decoded = jsonDecode(dataString);
       return decoded.map((e) => WorkflowNode.fromJson(e)).toList();
     } catch (e) {
       return null;
     }
+  }
+
+  // 该工作流是否已有映射配置（用于首页判断直接进入运行页还是配置页）
+  bool hasMappingConfig(String workflowId) {
+    return getMappingConfig(workflowId)?.isNotEmpty ?? false;
   }
   // 断开连接/切换服务器时清空列表和选中的缓存数据。
   // 直接构造新 state：copyWith 对 null 参数做合并，无法把字段置回 null。

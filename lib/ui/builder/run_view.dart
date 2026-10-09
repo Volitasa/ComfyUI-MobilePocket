@@ -9,6 +9,7 @@ import '../../providers/task_manager.dart';
 import '../../providers/ws_event_provider.dart';
 import '../../utils.dart';
 import '../main_screen.dart';
+import 'workflow_view.dart';
 
 class RunView extends ConsumerStatefulWidget {
   final String workflowId;
@@ -32,8 +33,9 @@ class _RunViewState extends ConsumerState<RunView> {
 
   void _initForm() {
     final savedConfig = ref.read(workflowProvider.notifier).getMappingConfig(widget.workflowId);
-    if (savedConfig == null) {
+    if (savedConfig == null || savedConfig.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('未找到有效的表单配置')));
         Navigator.pop(context);
       });
@@ -164,7 +166,13 @@ class _RunViewState extends ConsumerState<RunView> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.pop(context),
+            tooltip: '节点配置',
+            // 跳转到节点配置面板（用 pushReplacement 替换当前页，
+            // 与配置页「保存并进入运行页」的 pushReplacement 对称，避免栈内重复）
+            onPressed: () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => WorkflowView(workflowId: widget.workflowId)),
+            ),
           )
         ],
       ),
