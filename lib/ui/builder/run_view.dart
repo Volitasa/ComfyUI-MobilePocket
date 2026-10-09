@@ -88,6 +88,19 @@ class _RunViewState extends ConsumerState<RunView> {
           break;
       }
     }
+
+    // 确保工作流数据已加载：从首页直接进入运行页时，
+    // currentWorkflowData 可能为空（冷启动未拉取 / 切换连接被清空），
+    // 提交任务依赖它，这里主动补拉，否则「立即生成」会静默无反应
+    if (!widget.workflowId.startsWith('local_')) {
+      _ensureWorkflowData();
+    }
+  }
+
+  Future<void> _ensureWorkflowData() async {
+    final state = ref.read(workflowProvider);
+    if (state.currentWorkflowData != null) return;
+    await ref.read(workflowProvider.notifier).fetchWorkflowContent(widget.workflowId);
   }
 
   String _numToString(dynamic v) {
@@ -161,7 +174,13 @@ class _RunViewState extends ConsumerState<RunView> {
 
   Future<void> _handleExecute() async {
     final workflowData = ref.read(workflowProvider).currentWorkflowData;
-    if (workflowData == null) return;
+    if (workflowData == null) {
+      // 防御：正常已在 _ensureWorkflowData 预加载，这里兜底给明确提示而非静默
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('工作流数据未加载，请返回重试')));
+      }
+      return;
+    }
 
     setState(() => _isExecuting = true);
     ref.read(wsProvider.notifier).connect();
