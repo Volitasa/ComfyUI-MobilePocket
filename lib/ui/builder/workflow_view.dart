@@ -62,7 +62,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     });
   }
 
-  void _parseWorkflow(Map<String, dynamic> jsonMap) {
+  void _parseWorkflow(Map<String, dynamic> jsonMap, {bool useSavedConfig = true}) {
     final List<WorkflowNode> nodes = [];
 
     // 白名单节点类型：仅在这些节点内做参数扩展，避免把连线引用等噪声暴露出来
@@ -146,13 +146,56 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       });
     });
 
-    // 优先使用历史保存的配置
-    final savedConfig = ref.read(workflowProvider.notifier).getMappingConfig(widget.workflowId);
-    if (savedConfig != null && savedConfig.isNotEmpty) {
-      _extractableNodes = savedConfig;
-    } else {
-      _extractableNodes = nodes;
+    // 默认优先使用历史保存的配置；重新解析时跳过历史配置，用最新解析结果
+    if (useSavedConfig) {
+      final savedConfig = ref.read(workflowProvider.notifier).getMappingConfig(widget.workflowId);
+      if (savedConfig != null && savedConfig.isNotEmpty) {
+        _extractableNodes = savedConfig;
+        return;
+      }
     }
+    _extractableNodes = nodes;
+  }
+
+  // 重新解析：放弃已保存的映射，用工作流当前结构重新提取参数。
+  // 用于服务器端工作流更新后，让 App 重新识别新参数。
+  Future<void> _reparse() async {
+    final state = ref.read(workflowProvider);
+    final data = state.currentWorkflowData;
+    if (data == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('无可用工作流数据，无法重新解析')));
+      return;
+    }
+
+    setState(() {
+      _extractableNodes = [];
+      _isReady = false;
+    });
+
+    // 本地导入的工作流数据已在 currentWorkflowData 中，直接重新解析；
+    // 线上工作流则先重新拉取最新内容再解析
+    if (widget.workflowId.startsWith('local_')) {
+      _parseWorkflow(data, useSavedConfig: false);
+    } else {
+      final ok = await ref.read(workflowProvider.notifier).fetchWorkflowContent(widget.workflowId);
+      if (!ok) {
+        if (!mounted) return;
+        setState(() => _isReady = true);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('重新拉取工作流失败，请检查服务器连接')));
+        return;
+      }
+      _parseWorkflow(ref.read(workflowProvider).currentWorkflowData!, useSavedConfig: false);
+    }
+
+    if (!mounted) return;
+    // 清掉旧的别名控制器，避免与新解析出的节点错位
+    for (final c in _aliasControllers.values) {
+      c.dispose();
+    }
+    _aliasControllers.clear();
+    setState(() => _isReady = true);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已重新解析，请确认参数后保存')));
   }
 
   // 配置面板里参数卡片的一行摘要：类型 + 当前值
@@ -177,7 +220,8 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   }
 
   // 给参数起一个可读的默认别名
-  String _defaultAlias(String key, String title) {    const map = {
+  String _defaultAlias(String key, String title) {
+    const map = {
       'seed': '随机种子',
       'noise_seed': '随机种子',
       'text': '提示词',
@@ -239,6 +283,13 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     return Scaffold(
       appBar: AppBar(
         title: Text('配置面板: $displayName', style: const TextStyle(fontSize: 16)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: '重新解析参数',
+            onPressed: _reparse,
+          ),
+        ],
       ),
       body: Column(
         children: [
