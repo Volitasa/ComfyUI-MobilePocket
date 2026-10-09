@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../providers/task_manager.dart';
 import '../../services/gallery_store.dart';
 import '../../services/png_metadata_stripper.dart';
 
@@ -38,6 +39,12 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
 
   @override
   Widget build(BuildContext context) {
+    // 监听任务列表：新增生成图 / 删除记录（连带删图）后自动刷新画廊，
+    // 避免列表残留已删除的文件导致保存时报错
+    ref.listen(taskManagerProvider, (_, _) {
+      _refresh();
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('画廊', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -148,6 +155,14 @@ class _GalleryViewerState extends State<_GalleryViewer> {
     if (_saving) return;
     setState(() => _saving = true);
     try {
+      // 校验文件仍存在（列表残留或已被删除时给出明确提示）
+      if (!_current.existsSync()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('图片已不存在，请刷新画廊')));
+        }
+        return;
+      }
+
       final hasAccess = await Gal.requestAccess();
       if (!hasAccess) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('需要相册权限')));

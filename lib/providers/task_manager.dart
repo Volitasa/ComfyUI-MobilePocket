@@ -134,15 +134,17 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   }
 
   // 按 promptId 删除任务，避免列表在渲染与点击之间发生变化时删错条目
-  void removeTask(String promptId) {
-    // 同步删除本地已下载的图片文件
-    final idx = state.history.indexWhere((t) => t.promptId == promptId);
-    if (idx != -1) {
-      final task = state.history[idx];
-      for (final img in task.images) {
-        final localPath = img['localPath'];
-        if (localPath is String && localPath.isNotEmpty) {
-          GalleryStore.instance.deleteFile(localPath);
+  // deleteLocalImages=true 时连带删除该任务已下载到画廊的本地图片
+  void removeTask(String promptId, {bool deleteLocalImages = false}) {
+    if (deleteLocalImages) {
+      final idx = state.history.indexWhere((t) => t.promptId == promptId);
+      if (idx != -1) {
+        final task = state.history[idx];
+        for (final img in task.images) {
+          final localPath = img['localPath'];
+          if (localPath is String && localPath.isNotEmpty) {
+            GalleryStore.instance.deleteFile(localPath);
+          }
         }
       }
     }

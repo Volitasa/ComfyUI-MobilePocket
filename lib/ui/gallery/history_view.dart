@@ -48,26 +48,52 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     return '${dt.year}-${two(dt.month)}-${two(dt.day)} ${two(dt.hour)}:${two(dt.minute)}';
   }
 
-  // 删除确认
+  // 删除确认：让用户选择是否连带删除画廊里对应的本地图片
   Future<void> _confirmDelete(TaskHistory task) async {
-    final ok = await showDialog<bool>(
+    final hasLocal = task.images.any((img) {
+      final p = img['localPath'];
+      return p is String && p.isNotEmpty;
+    });
+
+    final choice = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除记录'),
-        content: Text('确定删除「${task.title}」这条生成记录吗？'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('确定删除「${task.title}」这条生成记录吗？'),
+            if (hasLocal) ...[
+              const SizedBox(height: 10),
+              const Text(
+                '选择"同时删除画廊图片"会一并移除该记录已保存到画廊的本地图片，'
+                '此操作不可恢复；仅删除记录则保留画廊图片。',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('取消')),
+          if (hasLocal)
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('仅删除记录'),
+            ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删除'),
+            child: Text(hasLocal ? '同时删除画廊图片' : '删除'),
           ),
         ],
       ),
     );
-    if (ok == true && mounted) {
-      ref.read(taskManagerProvider.notifier).removeTask(task.promptId);
-    }
+
+    if (choice == null || !mounted) return;
+    ref
+        .read(taskManagerProvider.notifier)
+        .removeTask(task.promptId, deleteLocalImages: choice);
   }
 
   String _getMediaUrl(Map<String, dynamic> mediaObj) {
