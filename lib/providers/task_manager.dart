@@ -174,11 +174,17 @@ class TaskManagerNotifier extends Notifier<TaskState> {
         task.nodeInfo = '执行: $label';
       } else {
         _currentNode.remove(promptId);
-        task.status = '已完成';
-        task.progressValue = task.progressMax;
-        // 防止流程结束的提示覆盖掉成功的提示
-        if (task.nodeInfo != '✅ 生成成功') {
-          task.nodeInfo = '✅ 流程结束';
+        // executing(node=null) 是执行结束的收尾信号，正常完成与中断/出错后都会发。
+        // 已中断/已失败是终态，不能被它覆盖成“已完成”
+        if (task.status == '已中断' || task.status == '已失败') {
+          // 保持终态不变
+        } else {
+          task.status = '已完成';
+          task.progressValue = task.progressMax;
+          // 防止流程结束的提示覆盖掉成功的提示
+          if (task.nodeInfo != '✅ 生成成功') {
+            task.nodeInfo = '✅ 流程结束';
+          }
         }
       }
     } else if (type == 'execution_error') {
