@@ -104,12 +104,18 @@ void main() {
     });
     test('低频参数默认不暴露', () {
       expect(isDefaultExposed('denoise', 'KSampler'), isFalse);
-      expect(isDefaultExposed('width', 'EmptyLatentImage'), isFalse);
+      expect(isDefaultExposed('start_at_step', 'KSamplerAdvanced'), isFalse);
+    });
+    // 当前设计：尺寸、生成数量与模型加载参数默认暴露（便于在运行页直接换模型/尺寸）
+    test('尺寸与模型加载参数默认暴露', () {
+      expect(isDefaultExposed('width', 'EmptyLatentImage'), isTrue);
+      expect(isDefaultExposed('height', 'EmptyLatentImage'), isTrue);
+      expect(isDefaultExposed('unet_name', 'UNETLoader'), isTrue);
     });
   });
 
   group('WorkflowNode 序列化兼容', () {
-    test('旧配置无 paramType 时兜底为 text', () {
+    test('旧配置无 paramType 时按 key 推断（seed → seed）', () {
       final node = WorkflowNode.fromJson({
         'id': '1',
         'classType': 'KSampler',
@@ -117,9 +123,20 @@ void main() {
         'alias': '种子',
         'exposed': true,
       });
-      expect(node.paramType, ParamType.text);
+      expect(node.paramType, ParamType.seed);
       expect(node.options, isEmpty);
       expect(node.value, isNull);
+    });
+
+    test('旧配置无 paramType 且无法推断时兜底为 text', () {
+      final node = WorkflowNode.fromJson({
+        'id': '2',
+        'classType': 'SomeNode',
+        'key': 'some_unknown_param',
+        'alias': '未知参数',
+        'exposed': true,
+      });
+      expect(node.paramType, ParamType.text);
     });
 
     test('完整序列化往返', () {

@@ -41,6 +41,25 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     }
   }
 
+  // 无输出时的缩略图占位：终结态给出明确结果，只有进行中才转圈
+  Widget _noOutputPlaceholder(String status, Color statusColor) {
+    switch (status) {
+      case '已完成':
+        return const Text('无图', style: TextStyle(fontSize: 12, color: Colors.grey));
+      case '已失败':
+        return Icon(Icons.error_outline, size: 22, color: statusColor);
+      case '已中断':
+        return Icon(Icons.remove_circle_outline, size: 22, color: statusColor);
+      default:
+        // 排队中 / 生成中：确实还在等输出
+        return const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        );
+    }
+  }
+
   // 本地化的时间显示（yyyy-MM-dd HH:mm）
   String _formatTime(int timestamp) {
     final dt = DateTime.fromMillisecondsSinceEpoch(timestamp);
@@ -180,6 +199,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
               itemBuilder: (context, index) {
                 final task = tasks[index];
                 final isDone = task.status == '已完成';
+                // 终结态：任务已结束、不会再有输出（失败/中断同样如此），
+                // 不能继续显示加载动画，否则会永久转圈
+                final isTerminal =
+                    isDone || task.status == '已失败' || task.status == '已中断';
                 final statusColor = _statusColor(task.status);
                 final progress = task.progressMax > 0 ? (task.progressValue / task.progressMax) : 0.0;
 
@@ -221,7 +244,8 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      if (!isDone) ...[
+                                      // 终结态不再显示进度条（失败/中断时它是条永远不动的空槽）
+                                      if (!isTerminal) ...[
                                         const SizedBox(height: 8),
                                         LinearProgressIndicator(
                                           value: progress,
@@ -275,11 +299,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                                                     )
                                                 ],
                                               )
-                                            : Center(
-                                                child: isDone
-                                                    ? const Text('无图', style: TextStyle(fontSize: 12, color: Colors.grey))
-                                                    : const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                                              ),
+                                            : Center(child: _noOutputPlaceholder(task.status, statusColor)),
                                       ),
                                     ),
                                     const SizedBox(height: 4),
