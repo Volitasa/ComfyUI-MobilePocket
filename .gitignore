@@ -37,3 +37,7 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Android signing keystore
+comfy-release-key.jks
+keystore_base64.txt

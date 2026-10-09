@@ -45,15 +45,31 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
-      # 7. 使用 Gradle 编译生成 Debug 版 APK
-      - name: Build Android APK
+      # 7. 使用 Gradle 编译生成 Release 版（未签名）APK
+      - name: Build Android Release APK
         run: |
           cd android
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
 
-      # 8. 收集生成的 APK 并上传到 GitHub 面板供下载
-      - name: Upload APK Artifact
+      # 8. 使用 GitHub Secrets 注入密钥并进行 V1/V2 正式签名
+      - name: Sign Release APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
+          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+
+      # 9. 重命名生成的 APK 文件，去掉默认的 app-release 丑陋命名
+      - name: Rename APK File
+        run: |
+          mv ${{steps.sign_app.outputs.signedReleaseFile}} android/app/build/outputs/apk/release/ComfyUI-Mobile-Web.apk
+
+      # 10. 收集签名且重命名后的 APK 并上传
+      - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: ComfyRemote-App
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: ComfyUI-Mobile-Web-Release-APK # GitHub 网页上显示的压缩包名称
+          path: android/app/build/outputs/apk/release/ComfyUI-Mobile-Web.apk
