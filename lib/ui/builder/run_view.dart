@@ -210,7 +210,7 @@ class _RunViewState extends ConsumerState<RunView> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('任务下发成功！')));
         Navigator.pop(context);
-        ref.read(mainTabIndexProvider.notifier).state = 1;
+        ref.read(mainTabIndexProvider.notifier).state = MainTabs.history;
       } else {
         // 服务端返回非 200：透出具体错误（node_errors 等），而非笼统提示
         final code = result['_http_error'];

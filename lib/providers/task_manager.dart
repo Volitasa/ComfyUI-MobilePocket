@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 import '../models/task_history.dart';
+import '../services/gallery_store.dart';
 import '../utils.dart';
 import 'connection_provider.dart';
 import 'workflow_provider.dart';
@@ -116,6 +118,17 @@ class TaskManagerNotifier extends Notifier<TaskState> {
 
   // 按 promptId 删除任务，避免列表在渲染与点击之间发生变化时删错条目
   void removeTask(String promptId) {
+    // 同步删除本地已下载的图片文件
+    final idx = state.history.indexWhere((t) => t.promptId == promptId);
+    if (idx != -1) {
+      final task = state.history[idx];
+      for (final img in task.images) {
+        final localPath = img['localPath'];
+        if (localPath is String && localPath.isNotEmpty) {
+          GalleryStore.instance.deleteFile(localPath);
+        }
+      }
+    }
     final updatedList = List<TaskHistory>.from(state.history)
       ..removeWhere((t) => t.promptId == promptId);
     _saveHistory(updatedList);
@@ -133,6 +146,53 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       }
     }
     return idStr;
+  }
+
+  // 组装媒体文件的下载 URL
+  String _mediaUrl(Map<String, dynamic> media) {
+    final config = ref.read(connectionProvider);
+    final filename = Uri.encodeComponent(media['filename'] ?? '');
+    final subfolder = Uri.encodeComponent(media['subfolder'] ?? '');
+    final type = Uri.encodeComponent(media['type'] ?? 'output');
+    return '${config.comfyUrl}/view?filename=$filename&subfolder=$subfolder&type=$type';
+  }
+
+  // 异步下载新生成的媒体到本地画廊，成功后回填 localPath 并持久化
+  Future<void> _localizeMedia(String promptId, List<Map<String, dynamic>> newMedia) async {
+    final downloaded = <Map<String, dynamic>>[];
+    for (final media in newMedia) {
+      try {
+        final url = _mediaUrl(media);
+        final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 60));
+        if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
+          final name = media['filename']?.toString() ?? 'image.png';
+          final localPath = await GalleryStore.instance.saveBytes(resp.bodyBytes, name);
+          downloaded.add({...media, 'localPath': localPath});
+        } else {
+          downloaded.add(media);
+        }
+      } catch (_) {
+        downloaded.add(media); // 下载失败则保留原样，仍走服务器 URL
+      }
+    }
+
+    if (downloaded.isEmpty) return;
+
+    // 回填 localPath 到任务历史并持久化
+    final idx = state.history.indexWhere((t) => t.promptId == promptId);
+    if (idx == -1) return;
+    final task = state.history[idx];
+    // 按 filename 匹配回填（下载顺序与原顺序一致）
+    final updatedImages = task.images.map((m) {
+      for (final d in downloaded) {
+        if (d['localPath'] != null && d['filename'] == m['filename']) {
+          return {...m, 'localPath': d['localPath']};
+        }
+      }
+      return m;
+    }).toList();
+    task.images = updatedImages;
+    _saveHistory(List<TaskHistory>.from(state.history));
   }
 
   // 处理 WebSocket 传来的状态更新
@@ -219,6 +279,10 @@ class TaskManagerNotifier extends Notifier<TaskState> {
         task.images = combinedImages;
         task.status = '已完成';
         task.nodeInfo = '✅ 生成成功';
+
+        // 4. 异步把新图下载到本地画廊（保留原图元数据，可拖回 ComfyUI 复现）
+        final newMediaCopy = List<Map<String, dynamic>>.from(newMedia);
+        unawaited(_localizeMedia(promptId, newMediaCopy));
       } catch (e) {
         task.status = '已失败';
         task.nodeInfo = '❌ 结果数据解析失败';

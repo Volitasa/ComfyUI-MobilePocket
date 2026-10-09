@@ -80,6 +80,18 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     return '${config.comfyUrl}/view?filename=$filename&subfolder=$subfolder&type=$type';
   }
 
+  // 缩略图：优先读本地文件（服务端离线也能显示），无本地文件回退网络
+  Widget _thumbnail(Map<String, dynamic> media) {
+    final localPath = media['localPath'];
+    if (localPath is String && localPath.isNotEmpty) {
+      final f = File(localPath);
+      if (f.existsSync()) {
+        return Image.file(f, fit: BoxFit.cover);
+      }
+    }
+    return Image.network(_getMediaUrl(media), fit: BoxFit.cover);
+  }
+
   bool _isVideo(String? filename) {
     if (filename == null) return false;
     final ext = filename.split('.').last.toLowerCase();
@@ -110,7 +122,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
         title: const Text('生成记录', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           ConnectionStatusBadge(
-            onTap: () => ref.read(mainTabIndexProvider.notifier).state = 2,
+            onTap: () => ref.read(mainTabIndexProvider.notifier).state = MainTabs.setup,
           ),
           const SizedBox(width: 8),
         ],
@@ -202,7 +214,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                                                 children: [
                                                   _isVideo(task.images[0]['filename'])
                                                       ? const Center(child: Icon(Icons.videocam, color: Colors.grey))
-                                                      : Image.network(_getMediaUrl(task.images[0]), fit: BoxFit.cover),
+                                                      : _thumbnail(task.images[0]),
                                                   if (task.images.length > 1)
                                                     Positioned(
                                                       right: 4,

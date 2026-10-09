@@ -92,7 +92,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
               onPressed: () => ref.read(workflowProvider.notifier).fetchRemoteList(),
             ),
           ConnectionStatusBadge(
-            onTap: () => ref.read(mainTabIndexProvider.notifier).state = 2,
+            onTap: () => ref.read(mainTabIndexProvider.notifier).state = MainTabs.setup,
           ),
           const SizedBox(width: 8),
         ],
@@ -117,7 +117,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
               icon: const Icon(Icons.settings),
               onPressed: () {
                 // 直接通过 Provider 将底部导航栏硬切到“服务器配置”页 (索引为 2)
-                ref.read(mainTabIndexProvider.notifier).state = 2;
+                ref.read(mainTabIndexProvider.notifier).state = MainTabs.setup;
               },
               label: const Text('前往配置'),
             ),
