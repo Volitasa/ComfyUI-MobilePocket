@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,48 +9,96 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('须在 main.dart 中初始化');
 });
 
-// 状态实体 (对应 Pinia 中的 state)
+/// 单个服务器连接配置：支持主/备双地址（适配内外网环境）。
+/// 连接时先探测主地址，不通再探测备用地址，哪个通用哪个。
+class ServerConfig {
+  final String id;
+  String name;
+  String primaryUrl;
+  String backupUrl; // 可为空
+
+  ServerConfig({
+    required this.id,
+    required this.name,
+    required this.primaryUrl,
+    this.backupUrl = '',
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'primary': primaryUrl,
+        'backup': backupUrl,
+      };
+
+  factory ServerConfig.fromJson(Map<String, dynamic> json) => ServerConfig(
+        id: json['id'],
+        name: json['name'] ?? '服务器',
+        primaryUrl: json['primary'] ?? '',
+        backupUrl: json['backup'] ?? '',
+      );
+
+  List<String> get urls => [primaryUrl, if (backupUrl.trim().isNotEmpty) backupUrl];
+}
+
+/// 状态实体
 class ConfigState {
-  final String comfyUrl;
+  final List<ServerConfig> servers;
+  final String? activeServerId; // 当前启用的连接（同时只能一个）
+  final String comfyUrl; // 当前生效的 URL（主/备中连通的那个）
+  final String clientId;
   final bool isConnected;
   final bool isTesting;
-  final String clientId;
   final String? testResultMessage;
 
-  ConfigState({
+  const ConfigState({
+    this.servers = const [],
+    this.activeServerId,
     this.comfyUrl = 'http://127.0.0.1:8190',
+    this.clientId = '',
     this.isConnected = false,
     this.isTesting = false,
-    this.clientId = '',
     this.testResultMessage,
   });
 
   ConfigState copyWith({
+    List<ServerConfig>? servers,
+    String? activeServerId,
     String? comfyUrl,
+    String? clientId,
     bool? isConnected,
     bool? isTesting,
-    String? clientId,
     String? testResultMessage,
   }) {
     return ConfigState(
+      servers: servers ?? this.servers,
+      activeServerId: activeServerId ?? this.activeServerId,
       comfyUrl: comfyUrl ?? this.comfyUrl,
+      clientId: clientId ?? this.clientId,
       isConnected: isConnected ?? this.isConnected,
       isTesting: isTesting ?? this.isTesting,
-      clientId: clientId ?? this.clientId,
       testResultMessage: testResultMessage,
     );
   }
 }
 
-// 状态控制器 (对应 Pinia 中的 actions)
+/// 状态控制器：多连接管理 + 主备地址探测
 class ConnectionNotifier extends Notifier<ConfigState> {
   late SharedPreferences _prefs;
 
   @override
   ConfigState build() {
     _prefs = ref.watch(sharedPreferencesProvider);
+    final servers = _loadServers();
+    String? activeId = _prefs.getString('comfy_active_server');
+    if (servers.isNotEmpty && (activeId == null || !servers.any((s) => s.id == activeId))) {
+      activeId = servers.first.id;
+    }
+    final activeUrl = _prefs.getString('comfyUrl') ?? 'http://127.0.0.1:8190';
     return ConfigState(
-      comfyUrl: _prefs.getString('comfyUrl') ?? 'http://127.0.0.1:8190',
+      servers: servers,
+      activeServerId: activeId,
+      comfyUrl: activeUrl,
       clientId: _getOrCreateClientId(),
     );
   }
@@ -65,57 +114,167 @@ class ConnectionNotifier extends Notifier<ConfigState> {
     return id;
   }
 
-  // 启动时静默探测已保存的服务器地址，成功则自动置为已连接，
-  // 免去每次冷启动都要手动重新测试连接
-  Future<void> autoConnect() async {
-    if (state.isConnected || state.isTesting) return;
-    final savedUrl = _prefs.getString('comfyUrl');
-    if (savedUrl == null || savedUrl.isEmpty) return;
-    try {
-      final uri = Uri.parse('$savedUrl/system_stats');
-      final response = await http.get(uri).timeout(const Duration(seconds: 5));
-      if (response.statusCode == 200) {
-        state = state.copyWith(isConnected: true);
-      }
-    } catch (_) {
-      // 静默失败：保持“未连接”状态，等待用户手动测试
+  // ---------- 服务器列表 CRUD ----------
+
+  List<ServerConfig> _loadServers() {
+    final raw = _prefs.getString('comfy_servers');
+    if (raw != null) {
+      try {
+        final list = jsonDecode(raw) as List;
+        return list.map((e) => ServerConfig.fromJson(e)).toList();
+      } catch (_) {}
+    }
+    // 旧版本迁移：只有单条 comfyUrl 时转成一条默认服务器，不丢数据
+    final legacy = _prefs.getString('comfyUrl');
+    if (legacy != null && legacy.isNotEmpty) {
+      return [ServerConfig(id: _newId(), name: '默认服务器', primaryUrl: legacy)];
+    }
+    return [];
+  }
+
+  void _saveServers(List<ServerConfig> servers) {
+    _prefs.setString('comfy_servers', jsonEncode(servers.map((e) => e.toJson()).toList()));
+  }
+
+  String _newId() => 'srv_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
+
+  String _cleanUrl(String url) {
+    final t = url.trim();
+    return t.endsWith('/') ? t.substring(0, t.length - 1) : t;
+  }
+
+  Future<void> addServer(String name, String primary, String backup) async {
+    final server = ServerConfig(
+      id: _newId(),
+      name: name.trim().isEmpty ? '服务器 ${state.servers.length + 1}' : name.trim(),
+      primaryUrl: _cleanUrl(primary),
+      backupUrl: _cleanUrl(backup),
+    );
+    final servers = [...state.servers, server];
+    _saveServers(servers);
+    state = state.copyWith(servers: servers);
+    // 第一个连接自动启用
+    if (state.activeServerId == null) {
+      await activateServer(server.id);
     }
   }
 
-  // 测试并保存连接
-  Future<void> testConnection(String url) async {
+  Future<void> updateServer(String id, String name, String primary, String backup) async {
+    final servers = state.servers.map((s) {
+      if (s.id != id) return s;
+      return ServerConfig(
+        id: s.id,
+        name: name.trim().isEmpty ? s.name : name.trim(),
+        primaryUrl: _cleanUrl(primary),
+        backupUrl: _cleanUrl(backup),
+      );
+    }).toList();
+    _saveServers(servers);
+    state = state.copyWith(servers: servers);
+    // 编辑的是启用中的连接时，重新探测并刷新生效地址
+    if (state.activeServerId == id) {
+      await activateServer(id);
+    }
+  }
+
+  Future<void> removeServer(String id) async {
+    final servers = state.servers.where((s) => s.id != id).toList();
+    _saveServers(servers);
+
+    if (state.activeServerId == id) {
+      // 移除的是启用中的连接：直接断开（comfyUrl 置空触发 WS 断开与列表清空）
+      await _prefs.remove('comfy_active_server');
+      await _prefs.remove('comfyUrl');
+      state = ConfigState(
+        servers: servers,
+        activeServerId: null,
+        comfyUrl: '',
+        clientId: state.clientId,
+        isConnected: false,
+        isTesting: false,
+      );
+    } else {
+      state = state.copyWith(servers: servers);
+    }
+  }
+
+  // ---------- 连接探测 ----------
+
+  // 依次探测主/备地址，返回首个连通的 URL
+  Future<String?> _probe(ServerConfig server) async {
+    for (final url in server.urls) {
+      final clean = _cleanUrl(url);
+      if (clean.isEmpty) continue;
+      try {
+        final response =
+            await http.get(Uri.parse('$clean/system_stats')).timeout(const Duration(seconds: 4));
+        if (response.statusCode == 200) return clean;
+      } catch (_) {
+        // 尝试下一个地址
+      }
+    }
+    return null;
+  }
+
+  // 启用某连接：主/备依次探测，连通者作为生效地址
+  Future<void> activateServer(String id) async {
+    ServerConfig? server;
+    for (final s in state.servers) {
+      if (s.id == id) server = s;
+    }
+    if (server == null) return;
+
     state = state.copyWith(isTesting: true, isConnected: false, testResultMessage: null);
 
-    // 移除末尾的反斜杠
-    final cleanUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
-
-    try {
-      final uri = Uri.parse('$cleanUrl/system_stats');
-      // 设置 5 秒超时防止卡死
-      final response = await http.get(uri).timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        await _prefs.setString('comfyUrl', cleanUrl);
-        state = state.copyWith(
-          comfyUrl: cleanUrl,
-          isConnected: true,
-          isTesting: false,
-          testResultMessage: '连接成功！',
-        );
-      } else {
-        state = state.copyWith(
-          isTesting: false,
-          isConnected: false,
-          testResultMessage: '连接失败: HTTP ${response.statusCode}',
-        );
-      }
-    } catch (e) {
+    final url = await _probe(server);
+    if (url == null) {
       state = state.copyWith(
         isTesting: false,
         isConnected: false,
-        testResultMessage: '无法连接到服务器，请检查地址或网络跨域设置。',
+        testResultMessage: '「${server.name}」连接失败：主/备地址均无法连通',
       );
+      return;
     }
+
+    await _prefs.setString('comfy_active_server', id);
+    await _prefs.setString('comfyUrl', url);
+    final usedPrimary = url == _cleanUrl(server.primaryUrl);
+    state = state.copyWith(
+      isTesting: false,
+      isConnected: true,
+      activeServerId: id,
+      comfyUrl: url,
+      testResultMessage: usedPrimary ? '已连接「${server.name}」（主地址）' : '已连接「${server.name}」（备用地址）',
+    );
+  }
+
+  // 编辑对话框内的双地址测试（不改变启用状态）
+  Future<String> testUrls(String primary, String backup) async {
+    final tmp = ServerConfig(id: 'tmp', name: 'tmp', primaryUrl: primary, backupUrl: backup);
+    final url = await _probe(tmp);
+    if (url == null) return '主/备地址均无法连通';
+    return url == _cleanUrl(primary) ? '主地址可用' : '备用地址可用';
+  }
+
+  // 启动时静默自动连接：先试上次生效的地址（快速路径），失败再走完整主备探测
+  Future<void> autoConnect() async {
+    if (state.isConnected || state.isTesting) return;
+    if (state.activeServerId == null) return;
+
+    final lastUrl = _prefs.getString('comfyUrl');
+    if (lastUrl != null && lastUrl.isNotEmpty) {
+      try {
+        final response =
+            await http.get(Uri.parse('$lastUrl/system_stats')).timeout(const Duration(seconds: 5));
+        if (response.statusCode == 200) {
+          state = state.copyWith(isConnected: true);
+          return;
+        }
+      } catch (_) {
+        // 快速路径失败，走完整探测
+      }
+    }
+    await activateServer(state.activeServerId!);
   }
 }
 

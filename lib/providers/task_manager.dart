@@ -6,6 +6,7 @@ import 'package:http_parser/http_parser.dart';
 import '../models/task_history.dart';
 import '../utils.dart';
 import 'connection_provider.dart';
+import 'workflow_provider.dart';
 
 class TaskState {
   final List<TaskHistory> history;
@@ -118,6 +119,20 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     _saveHistory(updatedList);
   }
 
+  // 节点 ID → 可读名称：优先用工作流映射里保存的节点标题，无则回退"类名(ID)"
+  String _nodeLabel(String workflowId, dynamic nodeId) {
+    final idStr = nodeId?.toString() ?? '';
+    final config = ref.read(workflowProvider.notifier).getMappingConfig(workflowId);
+    if (config != null) {
+      for (final n in config) {
+        if (n.id == idStr) {
+          return isMeaningfulTitle(n.title, n.classType) ? n.title : '${n.classType}($idStr)';
+        }
+      }
+    }
+    return idStr;
+  }
+
   // 处理 WebSocket 传来的状态更新
   void updateTaskFromWs(Map<String, dynamic> msg) {
     if (msg['data'] == null || msg['data']['prompt_id'] == null) return;
@@ -137,12 +152,15 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       task.status = '生成中';
       task.nodeInfo = '⚡ 命中缓存...';
     } else if (type == 'progress') {
-      task.progressValue = data['value'] ?? 0;
-      task.progressMax = data['max'] ?? 0;
-      task.nodeInfo = '🔄 处理节点...';
+      final v = data['value'] ?? 0;
+      final m = data['max'] ?? 0;
+      task.progressValue = v;
+      task.progressMax = m;
+      task.nodeInfo = m > 0 ? '🔄 处理中 ${(v / m * 100).round()}%' : '🔄 处理节点...';
     } else if (type == 'executing') {
       if (data['node'] != null) {
-        task.nodeInfo = '执行: ${data['node']}';
+        // 用节点标题代替裸节点 ID，更直观（如“执行: K 采样器”）
+        task.nodeInfo = '执行: ${_nodeLabel(task.workflowId, data['node'])}';
       } else {
         task.status = '已完成';
         task.progressValue = task.progressMax;
