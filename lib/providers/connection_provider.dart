@@ -65,6 +65,23 @@ class ConnectionNotifier extends Notifier<ConfigState> {
     return id;
   }
 
+  // 启动时静默探测已保存的服务器地址，成功则自动置为已连接，
+  // 免去每次冷启动都要手动重新测试连接
+  Future<void> autoConnect() async {
+    if (state.isConnected || state.isTesting) return;
+    final savedUrl = _prefs.getString('comfyUrl');
+    if (savedUrl == null || savedUrl.isEmpty) return;
+    try {
+      final uri = Uri.parse('$savedUrl/system_stats');
+      final response = await http.get(uri).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        state = state.copyWith(isConnected: true);
+      }
+    } catch (_) {
+      // 静默失败：保持“未连接”状态，等待用户手动测试
+    }
+  }
+
   // 测试并保存连接
   Future<void> testConnection(String url) async {
     state = state.copyWith(isTesting: true, isConnected: false, testResultMessage: null);

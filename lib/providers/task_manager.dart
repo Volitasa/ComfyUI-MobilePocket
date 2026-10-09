@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 import '../models/task_history.dart';
+import '../utils.dart';
 import 'connection_provider.dart';
 
 class TaskState {
@@ -17,7 +18,6 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   @override
   TaskState build() {
     _prefs = ref.watch(sharedPreferencesProvider);
-    _loadHistory();
     return TaskState(history: _loadHistory());
   }
 
@@ -38,9 +38,9 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   }
 
   void createNewTask(String promptId, String workflowId) {
-    final title = workflowId.replaceAll('_api.json', '');
+    final title = workflowDisplayName(workflowId);
     final newTask = TaskHistory(promptId: promptId, workflowId: workflowId, title: title);
-    
+
     final updatedList = [newTask, ...state.history];
     if (updatedList.length > 50) {
       updatedList.removeLast(); // 保留最近50条
@@ -54,29 +54,33 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     try {
       final uri = Uri.parse('${config.comfyUrl}/upload/image');
       final request = http.MultipartRequest('POST', uri);
-      
+
       final multipartFile = http.MultipartFile.fromBytes(
         'image',
         fileBytes,
         filename: filename,
         contentType: MediaType('image', 'jpeg'), // 泛用型兜底
       );
-      
+
       request.files.add(multipartFile);
-      final response = await request.send();
-      
+      final response =
+          await request.send().timeout(const Duration(seconds: 60));
+
       if (response.statusCode == 200) {
         final respStr = await response.stream.bytesToString();
         final data = jsonDecode(respStr);
         return data['name'];
       }
     } catch (e) {
-      // 错误处理
+      // 上传失败时返回 null，由调用方给出错误提示
     }
     return null;
   }
 
-  // 提交生成任务
+  // 提交生成任务。
+  // 返回值约定：200 → 服务端原始响应（含 prompt_id）；
+  // 非 200 → {'_http_error': 状态码, '_body': 服务端错误详情}，供 UI 透出；
+  // 网络异常/超时 → null。
   Future<Map<String, dynamic>?> executeWorkflow(Map<String, dynamic> promptNodes) async {
     final config = ref.read(connectionProvider);
     final payload = {
@@ -90,27 +94,34 @@ class TaskManagerNotifier extends Notifier<TaskState> {
         uri,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(payload),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
+      dynamic body;
+      try {
+        body = jsonDecode(response.body);
+      } catch (_) {
+        body = null;
+      }
+      return {'_http_error': response.statusCode, '_body': body};
     } catch (e) {
-      // 错误处理
+      return null;
     }
-    return null;
   }
 
-  void removeTask(int index) {
-    final updatedList = List<TaskHistory>.from(state.history);
-    updatedList.removeAt(index);
+  // 按 promptId 删除任务，避免列表在渲染与点击之间发生变化时删错条目
+  void removeTask(String promptId) {
+    final updatedList = List<TaskHistory>.from(state.history)
+      ..removeWhere((t) => t.promptId == promptId);
     _saveHistory(updatedList);
   }
 
   // 处理 WebSocket 传来的状态更新
   void updateTaskFromWs(Map<String, dynamic> msg) {
     if (msg['data'] == null || msg['data']['prompt_id'] == null) return;
-    
+
     final promptId = msg['data']['prompt_id'];
     final taskIndex = state.history.indexWhere((t) => t.promptId == promptId);
     if (taskIndex == -1) return;
@@ -135,11 +146,19 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       } else {
         task.status = '已完成';
         task.progressValue = task.progressMax;
-        // 关键体验修复：防止流程结束的提示覆盖掉成功的提示
+        // 防止流程结束的提示覆盖掉成功的提示
         if (task.nodeInfo != '✅ 生成成功') {
           task.nodeInfo = '✅ 流程结束';
         }
       }
+    } else if (type == 'execution_error') {
+      // 服务端执行出错：必须终结任务状态，否则 UI 会永远停留在“生成中”
+      task.status = '已失败';
+      final errMsg = data['exception_message'] ?? data['exception_type'] ?? '未知错误';
+      task.nodeInfo = '❌ 执行出错: $errMsg';
+    } else if (type == 'execution_interrupted') {
+      task.status = '已中断';
+      task.nodeInfo = '⏹️ 任务已被中断';
     } else if (type == 'executed') {
       try {
         final output = data['output'];
@@ -155,17 +174,16 @@ class TaskManagerNotifier extends Notifier<TaskState> {
           }
         }
 
-        // 2. 语法最优化：使用展开操作符 [...] 瞬间合并旧图和新图
+        // 2. 合并旧图和新图
         final combinedImages = [...task.images, ...newMedia];
 
         // 3. 赋值（注：如果未来发现 UI 不刷新，需将 TaskHistory 改造为 copyWith 模式）
         task.images = combinedImages;
         task.status = '已完成';
         task.nodeInfo = '✅ 生成成功';
-        
-        print('=== 🎉 成功获取到媒体文件: ${task.images.length} 张 ===');
       } catch (e) {
-        print('=== ❌ 解析图片数据失败: $e ===');
+        task.status = '已失败';
+        task.nodeInfo = '❌ 结果数据解析失败';
       }
     }
 

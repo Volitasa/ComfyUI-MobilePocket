@@ -14,11 +14,19 @@ class WsNotifier extends Notifier<WsState> {
 
   @override
   WsState build() {
+    // 监听连接状态：连接成功后自动建立 WS，断开时关闭，保证单点维护连接生命周期
+    ref.listen(connectionProvider, (prev, next) {
+      if (next.isConnected && !(prev?.isConnected ?? false)) {
+        connect();
+      } else if (!next.isConnected && (prev?.isConnected ?? false)) {
+        disconnect();
+      }
+    });
     return WsState();
   }
 
   void connect() {
-    if (_channel != null && state.isConnected) return;
+    if (_channel != null) return;
 
     final config = ref.read(connectionProvider);
     if (!config.isConnected) return;
@@ -32,10 +40,9 @@ class WsNotifier extends Notifier<WsState> {
     wsUrl = '$wsUrl/ws?clientId=${config.clientId}';
 
     try {
-      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
-      state = WsState(isConnected: true);
+      final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
-      _channel!.stream.listen(
+      channel.stream.listen(
         (message) {
           if (message is String) {
             try {
@@ -48,17 +55,36 @@ class WsNotifier extends Notifier<WsState> {
           }
         },
         onDone: () {
-          state = WsState(isConnected: false);
-          _channel = null;
+          _resetChannel();
+          _scheduleReconnect();
         },
         onError: (error) {
-          state = WsState(isConnected: false);
-          _channel = null;
+          _resetChannel();
+          _scheduleReconnect();
         },
       );
+
+      // stream 订阅成功后标记已连接
+      _channel = channel;
+      state = WsState(isConnected: true);
     } catch (e) {
       state = WsState(isConnected: false);
     }
+  }
+
+  void _resetChannel() {
+    _channel = null;
+    state = WsState(isConnected: false);
+  }
+
+  void _scheduleReconnect() {
+    // 断线后若连接配置仍有效，自动重连，避免进度更新长期中断
+    if (!ref.read(connectionProvider).isConnected) return;
+    Future.delayed(const Duration(seconds: 3), () {
+      if (_channel == null && ref.read(connectionProvider).isConnected) {
+        connect();
+      }
+    });
   }
 
   void disconnect() {

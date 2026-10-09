@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/workflow_node.dart';
+import '../utils.dart';
 import 'connection_provider.dart';
 
 class WorkflowState {
@@ -46,7 +47,8 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
     state = state.copyWith(isLoading: true);
     try {
       final uri = Uri.parse('${config.comfyUrl}/userdata?dir=workflows');
-      final response = await http.get(uri);
+      final response =
+          await http.get(uri).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -66,17 +68,18 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
     }
   }
 
-  // 获取单个工作流 JSON 内容
+  // 获取单个工作流 JSON 内容（载入时统一归一化，兼容 prompt 包装格式）
   Future<bool> fetchWorkflowContent(String filename) async {
     final config = ref.read(connectionProvider);
     try {
       final fileParam = Uri.encodeComponent('workflows/$filename');
       final uri = Uri.parse('${config.comfyUrl}/userdata/$fileParam');
-      final response = await http.get(uri);
+      final response =
+          await http.get(uri).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        state = state.copyWith(currentWorkflowData: data);
+        final data = Map<String, dynamic>.from(jsonDecode(response.body));
+        state = state.copyWith(currentWorkflowData: normalizeWorkflowJson(data));
         return true;
       }
     } catch (e) {
@@ -84,10 +87,10 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
     }
     return false;
   }
-  
-  // 设置本地导入的 JSON 数据
+
+  // 设置本地导入的 JSON 数据（同样做归一化，保证与线上工作流结构一致）
   void setLocalWorkflowData(Map<String, dynamic> data) {
-    state = state.copyWith(currentWorkflowData: data);
+    state = state.copyWith(currentWorkflowData: normalizeWorkflowJson(data));
   }
 
   // 保存节点配置
@@ -108,9 +111,10 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
       return null;
     }
   }
-  // 断开连接时清空列表和选中的缓存数据
+  // 断开连接/切换服务器时清空列表和选中的缓存数据。
+  // 直接构造新 state：copyWith 对 null 参数做合并，无法把字段置回 null。
   void clearList() {
-    state = state.copyWith(workflowList: [], currentWorkflowData: null);
+    state = WorkflowState(workflowList: [], currentWorkflowData: null);
   }
 }
 

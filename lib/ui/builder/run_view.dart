@@ -7,6 +7,7 @@ import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
 import '../../providers/task_manager.dart';
 import '../../providers/ws_event_provider.dart';
+import '../../utils.dart';
 import '../main_screen.dart';
 
 class RunView extends ConsumerStatefulWidget {
@@ -41,7 +42,7 @@ class _RunViewState extends ConsumerState<RunView> {
 
     _formConfig = savedConfig.where((node) => node.exposed).toList();
     for (var node in _formConfig) {
-      if (node.key == 'seed') {
+      if (node.key == 'seed' || node.key == 'noise_seed') {
         _generateSeed(node.id);
       } else if (node.key == 'text' || node.key == 'value') {
         _controllers[node.id] = TextEditingController();
@@ -58,13 +59,14 @@ class _RunViewState extends ConsumerState<RunView> {
   }
 
   void _generateSeed(String nodeId) {
-    final randomSeed = Random().nextInt(900719925).toString() + Random().nextInt(9999999).toString();
+    // 定长生成：高 10 位 + 低 5 位，固定 15 位，避免 substring(0,15) 越界崩溃
+    final high = Random().nextInt(1000000000) + 1000000000; // 10 位（1e9 ~ 2e9）
+    final low = Random().nextInt(100000); // 0 ~ 99999
+    final seed = high * 100000 + low;
     setState(() {
-      _formData[nodeId] = int.parse(randomSeed.substring(0, 15));
-      if (_controllers[nodeId] == null) {
-        _controllers[nodeId] = TextEditingController();
-      }
-      _controllers[nodeId]!.text = _formData[nodeId].toString();
+      _formData[nodeId] = seed;
+      final controller = _controllers.putIfAbsent(nodeId, () => TextEditingController());
+      controller.text = seed.toString();
     });
   }
 
@@ -93,19 +95,20 @@ class _RunViewState extends ConsumerState<RunView> {
     try {
       // 深拷贝一份原始工作流，防止污染内存
       Map<String, dynamic> originalJson = jsonDecode(jsonEncode(workflowData));
-      Map<String, dynamic> promptNodes = originalJson.containsKey('prompt') ? originalJson['prompt'] : originalJson;
+      // 与解析侧保持一致：统一归一化后再解包节点结构
+      Map<String, dynamic> promptNodes = normalizeWorkflowJson(originalJson);
 
       final taskManager = ref.read(taskManagerProvider.notifier);
 
       for (var node in _formConfig) {
         dynamic value;
-        
+
         if (node.key == 'image' && _formData[node.id] != null) {
           final imgData = _formData[node.id];
           final uploadedName = await taskManager.uploadImage(imgData['bytes'], imgData['filename']);
           if (uploadedName == null) throw Exception('图片上传失败');
           value = uploadedName;
-        } else if (node.key == 'seed') {
+        } else if (node.key == 'seed' || node.key == 'noise_seed') {
           value = int.tryParse(_controllers[node.id]?.text ?? '0');
         } else {
           value = _controllers[node.id]?.text;
@@ -119,19 +122,33 @@ class _RunViewState extends ConsumerState<RunView> {
       }
 
       final result = await taskManager.executeWorkflow(promptNodes);
-      
-      if (result != null && result.containsKey('prompt_id')) {
+
+      if (result == null) {
+        throw Exception('提交失败：无法连接服务器或请求超时');
+      }
+      if (result.containsKey('prompt_id')) {
         taskManager.createNewTask(result['prompt_id'], widget.workflowId);
-        
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('任务下发成功！')));
         Navigator.pop(context);
         ref.read(mainTabIndexProvider.notifier).state = 1;
       } else {
-        throw Exception('提交失败，请检查 ComfyUI 日志');
+        // 服务端返回非 200：透出具体错误（node_errors 等），而非笼统提示
+        final code = result['_http_error'];
+        final body = result['_body'];
+        String detail = '';
+        if (body is Map && body['node_errors'] != null) {
+          final errors = body['node_errors'];
+          detail = errors is Map && errors.isNotEmpty
+              ? '，错误节点: ${errors.keys.join(', ')}'
+              : '';
+        }
+        throw Exception('提交失败 (HTTP $code)$detail，请检查 ComfyUI 日志');
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } finally {
       if (mounted) setState(() => _isExecuting = false);
     }
@@ -139,7 +156,7 @@ class _RunViewState extends ConsumerState<RunView> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = widget.workflowId.replaceAll('_api.json', '');
+    final displayName = workflowDisplayName(widget.workflowId);
 
     return Scaffold(
       appBar: AppBar(
@@ -217,7 +234,7 @@ class _RunViewState extends ConsumerState<RunView> {
           isDense: true,
         ),
       );
-    } else if (node.key == 'seed') {
+    } else if (node.key == 'seed' || node.key == 'noise_seed') {
       return Row(
         children: [
           Expanded(

@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/workflow_provider.dart';
-import '../builder/workflow_view.dart'; 
+import '../../utils.dart';
+import '../builder/workflow_view.dart';
 import '../main_screen.dart';
 
 class HomeView extends ConsumerStatefulWidget {
@@ -18,11 +19,14 @@ class _HomeViewState extends ConsumerState<HomeView> {
   @override
   void initState() {
     super.initState();
-    // 页面加载时，如果已连接则自动拉取
+    // 页面加载时：先静默探测已保存地址自动连接，成功后拉取远端列表
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (ref.read(connectionProvider).isConnected) {
-        ref.read(workflowProvider.notifier).fetchRemoteList();
-      }
+      ref.read(connectionProvider.notifier).autoConnect().then((_) {
+        if (!mounted) return;
+        if (ref.read(connectionProvider).isConnected) {
+          ref.read(workflowProvider.notifier).fetchRemoteList();
+        }
+      });
     });
   }
 
@@ -37,21 +41,24 @@ class _HomeViewState extends ConsumerState<HomeView> {
       if (result != null && result.files.single.bytes != null) {
         final jsonString = utf8.decode(result.files.single.bytes!);
         final Map<String, dynamic> data = jsonDecode(jsonString);
-        
+
         ref.read(workflowProvider.notifier).setLocalWorkflowData(data);
-        
-        // 带着 'local' 标识跳转到配置装配页
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const WorkflowView(workflowId: 'local')));
+
+        // 以内容哈希作为本地工作流 ID，避免多个本地文件共用 'local' 导致配置串台
+        final localId = 'local_${stableHash(jsonString).toRadixString(36)}';
+        if (!mounted) return;
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => WorkflowView(workflowId: localId)));
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('本地导入成功，即将跳转...')));
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('JSON 文件解析失败')));
     }
   }
 
   void _onCardTap(String filename) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => WorkflowView(workflowId: filename)));
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('点击了: $filename')));
   }
 
   @override

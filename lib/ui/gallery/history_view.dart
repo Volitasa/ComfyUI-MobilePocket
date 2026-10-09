@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:video_player/video_player.dart';
+import 'dart:io';
 import '../../providers/task_manager.dart';
 import '../../providers/ws_event_provider.dart';
 import '../../providers/connection_provider.dart';
@@ -108,7 +111,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.close, size: 18, color: Colors.grey),
-                                    onPressed: () => ref.read(taskManagerProvider.notifier).removeTask(index),
+                                    onPressed: () => ref.read(taskManagerProvider.notifier).removeTask(task.promptId),
                                     constraints: const BoxConstraints(),
                                     padding: EdgeInsets.zero,
                                   ),
@@ -154,7 +157,9 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                                 ? Stack(
                                     fit: StackFit.expand,
                                     children: [
-                                      Image.network(_getMediaUrl(task.images[0]), fit: BoxFit.cover),
+                                      _isVideo(task.images[0]['filename'])
+                                          ? const Center(child: Icon(Icons.videocam, color: Colors.grey))
+                                          : Image.network(_getMediaUrl(task.images[0]), fit: BoxFit.cover),
                                       if (task.images.length > 1)
                                         Positioned(
                                           right: 4,
@@ -209,6 +214,7 @@ class MediaViewer extends StatefulWidget {
 class _MediaViewerState extends State<MediaViewer> {
   late PageController _pageController;
   late int _currentIndex;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -217,26 +223,53 @@ class _MediaViewerState extends State<MediaViewer> {
     _pageController = PageController(initialPage: _currentIndex);
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   Future<void> _saveToLocal() async {
+    if (_saving) return;
+    setState(() => _saving = true);
     try {
       final currentMedia = widget.mediaList[_currentIndex];
       final url = widget.urlBuilder(currentMedia);
-      
+      final isVideo = widget.isVideoChecker(currentMedia['filename']);
+
       // 请求相册权限
       final hasAccess = await Gal.requestAccess();
       if (!hasAccess) {
-        if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('需要相册权限')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('需要相册权限')));
         return;
       }
 
-      // 下载并保存
+      // 下载媒体
       final bytes = await http.readBytes(Uri.parse(url));
-      final extension = widget.isVideoChecker(currentMedia['filename']) ? 'mp4' : 'jpg';
-      await Gal.putImageBytes(bytes, name: 'comfy_${DateTime.now().millisecondsSinceEpoch}.$extension');
-      
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ 已保存到手机相册')));
+
+      if (isVideo) {
+        // 视频需先写入临时文件，再调用 putVideo 保存
+        final ext = (currentMedia['filename']?.toString().split('.').last ?? 'mp4');
+        final tmpDir = await getTemporaryDirectory();
+        final tmpFile = File('${tmpDir.path}/comfy_${DateTime.now().millisecondsSinceEpoch}.$ext');
+        await tmpFile.writeAsBytes(bytes);
+        await Gal.putVideo(tmpFile.path);
+        // 清理临时文件
+        try {
+          await tmpFile.delete();
+        } catch (_) {}
+      } else {
+        // 图片：按真实扩展名保存
+        final ext = (currentMedia['filename']?.toString().split('.').last ?? 'jpg');
+        final name = 'comfy_${DateTime.now().millisecondsSinceEpoch}.$ext';
+        await Gal.putImageBytes(bytes, name: name);
+      }
+
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ 已保存到手机相册')));
     } catch (e) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存失败')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存失败')));
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -259,8 +292,7 @@ class _MediaViewerState extends State<MediaViewer> {
           final url = widget.urlBuilder(media);
           
           if (widget.isVideoChecker(media['filename'])) {
-            // 此处省略 video_player 初始化逻辑，可替换为原生 VideoPlayer 组件
-            return const Center(child: Text('视频播放器占位', style: TextStyle(color: Colors.white)));
+            return _VideoItem(url: url);
           }
           return InteractiveViewer(
             child: Center(
@@ -278,10 +310,88 @@ class _MediaViewerState extends State<MediaViewer> {
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
-            onPressed: _saveToLocal,
-            icon: const Icon(Icons.save_alt),
-            label: const Text('保存到本地', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            onPressed: _saving ? null : _saveToLocal,
+            icon: _saving
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Icon(Icons.save_alt),
+            label: Text(_saving ? '保存中...' : '保存到本地', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// 视频播放组件：使用 video_player 进行真实的视频播放
+class _VideoItem extends StatefulWidget {
+  final String url;
+  const _VideoItem({required this.url});
+
+  @override
+  State<_VideoItem> createState() => _VideoItemState();
+}
+
+class _VideoItemState extends State<_VideoItem> {
+  VideoPlayerController? _controller;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    try {
+      final controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      await controller.initialize();
+      await controller.setLooping(true);
+      if (!mounted) {
+        controller.dispose();
+        return;
+      }
+      setState(() => _controller = controller);
+      controller.play();
+    } catch (e) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_failed) {
+      return const Center(child: Text('视频加载失败', style: TextStyle(color: Colors.white70)));
+    }
+    final controller = _controller;
+    if (controller == null) {
+      return const Center(child: CircularProgressIndicator(color: Colors.white));
+    }
+    return Center(
+      child: AspectRatio(
+        aspectRatio: controller.value.aspectRatio,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            VideoPlayer(controller),
+            // 点击播放/暂停
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() {
+                controller.value.isPlaying ? controller.pause() : controller.play();
+              }),
+              child: AnimatedOpacity(
+                opacity: controller.value.isPlaying ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 200),
+                child: const Icon(Icons.play_circle_fill, size: 64, color: Colors.white70),
+              ),
+            ),
+          ],
         ),
       ),
     );

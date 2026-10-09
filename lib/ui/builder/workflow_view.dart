@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
+import '../../utils.dart';
 import 'run_view.dart'; // 下一步我们将创建运行页面
 
 class WorkflowView extends ConsumerStatefulWidget {
@@ -16,6 +17,16 @@ class WorkflowView extends ConsumerStatefulWidget {
 class _WorkflowViewState extends ConsumerState<WorkflowView> {
   bool _isReady = false;
   List<WorkflowNode> _extractableNodes = [];
+  // 别名输入框控制器统一挂到 State 上，随页面销毁一并释放（避免 build 内新建导致泄漏）
+  final Map<String, TextEditingController> _aliasControllers = {};
+
+  @override
+  void dispose() {
+    for (final c in _aliasControllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -27,7 +38,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     final notifier = ref.read(workflowProvider.notifier);
     final state = ref.read(workflowProvider);
 
-    if (widget.workflowId == 'local') {
+    if (widget.workflowId.startsWith('local_')) {
       if (state.currentWorkflowData == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('本地数据已丢失，请重新选择文件')));
         Navigator.pop(context);
@@ -45,6 +56,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       _parseWorkflow(ref.read(workflowProvider).currentWorkflowData!);
     }
 
+    if (!mounted) return;
     setState(() {
       _isReady = true;
     });
@@ -64,10 +76,15 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
       final title = meta?['title'] as String? ?? 'Node $nodeId';
 
-      // 1. 提取 KSampler 的随机种子
-      if (classType == 'KSampler' || classType == 'KSamplerAdvanced') {
+      // 1. 提取采样器的随机种子
+      if (classType == 'KSampler') {
         if (inputs.containsKey('seed') && inputs['seed'] is! List) {
           nodes.add(WorkflowNode(id: nodeId, classType: classType, key: 'seed', alias: title, exposed: true));
+        }
+      } else if (classType == 'KSamplerAdvanced') {
+        // KSamplerAdvanced 的种子键是 noise_seed，而非 seed
+        if (inputs.containsKey('noise_seed') && inputs['noise_seed'] is! List) {
+          nodes.add(WorkflowNode(id: nodeId, classType: classType, key: 'noise_seed', alias: title, exposed: true));
         }
       }
       // 2. 提取原生 CLIP 文本
@@ -77,7 +94,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         }
       }
       // 3. 提取主流自定义文本节点
-      else if (['Text Multiline', 'Text box', 'PrimitiveNode'].contains(classType)) {
+      else if (classType == 'PrimitiveNode') {
         if (inputs.containsKey('text') && inputs['text'] is String) {
           nodes.add(WorkflowNode(id: nodeId, classType: classType, key: 'text', alias: title, exposed: true));
         } else if (inputs.containsKey('value') && inputs['value'] is String) {
@@ -119,7 +136,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       );
     }
 
-    final displayName = widget.workflowId.replaceAll('_api.json', '');
+    final displayName = workflowDisplayName(widget.workflowId);
 
     return Scaffold(
       appBar: AppBar(
@@ -182,7 +199,8 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                                 Padding(
                                   padding: const EdgeInsets.only(left: 48.0),
                                   child: TextField(
-                                    controller: TextEditingController(text: node.alias)..selection = TextSelection.collapsed(offset: node.alias.length),
+                                    controller: _aliasControllers.putIfAbsent(
+                                        node.id, () => TextEditingController(text: node.alias)),
                                     onChanged: (val) => node.alias = val,
                                     decoration: const InputDecoration(
                                       isDense: true,
