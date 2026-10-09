@@ -46,10 +46,11 @@ class _HomeViewState extends ConsumerState<HomeView> {
         final jsonString = utf8.decode(result.files.single.bytes!);
         final Map<String, dynamic> data = jsonDecode(jsonString);
 
-        ref.read(workflowProvider.notifier).setLocalWorkflowData(data);
-
         // 以内容哈希作为本地工作流 ID，避免多个本地文件共用 'local' 导致配置串台
         final localId = 'local_${stableHash(jsonString).toRadixString(36)}';
+        // 同时记录数据归属，防止与其它工作流的缓存串用
+        ref.read(workflowProvider.notifier).setLocalWorkflowData(data, workflowId: localId);
+
         if (!mounted) return;
         await Navigator.push(context, MaterialPageRoute(builder: (_) => WorkflowView(workflowId: localId)));
         if (!mounted) return;

@@ -42,7 +42,8 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     final state = ref.read(workflowProvider);
 
     if (widget.workflowId.startsWith('local_')) {
-      if (state.currentWorkflowData == null) {
+      // 本地导入：校验缓存数据确实属于当前本地工作流
+      if (!state.hasDataFor(widget.workflowId)) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('本地数据已丢失，请重新选择文件')));
         Navigator.pop(context);
         return;
@@ -216,8 +217,14 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   // 重新解析：放弃已保存的映射，用工作流当前结构重新提取参数。
   // 用于服务器端工作流更新后，让 App 重新识别新参数。
   Future<void> _reparse() async {
-    final state = ref.read(workflowProvider);
-    final data = state.currentWorkflowData;
+    // 本地分支必须校验归属：可能已切换到其它本地工作流，缓存不属于当前 ID
+    if (widget.workflowId.startsWith('local_') &&
+        !ref.read(workflowProvider).hasDataFor(widget.workflowId)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('本地数据已丢失，请重新选择文件')));
+      return;
+    }
+    final data = ref.read(workflowProvider).currentWorkflowData;
     if (data == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('无可用工作流数据，无法重新解析')));

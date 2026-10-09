@@ -10,22 +10,33 @@ class WorkflowState {
   final List<String> workflowList;
   final bool isLoading;
   final Map<String, dynamic>? currentWorkflowData;
+  /// currentWorkflowData 所属的工作流 ID。
+  /// 用于防止跨工作流复用缓存：切换工作流后必须重新拉取，
+  /// 否则会把上一个工作流的图提交出去（会导致服务端报错）。
+  final String? currentWorkflowId;
 
   WorkflowState({
     this.workflowList = const [],
     this.isLoading = false,
     this.currentWorkflowData,
+    this.currentWorkflowId,
   });
+
+  /// 指定工作流的数据是否已就绪（数据存在且归属匹配）
+  bool hasDataFor(String workflowId) =>
+      currentWorkflowData != null && currentWorkflowId == workflowId;
 
   WorkflowState copyWith({
     List<String>? workflowList,
     bool? isLoading,
     Map<String, dynamic>? currentWorkflowData,
+    String? currentWorkflowId,
   }) {
     return WorkflowState(
       workflowList: workflowList ?? this.workflowList,
       isLoading: isLoading ?? this.isLoading,
       currentWorkflowData: currentWorkflowData ?? this.currentWorkflowData,
+      currentWorkflowId: currentWorkflowId ?? this.currentWorkflowId,
     );
   }
 }
@@ -79,7 +90,10 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
 
       if (response.statusCode == 200) {
         final data = Map<String, dynamic>.from(jsonDecode(response.body));
-        state = state.copyWith(currentWorkflowData: normalizeWorkflowJson(data));
+        state = state.copyWith(
+          currentWorkflowData: normalizeWorkflowJson(data),
+          currentWorkflowId: filename,
+        );
         return true;
       }
     } catch (e) {
@@ -89,8 +103,11 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
   }
 
   // 设置本地导入的 JSON 数据（同样做归一化，保证与线上工作流结构一致）
-  void setLocalWorkflowData(Map<String, dynamic> data) {
-    state = state.copyWith(currentWorkflowData: normalizeWorkflowJson(data));
+  void setLocalWorkflowData(Map<String, dynamic> data, {required String workflowId}) {
+    state = state.copyWith(
+      currentWorkflowData: normalizeWorkflowJson(data),
+      currentWorkflowId: workflowId,
+    );
   }
 
   // 保存节点配置
