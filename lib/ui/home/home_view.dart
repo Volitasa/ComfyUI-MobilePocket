@@ -170,6 +170,19 @@ class _HomeViewState extends ConsumerState<HomeView> {
         else
           ...workflowState.workflowList.map((file) => _buildWorkflowCard(file)),
 
+        // 工作流来源说明（与服务器配置页提示文案同一风格）
+        if (!workflowState.isLoading && workflowState.workflowList.isNotEmpty)
+          const SizedBox(height: 12),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            '提示：工作流来自 ComfyUI 的 userdata/workflows 目录下的 _api.json 文件。'
+            '这些 API JSON 由 ComfyUI-AutoSaveAPI 插件自动生成'
+            '（https://github.com/Volitasa/ComfyUI-AutoSaveAPI.git）。',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ),
+
         const SizedBox(height: 40),
         const Row(
           children: [
@@ -190,6 +203,17 @@ class _HomeViewState extends ConsumerState<HomeView> {
             padding: const EdgeInsets.symmetric(vertical: 16),
             side: const BorderSide(color: Colors.grey),
             foregroundColor: Colors.black87,
+          ),
+        ),
+        // 导入文件格式说明
+        const SizedBox(height: 12),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            '提示：这里导入的是 ComfyUI 的 API 格式 JSON（_api.json），'
+            '即以节点 ID 为键、含 class_type 与 inputs 的结构；'
+            '普通 UI 界面保存的 workflow JSON 不适用。',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ),
       ],
