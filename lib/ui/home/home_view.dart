@@ -28,13 +28,6 @@ class _HomeViewState extends ConsumerState<HomeView> {
         }
       });
     });
-    // 监听连接状态：在设置页完成连接（isConnected 由 false→true）时，
-    // 自动拉取一次工作流列表，免去手动点刷新
-    ref.listen(connectionProvider, (prev, next) {
-      if (next.isConnected && !(prev?.isConnected ?? false)) {
-        ref.read(workflowProvider.notifier).fetchRemoteList();
-      }
-    });
   }
 
   Future<void> _importLocalJson() async {
@@ -72,6 +65,14 @@ class _HomeViewState extends ConsumerState<HomeView> {
   Widget build(BuildContext context) {
     final configState = ref.watch(connectionProvider);
     final workflowState = ref.watch(workflowProvider);
+
+    // 监听连接状态：在设置页完成连接（isConnected 由 false→true）时，
+    // 自动拉取一次工作流列表，免去手动点刷新
+    ref.listen(connectionProvider, (prev, next) {
+      if (next.isConnected && !(prev?.isConnected ?? false)) {
+        ref.read(workflowProvider.notifier).fetchRemoteList();
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
