@@ -7,7 +7,6 @@ import 'package:video_player/video_player.dart';
 import 'dart:io';
 import '../../theme.dart';
 import '../../providers/task_manager.dart';
-import '../../providers/ws_event_provider.dart';
 import '../../providers/connection_provider.dart';
 import '../../models/task_history.dart';
 import '../widgets/connection_status_badge.dart';
@@ -21,12 +20,11 @@ class HistoryView extends ConsumerStatefulWidget {
 }
 
 class _HistoryViewState extends ConsumerState<HistoryView> {
+  // 连接生命周期由 home_view 统一维护（连接状态变化时 connect/disconnect），
+  // 此处不再单独触发，避免多处 connect 造成框架断言风险
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(wsProvider.notifier).connect();
-    });
   }
 
   // 任务状态 → 展示色（成功绿 / 失败红 / 中断灰 / 进行中橙）

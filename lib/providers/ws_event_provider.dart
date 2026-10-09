@@ -14,14 +14,10 @@ class WsNotifier extends Notifier<WsState> {
 
   @override
   WsState build() {
-    // 监听连接状态：连接成功后自动建立 WS，断开时关闭，保证单点维护连接生命周期
-    ref.listen(connectionProvider, (prev, next) {
-      if (next.isConnected && !(prev?.isConnected ?? false)) {
-        connect();
-      } else if (!next.isConnected && (prev?.isConnected ?? false)) {
-        disconnect();
-      }
-    });
+    // 注意：不在 build() 里用 ref.listen 做跨 provider 副作用监听
+    // （这是 Riverpod 反模式，且会触发 Flutter 3.47 的 InheritedElement
+    //  deactivate 断言）。连接触发由 UI 层（home_view）在连接状态变化时
+    //  显式调用 connect()/disconnect()。
     return WsState();
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/workflow_provider.dart';
+import '../../providers/ws_event_provider.dart';
 import '../../utils.dart';
 import '../builder/workflow_view.dart';
 import '../builder/run_view.dart';
@@ -73,11 +74,14 @@ class _HomeViewState extends ConsumerState<HomeView> {
     final configState = ref.watch(connectionProvider);
     final workflowState = ref.watch(workflowProvider);
 
-    // 监听连接状态：在设置页完成连接（isConnected 由 false→true）时，
-    // 自动拉取一次工作流列表，免去手动点刷新
+    // 监听连接状态：连接成功（false→true）时建立 WS 并拉取工作流列表，
+    // 断开（true→false）时关闭 WS，统一在此维护连接生命周期
     ref.listen(connectionProvider, (prev, next) {
       if (next.isConnected && !(prev?.isConnected ?? false)) {
+        ref.read(wsProvider.notifier).connect();
         ref.read(workflowProvider.notifier).fetchRemoteList();
+      } else if (!next.isConnected && (prev?.isConnected ?? false)) {
+        ref.read(wsProvider.notifier).disconnect();
       }
     });
 
