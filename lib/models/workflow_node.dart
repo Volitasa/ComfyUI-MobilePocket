@@ -18,6 +18,10 @@ class WorkflowNode {
   String alias;
   bool exposed;
 
+  /// 节点标题（工作流 _meta.title），用于分组展示时识别节点身份。
+  /// 旧配置无此字段，反序列化时兜底为空串。
+  final String title;
+
   /// 参数类型（旧配置无此字段，反序列化时兜底为 [ParamType.text]）
   final ParamType paramType;
 
@@ -33,6 +37,7 @@ class WorkflowNode {
     required this.key,
     required this.alias,
     this.exposed = false,
+    this.title = '',
     this.paramType = ParamType.text,
     this.options = const [],
     this.value,
@@ -45,6 +50,7 @@ class WorkflowNode {
       key: json['key'],
       alias: json['alias'] ?? '',
       exposed: json['exposed'] ?? false,
+      title: json['title'] ?? '',
       paramType: json['paramType'] != null
           ? _paramTypeFromName(json['paramType'])
           : _paramTypeFromKey(json['key']),
@@ -80,6 +86,7 @@ class WorkflowNode {
         'key': key,
         'alias': alias,
         'exposed': exposed,
+        'title': title,
         'paramType': paramType.name,
         'options': options,
         'value': value,

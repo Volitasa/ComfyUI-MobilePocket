@@ -100,3 +100,10 @@ bool isDefaultExposed(String key, String classType) {
 
 /// 参数在表单/控制器中的唯一键：同一节点可有多个参数，node.id 会冲突。
 String nodeParamKey(String nodeId, String key) => '$nodeId:$key';
+
+/// 判断节点标题是否为“有效自定义标题”（用户手动改过、有辨识度）。
+/// 无效标题：空串 / 等于类名 / 自动生成的 "Node X"。
+bool isMeaningfulTitle(String title, String classType) {
+  final t = title.trim();
+  return t.isNotEmpty && t != classType && !t.startsWith('Node ');
+}

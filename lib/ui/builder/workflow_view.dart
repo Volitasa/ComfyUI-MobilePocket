@@ -116,6 +116,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
             classType: classType,
             key: key,
             alias: _defaultAlias(key, title, classType),
+            title: title,
             exposed: true,
             paramType: ParamType.seed,
             value: rawValue is num ? rawValue.toInt() : rawValue,
@@ -130,6 +131,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
             classType: classType,
             key: key,
             alias: _defaultAlias(key, title, classType),
+            title: title,
             exposed: true,
             paramType: ParamType.image,
             value: rawValue,
@@ -161,6 +163,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
           classType: classType,
           key: key,
           alias: _defaultAlias(key, title, classType),
+          title: title,
           exposed: isDefaultExposed(key, classType),
           paramType: effectiveType,
           options: options,
@@ -191,6 +194,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
               key: n.key,
               alias: saved.alias.isNotEmpty ? saved.alias : n.alias,
               exposed: saved.exposed,
+              title: n.title,
               paramType: n.paramType,
               options: n.options,
               value: n.value,
@@ -242,6 +246,16 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     _aliasControllers.clear();
     setState(() => _isReady = true);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已重新解析，请确认参数后保存')));
+  }
+
+  // 分组卡片的头部标签：优先展示节点标题（有辨识度），无有效标题回退类名
+  String _groupLabel(List<WorkflowNode> params) {
+    final classType = params.first.classType;
+    final title = params.first.title;
+    if (isMeaningfulTitle(title, classType)) {
+      return title;
+    }
+    return classType;
   }
 
   // 配置面板里单个参数行：勾选 + 别名编辑 + 类型/当前值摘要
@@ -318,8 +332,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   // 无自定义标题才用内置描述名；结构化参数（steps/cfg 等）用参数级描述名。
   String _defaultAlias(String key, String title, String classType) {
     final t = title.trim();
-    // 默认标题 = 空串 / 与类名相同 / 自动生成的 "Node X"
-    final isDefaultTitle = t.isEmpty || t == classType || t.startsWith('Node ');
+    final isDefaultTitle = !isMeaningfulTitle(title, classType);
 
     if (key == 'text' || key == 'value') {
       return isDefaultTitle ? '提示词' : t;
@@ -424,7 +437,6 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                       itemBuilder: (context, index) {
                         final nodeId = groupIds[index];
                         final params = groups[nodeId]!;
-                        final classType = params.first.classType;
                         final exposedCount = params.where((p) => p.exposed).length;
 
                         // 默认展开含已勾选参数的节点，其余收起；用户可手动切换
@@ -467,7 +479,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
-                                          '[$classType] $nodeId',
+                                          _groupLabel(params),
                                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                           overflow: TextOverflow.ellipsis,
                                         ),

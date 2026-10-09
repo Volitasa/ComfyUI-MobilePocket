@@ -268,7 +268,6 @@ class _RunViewState extends ConsumerState<RunView> {
                 itemBuilder: (context, index) {
                   final nodeId = groupIds[index];
                   final params = groups[nodeId]!;
-                  final classType = params.first.classType;
                   final expanded = _expandedNodeIds.contains(nodeId)
                       ? true
                       : _collapsedNodeIds.contains(nodeId)
@@ -307,7 +306,7 @@ class _RunViewState extends ConsumerState<RunView> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    classType,
+                                    _groupLabel(params),
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -388,6 +387,14 @@ class _RunViewState extends ConsumerState<RunView> {
         ],
       ),
     );
+  }
+
+  // 分组卡片头部标签：优先节点标题，无有效标题回退类名
+  String _groupLabel(List<WorkflowNode> params) {
+    final classType = params.first.classType;
+    final title = params.first.title;
+    if (isMeaningfulTitle(title, classType)) return title;
+    return classType;
   }
 
   Widget _buildInputControl(WorkflowNode node) {
