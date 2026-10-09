@@ -165,123 +165,23 @@ class _SetupViewState extends ConsumerState<SetupView> {
     );
   }
 
-  // 新增/编辑连接对话框
+  // 新增/编辑连接对话框入口。
+  // 对话框内容抽为独立 StatefulWidget（_ServerFormDialog），
+  // 由它自己管理 TextEditingController 的生命周期——避免在对话框
+  // 退场动画结束前 dispose 掉仍被 TextField 引用的 controller。
   Future<void> _showServerDialog({ServerConfig? existing}) async {
-    final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final primaryCtrl = TextEditingController(text: existing?.primaryUrl ?? '');
-    final backupCtrl = TextEditingController(text: existing?.backupUrl ?? '');
-    String testMsg = '';
-    bool testing = false;
-
-    final ok = await showDialog<bool>(
+    final result = await showDialog<_ServerFormResult>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(existing == null ? '新增连接' : '编辑连接'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '名称',
-                    hintText: '例如: 家里内网 / 公司外网',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: primaryCtrl,
-                  keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: '主地址（优先尝试）',
-                    hintText: '例如: http://192.168.1.100:8188',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: backupCtrl,
-                  keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: '备用地址（可选）',
-                    hintText: '主地址不通时使用，如外网地址',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
-                if (testMsg.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    testMsg,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: testMsg.contains('不可用') ? Colors.red.shade700 : Colors.green.shade700,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed: testing
-                      ? null
-                      : () async {
-                          if (primaryCtrl.text.trim().isEmpty) {
-                            setDialogState(() => testMsg = '请先填写主地址');
-                            return;
-                          }
-                          setDialogState(() {
-                            testing = true;
-                            testMsg = '';
-                          });
-                          final msg = await ref
-                              .read(connectionProvider.notifier)
-                              .testUrls(primaryCtrl.text, backupCtrl.text);
-                          setDialogState(() {
-                            testing = false;
-                            testMsg = msg;
-                          });
-                        },
-                  icon: testing
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.wifi_find, size: 18),
-                  label: const Text('测试连接'),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.green),
-              onPressed: () {
-                if (primaryCtrl.text.trim().isEmpty) return;
-                Navigator.pop(ctx, true);
-              },
-              child: const Text('保存'),
-            ),
-          ],
-        ),
-      ),
+      builder: (ctx) => _ServerFormDialog(existing: existing),
     );
 
-    if (!mounted) return;
-    if (ok == true) {
-      final notifier = ref.read(connectionProvider.notifier);
-      if (existing == null) {
-        await notifier.addServer(nameCtrl.text, primaryCtrl.text, backupCtrl.text);
-      } else {
-        await notifier.updateServer(existing.id, nameCtrl.text, primaryCtrl.text, backupCtrl.text);
-      }
+    if (result == null || !mounted) return;
+    final notifier = ref.read(connectionProvider.notifier);
+    if (existing == null) {
+      await notifier.addServer(result.name, result.primary, result.backup);
+    } else {
+      await notifier.updateServer(existing.id, result.name, result.primary, result.backup);
     }
-    nameCtrl.dispose();
-    primaryCtrl.dispose();
-    backupCtrl.dispose();
   }
 
   Future<void> _confirmDelete(ServerConfig server) async {
@@ -303,5 +203,146 @@ class _SetupViewState extends ConsumerState<SetupView> {
     if (confirmed == true && mounted) {
       await ref.read(connectionProvider.notifier).removeServer(server.id);
     }
+  }
+}
+
+/// 新增/编辑连接对话框的返回值
+class _ServerFormResult {
+  final String name;
+  final String primary;
+  final String backup;
+  _ServerFormResult(this.name, this.primary, this.backup);
+}
+
+/// 新增/编辑连接表单：独立 State，自管理输入控制器生命周期
+class _ServerFormDialog extends ConsumerStatefulWidget {
+  final ServerConfig? existing;
+  const _ServerFormDialog({this.existing});
+
+  @override
+  ConsumerState<_ServerFormDialog> createState() => _ServerFormDialogState();
+}
+
+class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _primaryCtrl;
+  late final TextEditingController _backupCtrl;
+  String _testMsg = '';
+  bool _testing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.existing?.name ?? '');
+    _primaryCtrl = TextEditingController(text: widget.existing?.primaryUrl ?? '');
+    _backupCtrl = TextEditingController(text: widget.existing?.backupUrl ?? '');
+  }
+
+  @override
+  void dispose() {
+    // 与对话框 State 同生命周期释放，此时退场动画已结束、TextField 已卸载
+    _nameCtrl.dispose();
+    _primaryCtrl.dispose();
+    _backupCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _test() async {
+    if (_primaryCtrl.text.trim().isEmpty) {
+      setState(() => _testMsg = '请先填写主地址');
+      return;
+    }
+    setState(() {
+      _testing = true;
+      _testMsg = '';
+    });
+    final msg = await ref
+        .read(connectionProvider.notifier)
+        .testUrls(_primaryCtrl.text, _backupCtrl.text);
+    if (!mounted) return;
+    setState(() {
+      _testing = false;
+      _testMsg = msg;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.existing == null ? '新增连接' : '编辑连接'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameCtrl,
+              decoration: const InputDecoration(
+                labelText: '名称',
+                hintText: '例如: 家里内网 / 公司外网',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _primaryCtrl,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: '主地址（优先尝试）',
+                hintText: '例如: http://192.168.1.100:8188',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _backupCtrl,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: '备用地址（可选）',
+                hintText: '主地址不通时使用，如外网地址',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            if (_testMsg.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                _testMsg,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _testMsg.contains('不可用') ? Colors.red.shade700 : Colors.green.shade700,
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _testing ? null : _test,
+              icon: _testing
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.wifi_find, size: 18),
+              label: const Text('测试连接'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: Colors.green),
+          onPressed: () {
+            if (_primaryCtrl.text.trim().isEmpty) return;
+            Navigator.pop(
+              context,
+              _ServerFormResult(_nameCtrl.text, _primaryCtrl.text, _backupCtrl.text),
+            );
+          },
+          child: const Text('保存'),
+        ),
+      ],
+    );
   }
 }
