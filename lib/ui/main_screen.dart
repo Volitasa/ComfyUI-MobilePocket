@@ -1,40 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'home/home_view.dart';
 import 'gallery/history_view.dart';
 import 'setup/setup_view.dart';
 
-class MainScreen extends StatefulWidget {
+// 全局暴露的 Tab 索引状态，默认 0 (首页)
+final mainTabIndexProvider = StateProvider<int>((ref) => 0);
+
+class MainScreen extends ConsumerWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 监听当前选中的 Tab 索引
+    final currentIndex = ref.watch(mainTabIndexProvider);
 
-class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
-
-  // 保持与 Vue 版本路由一致的三个页面
-  final List<Widget> _pages = const [
-    HomeView(),
-    HistoryView(),
-    SetupView(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      // 使用 IndexedStack 保证切换 Tab 时页面不会被销毁重绘
       body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+        index: currentIndex,
+        children: const [
+          HomeView(),
+          HistoryView(),
+          SetupView(),
+        ],
       ),
-      // Material 3 风格的底部导航栏
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
+        selectedIndex: currentIndex,
         onDestinationSelected: (int index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          // 更新全局索引
+          ref.read(mainTabIndexProvider.notifier).state = index;
         },
         destinations: const [
           NavigationDestination(

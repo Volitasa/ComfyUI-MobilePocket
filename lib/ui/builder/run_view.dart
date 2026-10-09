@@ -6,7 +6,8 @@ import 'package:file_picker/file_picker.dart';
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
 import '../../providers/task_manager.dart';
-// import '../gallery/history_view.dart'; // 下一步画廊视图
+import '../../providers/ws_event_provider.dart';
+import '../main_screen.dart';
 
 class RunView extends ConsumerStatefulWidget {
   final String workflowId;
@@ -87,6 +88,7 @@ class _RunViewState extends ConsumerState<RunView> {
     if (workflowData == null) return;
 
     setState(() => _isExecuting = true);
+    ref.read(wsProvider.notifier).connect();
 
     try {
       // 深拷贝一份原始工作流，防止污染内存
@@ -122,9 +124,9 @@ class _RunViewState extends ConsumerState<RunView> {
         taskManager.createNewTask(result['prompt_id'], widget.workflowId);
         
         if (!mounted) return;
-        // 跳转到历史记录页
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HistoryView()));
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('任务下发成功！')));
+        Navigator.pop(context);
+        ref.read(mainTabIndexProvider.notifier).state = 1;
       } else {
         throw Exception('提交失败，请检查 ComfyUI 日志');
       }

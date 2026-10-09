@@ -135,19 +135,30 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       } else {
         task.status = '已完成';
         task.progressValue = task.progressMax;
-        task.nodeInfo = '✅ 流程结束';
+        // 关键体验修复：防止流程结束的提示覆盖掉成功的提示
+        if (task.nodeInfo != '✅ 生成成功') {
+          task.nodeInfo = '✅ 流程结束';
+        }
       }
     } else if (type == 'executed') {
-      if (data['output'] != null) {
-        if (data['output']['images'] != null) {
-          task.images.addAll(List<Map<String, dynamic>>.from(data['output']['images']));
+      // 关键修复：加入 try-catch 和安全的 List.map 类型映射
+      try {
+        if (data['output'] != null) {
+          if (data['output']['images'] != null) {
+            final List imgs = data['output']['images'];
+            task.images.addAll(imgs.map((e) => Map<String, dynamic>.from(e)).toList());
+          }
+          if (data['output']['gifs'] != null) {
+            final List gifs = data['output']['gifs'];
+            task.images.addAll(gifs.map((e) => Map<String, dynamic>.from(e)).toList());
+          }
         }
-        if (data['output']['gifs'] != null) {
-          task.images.addAll(List<Map<String, dynamic>>.from(data['output']['gifs']));
-        }
+        task.status = '已完成';
+        task.nodeInfo = '✅ 生成成功';
+        print('=== 🎉 成功获取到媒体文件: ${task.images.length} 张 ===');
+      } catch (e) {
+        print('=== ❌ 解析图片数据失败: $e ===');
       }
-      task.status = '已完成';
-      task.nodeInfo = '✅ 生成成功';
     }
 
     // 触发状态更新并持久化
@@ -155,7 +166,6 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     updatedList[taskIndex] = task;
     _saveHistory(updatedList);
   }
-}
 
 final taskManagerProvider = NotifierProvider<TaskManagerNotifier, TaskState>(() {
   return TaskManagerNotifier();
