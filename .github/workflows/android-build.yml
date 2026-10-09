@@ -51,26 +51,29 @@ jobs:
           cd android
           ./gradlew assembleRelease
 
-      # 8. 使用 GitHub Secrets 注入密钥并进行 V1/V2 正式签名
-      - name: Sign Release APK
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: android/app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
-          alias: ${{ secrets.SIGNING_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          buildToolsVersion: 34.0.0
-
-      # 9. 重命名生成的 APK 文件，去掉默认的 app-release 丑陋命名
-      - name: Rename APK File
+      # 8. 原生标准做法：使用 Android 官方工具 zipalign 和 apksigner 进行签名
+      - name: Native Sign APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEYSTORE_PASS: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          mv ${{steps.sign_app.outputs.signedReleaseFile}} android/app/build/outputs/apk/release/ComfyUI-Mobile-Web.apk
+          # 1. 将 Base64 还原为真实的 .jks 文件
+          echo $KEYSTORE_BASE64 | base64 -d > release.jks
 
-      # 10. 收集签名且重命名后的 APK 并上传
+          # 2. 找到服务器上最新版本的 Android Build Tools
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+
+          # 3. 对齐优化 APK (Zipalign)
+          $BUILD_TOOLS_DIR/zipalign -v 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+
+          # 4. 正式签名 (Apksigner)
+          $BUILD_TOOLS_DIR/apksigner sign --ks release.jks --ks-key-alias $ALIAS --ks-pass pass:$KEYSTORE_PASS --key-pass pass:$KEY_PASS --out ComfyUI-Mobile-Web.apk aligned.apk
+
+      # 9. 上传签名后的文件
       - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: ComfyUI-Mobile-Web-Release-APK # GitHub 网页上显示的压缩包名称
-          path: android/app/build/outputs/apk/release/ComfyUI-Mobile-Web.apk
+          name: ComfyUI-Mobile-Web-Release-APK
+          path: ComfyUI-Mobile-Web.apk
