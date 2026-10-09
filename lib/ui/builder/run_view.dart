@@ -46,39 +46,41 @@ class _RunViewState extends ConsumerState<RunView> {
 
     _formConfig = savedConfig.where((node) => node.exposed).toList();
     for (var node in _formConfig) {
+      // 同一节点可有多个参数，控制器/状态统一用 id:key 复合键，避免串台
+      final k = nodeParamKey(node.id, node.key);
       switch (node.paramType) {
         case ParamType.seed:
           // 有初值则用初值，否则随机
           if (node.value is int) {
-            _setSeedValue(node.id, node.value as int);
+            _setSeedValue(k, node.value as int);
           } else {
-            _generateSeed(node.id);
+            _generateSeed(k);
           }
           break;
         case ParamType.text:
-          _controllers[node.id] = TextEditingController(text: node.value?.toString() ?? '');
+          _controllers[k] = TextEditingController(text: node.value?.toString() ?? '');
           break;
         case ParamType.intType:
-          _controllers[node.id] = TextEditingController(text: _numToString(node.value));
+          _controllers[k] = TextEditingController(text: _numToString(node.value));
           break;
         case ParamType.float:
-          _controllers[node.id] = TextEditingController(text: _numToString(node.value));
+          _controllers[k] = TextEditingController(text: _numToString(node.value));
           break;
         case ParamType.boolType:
-          _widgetValues[node.id] = node.value ?? false;
+          _widgetValues[k] = node.value ?? false;
           break;
         case ParamType.enumType:
           // 下拉当前值：取 value，若为空则取 options 第一项
           final opts = node.options;
           final current = node.value?.toString();
-          _widgetValues[node.id] = (current != null && opts.contains(current))
+          _widgetValues[k] = (current != null && opts.contains(current))
               ? current
               : (opts.isNotEmpty ? opts.first : (current ?? ''));
           break;
         case ParamType.image:
           // 图片初值为服务器上已有的文件名，仅作展示，不预载图片
           if (node.value is String && (node.value as String).isNotEmpty) {
-            _widgetValues[node.id] = node.value;
+            _widgetValues[k] = node.value;
           }
           break;
       }
@@ -136,20 +138,21 @@ class _RunViewState extends ConsumerState<RunView> {
 
   // 根据参数类型，把控件里的值解析成正确的 Dart 类型后提交
   dynamic _resolveValue(WorkflowNode node) {
+    final k = nodeParamKey(node.id, node.key);
     switch (node.paramType) {
       case ParamType.seed:
-        return int.tryParse(_controllers[node.id]?.text ?? '') ?? 0;
+        return int.tryParse(_controllers[k]?.text ?? '') ?? 0;
       case ParamType.intType:
-        return int.tryParse(_controllers[node.id]?.text ?? '');
+        return int.tryParse(_controllers[k]?.text ?? '');
       case ParamType.float:
-        return double.tryParse(_controllers[node.id]?.text ?? '');
+        return double.tryParse(_controllers[k]?.text ?? '');
       case ParamType.boolType:
-        return _widgetValues[node.id] ?? false;
+        return _widgetValues[k] ?? false;
       case ParamType.enumType:
-        return _widgetValues[node.id];
+        return _widgetValues[k];
       case ParamType.text:
       case ParamType.image:
-        return _controllers[node.id]?.text;
+        return _controllers[k]?.text;
     }
   }
 
@@ -173,7 +176,7 @@ class _RunViewState extends ConsumerState<RunView> {
 
         if (node.paramType == ParamType.image) {
           // 图片：只有用户重新选择了本地图片才上传；否则沿用工作流里的原值
-          final picked = _formData[node.id];
+          final picked = _formData[nodeParamKey(node.id, node.key)];
           if (picked != null) {
             final uploadedName = await taskManager.uploadImage(picked['bytes'], picked['filename']);
             if (uploadedName == null) throw Exception('图片上传失败');
@@ -320,10 +323,12 @@ class _RunViewState extends ConsumerState<RunView> {
   }
 
   Widget _buildInputControl(WorkflowNode node) {
+    // 同一节点可有多个参数，控制器/状态统一用 id:key 复合键
+    final k = nodeParamKey(node.id, node.key);
     switch (node.paramType) {
       case ParamType.text:
         return TextField(
-          controller: _controllers[node.id],
+          controller: _controllers[k],
           maxLines: 3,
           minLines: 3,
           decoration: InputDecoration(
@@ -339,7 +344,7 @@ class _RunViewState extends ConsumerState<RunView> {
           children: [
             Expanded(
               child: TextField(
-                controller: _controllers[node.id],
+                controller: _controllers[k],
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -351,7 +356,7 @@ class _RunViewState extends ConsumerState<RunView> {
             ),
             const SizedBox(width: 12),
             ElevatedButton.icon(
-              onPressed: () => _generateSeed(node.id),
+              onPressed: () => _generateSeed(k),
               icon: const Icon(Icons.casino, size: 18),
               label: const Text('随机'),
             )
@@ -359,7 +364,7 @@ class _RunViewState extends ConsumerState<RunView> {
         );
       case ParamType.intType:
         return TextField(
-          controller: _controllers[node.id],
+          controller: _controllers[k],
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
             hintText: '整数',
@@ -371,7 +376,7 @@ class _RunViewState extends ConsumerState<RunView> {
         );
       case ParamType.float:
         return TextField(
-          controller: _controllers[node.id],
+          controller: _controllers[k],
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
             hintText: '数值（可小数）',
@@ -385,15 +390,15 @@ class _RunViewState extends ConsumerState<RunView> {
         return SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(
-            (_widgetValues[node.id] == true) ? '开启' : '关闭',
+            (_widgetValues[k] == true) ? '开启' : '关闭',
             style: const TextStyle(fontSize: 14),
           ),
-          value: _widgetValues[node.id] == true,
-          onChanged: (val) => setState(() => _widgetValues[node.id] = val),
+          value: _widgetValues[k] == true,
+          onChanged: (val) => setState(() => _widgetValues[k] = val),
         );
       case ParamType.enumType:
         final opts = node.options;
-        final current = _widgetValues[node.id]?.toString() ?? '';
+        final current = _widgetValues[k]?.toString() ?? '';
         // 若当前值不在选项里（理论上不会），仍显示它
         final items = opts.contains(current) ? opts : [...opts, if (current.isNotEmpty) current];
         return DropdownButtonFormField<String>(
@@ -408,12 +413,12 @@ class _RunViewState extends ConsumerState<RunView> {
           ),
           items: items.map((o) => DropdownMenuItem(value: o, child: Text(o, overflow: TextOverflow.ellipsis))).toList(),
           onChanged: (val) {
-            if (val != null) setState(() => _widgetValues[node.id] = val);
+            if (val != null) setState(() => _widgetValues[k] = val);
           },
         );
       case ParamType.image:
-        final hasImage = _formData[node.id] != null;
-        final serverImage = _widgetValues[node.id] as String?;
+        final hasImage = _formData[k] != null;
+        final serverImage = _widgetValues[k] as String?;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -434,7 +439,7 @@ class _RunViewState extends ConsumerState<RunView> {
               const SizedBox(height: 8),
             ],
             OutlinedButton.icon(
-              onPressed: () => _pickImage(node.id),
+              onPressed: () => _pickImage(k),
               icon: const Icon(Icons.image),
               label: Text(hasImage ? '更换图片' : '选择图片'),
             ),
@@ -443,7 +448,7 @@ class _RunViewState extends ConsumerState<RunView> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.memory(
-                  _formData[node.id]['bytes'],
+                  _formData[k]['bytes'],
                   height: 100,
                   width: double.infinity,
                   fit: BoxFit.cover,

@@ -75,7 +75,24 @@ const Set<String> highFreqParams = {
   'scheduler',
 };
 
+/// 已知枚举型参数名：这些参数的值在 API JSON 里是字符串（当前选中项），
+/// 但实际语义是下拉选项。识别为下拉框，选项暂取当前值。
+const Set<String> knownEnumParams = {
+  'sampler_name',
+  'scheduler',
+  'ckpt_name',
+  'lora_name',
+  'vae_name',
+  'unet_name',
+  'clip_name',
+  'control_net_name',
+  'upscale_model',
+};
+
 /// 判断某参数是否默认暴露（高频暴露，其余默认不暴露，由用户手动勾选）。
 bool isDefaultExposed(String key, String classType) {
   return highFreqParams.contains(key);
 }
+
+/// 参数在表单/控制器中的唯一键：同一节点可有多个参数，node.id 会冲突。
+String nodeParamKey(String nodeId, String key) => '$nodeId:$key';

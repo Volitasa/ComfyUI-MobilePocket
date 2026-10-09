@@ -19,6 +19,9 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   List<WorkflowNode> _extractableNodes = [];
   // 别名输入框控制器统一挂到 State 上，随页面销毁一并释放（避免 build 内新建导致泄漏）
   final Map<String, TextEditingController> _aliasControllers = {};
+  // 节点分组的展开/收起状态（用户手动切换）
+  final Set<String> _expandedNodeIds = {};
+  final Set<String> _collapsedNodeIds = {};
 
   @override
   void dispose() {
@@ -65,13 +68,16 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   void _parseWorkflow(Map<String, dynamic> jsonMap, {bool useSavedConfig = true}) {
     final List<WorkflowNode> nodes = [];
 
-    // 白名单节点类型：仅在这些节点内做参数扩展，避免把连线引用等噪声暴露出来
+    // 白名单节点类型：在这些节点内做全参数类型识别
     const whitelist = {
       'KSampler',
       'KSamplerAdvanced',
       'CLIPTextEncode',
       'LoadImage',
       'PrimitiveNode',
+      // 主流第三方文本节点（保留兼容，避免已有工作流反向失去支持）
+      'Text Multiline',
+      'Text box',
       'String Input',
       'Text Input',
       'CheckpointLoaderSimple',
@@ -85,12 +91,22 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       final meta = nodeData['_meta'] as Map<String, dynamic>?;
 
       if (classType == null || inputs == null) return;
-      if (!whitelist.contains(classType)) return;
 
       final title = meta?['title'] as String? ?? 'Node $nodeId';
+      final inWhitelist = whitelist.contains(classType);
+
+      // 兜底规则：任何节点的 text/value 参数若为字符串，都识别为文本节点。
+      // 第三方文本节点类名五花八门，靠类名白名单会漏，靠参数名兜底可全兼容。
+      final isTextNodeFallback = !inWhitelist &&
+          ((inputs['text'] is String) || (inputs['value'] is String));
+
+      if (!inWhitelist && !isTextNodeFallback) return;
 
       inputs.forEach((key, rawValue) {
         if (isLinkReference(rawValue)) return; // 连线引用不暴露
+
+        // 非白名单节点只暴露 text/value 兜底参数
+        if (!inWhitelist && key != 'text' && key != 'value') return;
 
         // seed 是整数，需特殊识别为 seed 类型（带随机按钮）
         if ((key == 'seed' || key == 'noise_seed') && rawValue is! List) {
@@ -121,8 +137,14 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         }
 
         // 其余参数按值类型推断
-        final type = inferParamType(key, rawValue);
+        var type = inferParamType(key, rawValue);
         if (type == null) return;
+
+        // 已知枚举参数名（sampler_name/scheduler/ckpt_name 等）：
+        // JSON 里是字符串，但语义是下拉选项，选项暂取当前值
+        if (type == ParamType.text && knownEnumParams.contains(key)) {
+          type = ParamType.enumType;
+        }
 
         // 文本类型：优先显示为文本控件
         final effectiveType = (key == 'text' || key == 'value') && rawValue is String
@@ -198,9 +220,57 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已重新解析，请确认参数后保存')));
   }
 
+  // 配置面板里单个参数行：勾选 + 别名编辑 + 类型/当前值摘要
+  Widget _buildParamRow(WorkflowNode node) {
+    final controllerKey = nodeParamKey(node.id, node.key);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            title: Text(
+              node.alias,
+              style: const TextStyle(fontSize: 14),
+            ),
+            subtitle: Text(
+              _describeParam(node),
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+            value: node.exposed,
+            onChanged: (val) {
+              setState(() {
+                node.exposed = val ?? false;
+              });
+            },
+            controlAffinity: ListTileControlAffinity.leading,
+            dense: true,
+          ),
+          if (node.exposed)
+            Padding(
+              padding: const EdgeInsets.only(left: 40.0),
+              child: TextField(
+                controller: _aliasControllers.putIfAbsent(
+                    controllerKey, () => TextEditingController(text: node.alias)),
+                onChanged: (val) => node.alias = val,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  hintText: '例如: 画面主体描述',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   // 配置面板里参数卡片的一行摘要：类型 + 当前值
-  String _describeParam(WorkflowNode node) {
-    final typeName = {
+  String _describeParam(WorkflowNode node) {    final typeName = {
       ParamType.text: '文本',
       ParamType.seed: '种子',
       ParamType.image: '图片',
@@ -308,69 +378,94 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                       child: Text('此工作流没有找到可动态修改的参数。', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
                     ),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: _extractableNodes.length,
-                    itemBuilder: (context, index) {
-                      final node = _extractableNodes[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
+                : Builder(builder: (context) {
+                    // 按节点分组展示：同一节点的多个参数合并为一张卡片
+                    final groups = <String, List<WorkflowNode>>{};
+                    for (final n in _extractableNodes) {
+                      groups.putIfAbsent(n.id, () => []).add(n);
+                    }
+                    final groupIds = groups.keys.toList();
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: groupIds.length,
+                      itemBuilder: (context, index) {
+                        final nodeId = groupIds[index];
+                        final params = groups[nodeId]!;
+                        final classType = params.first.classType;
+                        final exposedCount = params.where((p) => p.exposed).length;
+
+                        // 默认展开含已勾选参数的节点，其余收起；用户可手动切换
+                        final expanded = _expandedNodeIds.contains(nodeId)
+                            ? true
+                            : _collapsedNodeIds.contains(nodeId)
+                                ? false
+                                : exposedCount > 0;
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              CheckboxListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(
-                                  '[${node.classType}] ${node.alias}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                                subtitle: Text(
-                                  _describeParam(node),
-                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                ),
-                                value: node.exposed,
-                                onChanged: (val) {
-                                  setState(() {
-                                    node.exposed = val ?? false;
-                                  });
-                                },
-                                controlAffinity: ListTileControlAffinity.leading,
-                                dense: true,
-                              ),
-                              if (node.exposed) ...[
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 48.0, top: 8.0, bottom: 8.0),
-                                  child: Text('参数名: ${node.key}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 48.0),
-                                  child: TextField(
-                                    controller: _aliasControllers.putIfAbsent(
-                                        node.id, () => TextEditingController(text: node.alias)),
-                                    onChanged: (val) => node.alias = val,
-                                    decoration: const InputDecoration(
-                                      isDense: true,
-                                      hintText: '例如: 画面主体描述',
-                                      border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                    ),
-                                    style: const TextStyle(fontSize: 14),
+                              // 节点分组头部：类名 + 参数统计 + 展开/收起
+                              InkWell(
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                                onTap: () => setState(() {
+                                  if (expanded) {
+                                    _collapsedNodeIds.add(nodeId);
+                                    _expandedNodeIds.remove(nodeId);
+                                  } else {
+                                    _expandedNodeIds.add(nodeId);
+                                    _collapsedNodeIds.remove(nodeId);
+                                  }
+                                }),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  child: Row(
+                                    children: [
+                                      AnimatedRotation(
+                                        turns: expanded ? 0 : -0.25,
+                                        duration: const Duration(milliseconds: 150),
+                                        child: const Icon(Icons.expand_more, size: 20, color: Colors.grey),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          '[$classType] $nodeId',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Text(
+                                        exposedCount > 0 ? '$exposedCount/${params.length} 项已选' : '${params.length} 项参数',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: exposedCount > 0 ? Colors.green.shade700 : Colors.grey,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ]
+                              ),
+                              if (expanded)
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                                  child: Column(
+                                    children: [
+                                      const Divider(height: 1),
+                                      ...params.map((node) => _buildParamRow(node)),
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    );
+                  }),
           ),
           SafeArea(
             child: Padding(
