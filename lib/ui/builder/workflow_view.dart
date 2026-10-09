@@ -114,7 +114,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
             id: nodeId,
             classType: classType,
             key: key,
-            alias: _defaultAlias(key, title),
+            alias: _defaultAlias(key, title, classType),
             exposed: true,
             paramType: ParamType.seed,
             value: rawValue is num ? rawValue.toInt() : rawValue,
@@ -128,7 +128,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
             id: nodeId,
             classType: classType,
             key: key,
-            alias: _defaultAlias(key, title),
+            alias: _defaultAlias(key, title, classType),
             exposed: true,
             paramType: ParamType.image,
             value: rawValue,
@@ -159,7 +159,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
           id: nodeId,
           classType: classType,
           key: key,
-          alias: _defaultAlias(key, title),
+          alias: _defaultAlias(key, title, classType),
           exposed: isDefaultExposed(key, classType),
           paramType: effectiveType,
           options: options,
@@ -312,13 +312,21 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     return valueStr.isEmpty ? '类型: $typeName' : '类型: $typeName · 当前值: $valueStr';
   }
 
-  // 给参数起一个可读的默认别名
-  String _defaultAlias(String key, String title) {
+  // 给参数起一个可读的默认别名。
+  // 优先级：文本类参数优先用工作流里用户给节点起的标题（如“基础设定”），
+  // 无自定义标题才用内置描述名；结构化参数（steps/cfg 等）用参数级描述名。
+  String _defaultAlias(String key, String title, String classType) {
+    final t = title.trim();
+    // 默认标题 = 空串 / 与类名相同 / 自动生成的 "Node X"
+    final isDefaultTitle = t.isEmpty || t == classType || t.startsWith('Node ');
+
+    if (key == 'text' || key == 'value') {
+      return isDefaultTitle ? '提示词' : t;
+    }
+
     const map = {
       'seed': '随机种子',
       'noise_seed': '随机种子',
-      'text': '提示词',
-      'value': '文本内容',
       'image': '参考图片',
       'steps': '采样步数',
       'cfg': 'CFG 强度',
@@ -330,7 +338,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       'positive': '正向提示词',
       'negative': '负向提示词',
     };
-    return map[key] ?? title;
+    return map[key] ?? (isDefaultTitle ? t : t);
   }
 
   // 枚举选项：当前只取工作流里的当前值作为唯一下拉项
