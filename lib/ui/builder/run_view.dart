@@ -26,6 +26,9 @@ class _RunViewState extends ConsumerState<RunView> {
   // 枚举下拉、开关、滑块的当前选中值
   final Map<String, dynamic> _widgetValues = {};
   bool _isExecuting = false;
+  // 节点分组的展开/收起状态
+  final Set<String> _expandedNodeIds = {};
+  final Set<String> _collapsedNodeIds = {};
 
   @override
   void initState() {
@@ -252,50 +255,115 @@ class _RunViewState extends ConsumerState<RunView> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _formConfig.length,
-              itemBuilder: (context, index) {
-                final node = _formConfig[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+            child: Builder(builder: (context) {
+              // 按节点分组展示：同一节点的多个参数合并为一张卡片，支持展开/折叠
+              final groups = <String, List<WorkflowNode>>{};
+              for (final n in _formConfig) {
+                groups.putIfAbsent(n.id, () => []).add(n);
+              }
+              final groupIds = groups.keys.toList();
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: groupIds.length,
+                itemBuilder: (context, index) {
+                  final nodeId = groupIds[index];
+                  final params = groups[nodeId]!;
+                  final classType = params.first.classType;
+                  final expanded = _expandedNodeIds.contains(nodeId)
+                      ? true
+                      : _collapsedNodeIds.contains(nodeId)
+                          ? false
+                          : true; // 运行页默认全部展开
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.grey.shade200),
+                    ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(node.alias, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        InkWell(
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                          onTap: () => setState(() {
+                            if (expanded) {
+                              _collapsedNodeIds.add(nodeId);
+                              _expandedNodeIds.remove(nodeId);
+                            } else {
+                              _expandedNodeIds.add(nodeId);
+                              _collapsedNodeIds.remove(nodeId);
+                            }
+                          }),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            child: Row(
+                              children: [
+                                AnimatedRotation(
+                                  turns: expanded ? 0 : -0.25,
+                                  duration: const Duration(milliseconds: 150),
+                                  child: const Icon(Icons.expand_more, size: 20, color: Colors.grey),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    classType,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Text(
+                                  '${params.length} 项参数',
+                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                ),
+                              ],
                             ),
-                            if (node.key != 'text' && node.key != 'value')
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  node.key,
-                                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                                ),
-                              ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        _buildInputControl(node),
+                        if (expanded)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            child: Column(
+                              children: [
+                                const Divider(height: 1),
+                                ...params.map((node) => Padding(
+                                      padding: const EdgeInsets.only(top: 16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(node.alias, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                                              ),
+                                              if (node.key != 'text' && node.key != 'value')
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey.shade100,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    node.key,
+                                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 10),
+                                          _buildInputControl(node),
+                                        ],
+                                      ),
+                                    )),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              );
+            }),
           ),
           SafeArea(
             child: Padding(

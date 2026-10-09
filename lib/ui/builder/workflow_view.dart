@@ -75,6 +75,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       'CLIPTextEncode',
       'LoadImage',
       'PrimitiveNode',
+      'EmptyLatentImage',
       // 主流第三方文本节点（保留兼容，避免已有工作流反向失去支持）
       'Text Multiline',
       'Text box',
@@ -335,6 +336,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       'denoise': '重绘幅度',
       'width': '宽度',
       'height': '高度',
+      'batch_size': '生成数量',
       'positive': '正向提示词',
       'negative': '负向提示词',
     };

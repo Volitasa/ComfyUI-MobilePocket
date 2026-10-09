@@ -73,6 +73,10 @@ const Set<String> highFreqParams = {
   'cfg',
   'sampler_name',
   'scheduler',
+  // EmptyLatentImage 的尺寸与生成数量
+  'width',
+  'height',
+  'batch_size',
 };
 
 /// 已知枚举型参数名：这些参数的值在 API JSON 里是字符串（当前选中项），
