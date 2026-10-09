@@ -168,11 +168,34 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       });
     });
 
-    // 默认优先使用历史保存的配置；重新解析时跳过历史配置，用最新解析结果
+    // 默认优先使用历史保存的配置，但以最新解析为基准做合并：
+    // 参数集合/类型/当前值取新解析（保证旧配置自动补齐新参数、类型不回退），
+    // 仅保留用户在旧配置里的勾选状态与别名
     if (useSavedConfig) {
       final savedConfig = ref.read(workflowProvider.notifier).getMappingConfig(widget.workflowId);
       if (savedConfig != null && savedConfig.isNotEmpty) {
-        _extractableNodes = savedConfig;
+        if (nodes.isEmpty) {
+          // 新解析为空（工作流内容异常等）时兜底保留旧配置，避免误清空
+          _extractableNodes = savedConfig;
+        } else {
+          final savedByKey = {
+            for (final n in savedConfig) nodeParamKey(n.id, n.key): n,
+          };
+          _extractableNodes = nodes.map((n) {
+            final saved = savedByKey[nodeParamKey(n.id, n.key)];
+            if (saved == null) return n;
+            return WorkflowNode(
+              id: n.id,
+              classType: n.classType,
+              key: n.key,
+              alias: saved.alias.isNotEmpty ? saved.alias : n.alias,
+              exposed: saved.exposed,
+              paramType: n.paramType,
+              options: n.options,
+              value: n.value,
+            );
+          }).toList();
+        }
         return;
       }
     }

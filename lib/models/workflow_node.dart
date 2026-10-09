@@ -1,3 +1,5 @@
+import '../utils.dart';
+
 /// 参数类型：决定运行页用哪种控件渲染、提交时如何做类型转换
 enum ParamType {
   text, // 多行文本（提示词等）
@@ -43,10 +45,26 @@ class WorkflowNode {
       key: json['key'],
       alias: json['alias'] ?? '',
       exposed: json['exposed'] ?? false,
-      paramType: _paramTypeFromName(json['paramType']),
+      paramType: json['paramType'] != null
+          ? _paramTypeFromName(json['paramType'])
+          : _paramTypeFromKey(json['key']),
       options: (json['options'] as List?)?.map((e) => e.toString()).toList() ?? const [],
       value: json['value'],
     );
+  }
+
+  // 旧版配置没有 paramType 字段：按参数名推断，避免 seed 等被兜底成 text
+  static ParamType _paramTypeFromKey(String key) {
+    switch (key) {
+      case 'seed':
+      case 'noise_seed':
+        return ParamType.seed;
+      case 'image':
+        return ParamType.image;
+      default:
+        if (knownEnumParams.contains(key)) return ParamType.enumType;
+        return ParamType.text;
+    }
   }
 
   static ParamType _paramTypeFromName(dynamic name) {
