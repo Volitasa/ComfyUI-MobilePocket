@@ -1,3 +1,5 @@
+import 'models/workflow_node.dart';
+
 // 通用工具函数
 
 /// 由工作流 ID 得到用于界面展示的名称。
@@ -29,4 +31,51 @@ Map<String, dynamic> normalizeWorkflowJson(Map<String, dynamic> json) {
     return Map<String, dynamic>.from(prompt);
   }
   return json;
+}
+
+/// 判断一个参数值是否属于「连线引用」（形如 ["节点id", 输出索引]），
+/// 这类值不该暴露成表单控件。
+bool isLinkReference(dynamic value) {
+  if (value is! List) return false;
+  if (value.length != 2) return false;
+  return value[0] is String && value[1] is num;
+}
+
+/// 由参数名推断其语义类型（用于决定控件形态与默认暴露与否）。
+/// 无法归类的返回 null，调用方据此决定是否跳过。
+ParamType? inferParamType(String key, dynamic value) {
+  if (isLinkReference(value)) return null;
+  if (value is bool) return ParamType.boolType;
+  if (value is int) return ParamType.intType;
+  if (value is double) return ParamType.float;
+  if (value is List) {
+    // 枚举型下拉：元素均为字符串或数字
+    if (value.isNotEmpty && value.every((e) => e is String || e is num)) {
+      return ParamType.enumType;
+    }
+    return null;
+  }
+  if (value is String) {
+    // 文本
+    return ParamType.text;
+  }
+  return null;
+}
+
+/// 高频参数集合：这些参数默认在配置面板勾选暴露。
+const Set<String> highFreqParams = {
+  'seed',
+  'noise_seed',
+  'text',
+  'value',
+  'image',
+  'steps',
+  'cfg',
+  'sampler_name',
+  'scheduler',
+};
+
+/// 判断某参数是否默认暴露（高频暴露，其余默认不暴露，由用户手动勾选）。
+bool isDefaultExposed(String key, String classType) {
+  return highFreqParams.contains(key);
 }

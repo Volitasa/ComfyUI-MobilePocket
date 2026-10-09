@@ -23,6 +23,8 @@ class _RunViewState extends ConsumerState<RunView> {
   List<WorkflowNode> _formConfig = [];
   final Map<String, dynamic> _formData = {};
   final Map<String, TextEditingController> _controllers = {};
+  // 枚举下拉、开关、滑块的当前选中值
+  final Map<String, dynamic> _widgetValues = {};
   bool _isExecuting = false;
 
   @override
@@ -44,12 +46,61 @@ class _RunViewState extends ConsumerState<RunView> {
 
     _formConfig = savedConfig.where((node) => node.exposed).toList();
     for (var node in _formConfig) {
-      if (node.key == 'seed' || node.key == 'noise_seed') {
-        _generateSeed(node.id);
-      } else if (node.key == 'text' || node.key == 'value') {
-        _controllers[node.id] = TextEditingController();
+      switch (node.paramType) {
+        case ParamType.seed:
+          // 有初值则用初值，否则随机
+          if (node.value is int) {
+            _setSeedValue(node.id, node.value as int);
+          } else {
+            _generateSeed(node.id);
+          }
+          break;
+        case ParamType.text:
+          _controllers[node.id] = TextEditingController(text: node.value?.toString() ?? '');
+          break;
+        case ParamType.intType:
+          _controllers[node.id] = TextEditingController(text: _numToString(node.value));
+          break;
+        case ParamType.float:
+          _controllers[node.id] = TextEditingController(text: _numToString(node.value));
+          break;
+        case ParamType.boolType:
+          _widgetValues[node.id] = node.value ?? false;
+          break;
+        case ParamType.enumType:
+          // 下拉当前值：取 value，若为空则取 options 第一项
+          final opts = node.options;
+          final current = node.value?.toString();
+          _widgetValues[node.id] = (current != null && opts.contains(current))
+              ? current
+              : (opts.isNotEmpty ? opts.first : (current ?? ''));
+          break;
+        case ParamType.image:
+          // 图片初值为服务器上已有的文件名，仅作展示，不预载图片
+          if (node.value is String && (node.value as String).isNotEmpty) {
+            _widgetValues[node.id] = node.value;
+          }
+          break;
       }
     }
+  }
+
+  String _numToString(dynamic v) {
+    if (v == null) return '';
+    if (v is int) return v.toString();
+    if (v is double) {
+      // 去掉多余的小数尾零
+      return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+    }
+    return v.toString();
+  }
+
+  void _setSeedValue(String nodeId, int seed) {
+    setState(() {
+      _formData[nodeId] = seed;
+      final controller = _controllers.putIfAbsent(nodeId, () => TextEditingController());
+      controller.text = seed.toString();
+    });
   }
 
   @override
@@ -65,11 +116,7 @@ class _RunViewState extends ConsumerState<RunView> {
     final high = Random().nextInt(1000000000) + 1000000000; // 10 位（1e9 ~ 2e9）
     final low = Random().nextInt(100000); // 0 ~ 99999
     final seed = high * 100000 + low;
-    setState(() {
-      _formData[nodeId] = seed;
-      final controller = _controllers.putIfAbsent(nodeId, () => TextEditingController());
-      controller.text = seed.toString();
-    });
+    _setSeedValue(nodeId, seed);
   }
 
   Future<void> _pickImage(String nodeId) async {
@@ -84,6 +131,25 @@ class _RunViewState extends ConsumerState<RunView> {
           'filename': result.files.single.name,
         };
       });
+    }
+  }
+
+  // 根据参数类型，把控件里的值解析成正确的 Dart 类型后提交
+  dynamic _resolveValue(WorkflowNode node) {
+    switch (node.paramType) {
+      case ParamType.seed:
+        return int.tryParse(_controllers[node.id]?.text ?? '') ?? 0;
+      case ParamType.intType:
+        return int.tryParse(_controllers[node.id]?.text ?? '');
+      case ParamType.float:
+        return double.tryParse(_controllers[node.id]?.text ?? '');
+      case ParamType.boolType:
+        return _widgetValues[node.id] ?? false;
+      case ParamType.enumType:
+        return _widgetValues[node.id];
+      case ParamType.text:
+      case ParamType.image:
+        return _controllers[node.id]?.text;
     }
   }
 
@@ -105,21 +171,25 @@ class _RunViewState extends ConsumerState<RunView> {
       for (var node in _formConfig) {
         dynamic value;
 
-        if (node.key == 'image' && _formData[node.id] != null) {
-          final imgData = _formData[node.id];
-          final uploadedName = await taskManager.uploadImage(imgData['bytes'], imgData['filename']);
-          if (uploadedName == null) throw Exception('图片上传失败');
-          value = uploadedName;
-        } else if (node.key == 'seed' || node.key == 'noise_seed') {
-          value = int.tryParse(_controllers[node.id]?.text ?? '0');
+        if (node.paramType == ParamType.image) {
+          // 图片：只有用户重新选择了本地图片才上传；否则沿用工作流里的原值
+          final picked = _formData[node.id];
+          if (picked != null) {
+            final uploadedName = await taskManager.uploadImage(picked['bytes'], picked['filename']);
+            if (uploadedName == null) throw Exception('图片上传失败');
+            value = uploadedName;
+          } else {
+            // 未重新选择，保持工作流原有图片文件名不变
+            continue;
+          }
         } else {
-          value = _controllers[node.id]?.text;
+          value = _resolveValue(node);
         }
 
-        if (value != null && value != '') {
-          if (promptNodes[node.id] != null && promptNodes[node.id]['inputs'] != null) {
-            promptNodes[node.id]['inputs'][node.key] = value;
-          }
+        if (value == null || value == '') continue;
+
+        if (promptNodes[node.id] != null && promptNodes[node.id]['inputs'] != null) {
+          promptNodes[node.id]['inputs'][node.key] = value;
         }
       }
 
@@ -196,7 +266,25 @@ class _RunViewState extends ConsumerState<RunView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(node.alias, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(node.alias, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            ),
+                            if (node.key != 'text' && node.key != 'value')
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  node.key,
+                                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                ),
+                              ),
+                          ],
+                        ),
                         const SizedBox(height: 12),
                         _buildInputControl(node),
                       ],
@@ -232,59 +320,138 @@ class _RunViewState extends ConsumerState<RunView> {
   }
 
   Widget _buildInputControl(WorkflowNode node) {
-    if (node.key == 'text' || node.key == 'value') {
-      return TextField(
-        controller: _controllers[node.id],
-        maxLines: 3,
-        decoration: const InputDecoration(
-          hintText: '请输入描述...',
-          border: OutlineInputBorder(),
-          isDense: true,
-        ),
-      );
-    } else if (node.key == 'seed' || node.key == 'noise_seed') {
-      return Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _controllers[node.id],
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
-            ),
+    switch (node.paramType) {
+      case ParamType.text:
+        return TextField(
+          controller: _controllers[node.id],
+          maxLines: 3,
+          minLines: 3,
+          decoration: InputDecoration(
+            hintText: '请输入描述...',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            isDense: true,
+            filled: true,
+            fillColor: Colors.white,
           ),
-          const SizedBox(width: 12),
-          ElevatedButton.icon(
-            onPressed: () => _generateSeed(node.id),
-            icon: const Icon(Icons.casino, size: 18),
-            label: const Text('随机'),
-          )
-        ],
-      );
-    } else if (node.key == 'image') {
-      final hasImage = _formData[node.id] != null;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          OutlinedButton.icon(
-            onPressed: () => _pickImage(node.id),
-            icon: const Icon(Icons.image),
-            label: Text(hasImage ? '更换图片' : '选择图片'),
-          ),
-          if (hasImage) ...[
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.memory(
-                _formData[node.id]['bytes'],
-                height: 100,
-                width: double.infinity,
-                fit: BoxFit.cover,
+        );
+      case ParamType.seed:
+        return Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _controllers[node.id],
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  isDense: true,
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
               ),
             ),
-          ]
-        ],
-      );
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: () => _generateSeed(node.id),
+              icon: const Icon(Icons.casino, size: 18),
+              label: const Text('随机'),
+            )
+          ],
+        );
+      case ParamType.intType:
+        return TextField(
+          controller: _controllers[node.id],
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            hintText: '整数',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            isDense: true,
+            filled: true,
+            fillColor: Colors.white,
+          ),
+        );
+      case ParamType.float:
+        return TextField(
+          controller: _controllers[node.id],
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            hintText: '数值（可小数）',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            isDense: true,
+            filled: true,
+            fillColor: Colors.white,
+          ),
+        );
+      case ParamType.boolType:
+        return SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            (_widgetValues[node.id] == true) ? '开启' : '关闭',
+            style: const TextStyle(fontSize: 14),
+          ),
+          value: _widgetValues[node.id] == true,
+          onChanged: (val) => setState(() => _widgetValues[node.id] = val),
+        );
+      case ParamType.enumType:
+        final opts = node.options;
+        final current = _widgetValues[node.id]?.toString() ?? '';
+        // 若当前值不在选项里（理论上不会），仍显示它
+        final items = opts.contains(current) ? opts : [...opts, if (current.isNotEmpty) current];
+        return DropdownButtonFormField<String>(
+          initialValue: items.contains(current) ? current : (items.isNotEmpty ? items.first : null),
+          isExpanded: true,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            isDense: true,
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          ),
+          items: items.map((o) => DropdownMenuItem(value: o, child: Text(o, overflow: TextOverflow.ellipsis))).toList(),
+          onChanged: (val) {
+            if (val != null) setState(() => _widgetValues[node.id] = val);
+          },
+        );
+      case ParamType.image:
+        final hasImage = _formData[node.id] != null;
+        final serverImage = _widgetValues[node.id] as String?;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (serverImage != null && !hasImage) ...[
+              Row(
+                children: [
+                  const Icon(Icons.image_outlined, size: 16, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '已用图: $serverImage',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+            OutlinedButton.icon(
+              onPressed: () => _pickImage(node.id),
+              icon: const Icon(Icons.image),
+              label: Text(hasImage ? '更换图片' : '选择图片'),
+            ),
+            if (hasImage) ...[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  _formData[node.id]['bytes'],
+                  height: 100,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ]
+          ],
+        );
     }
-    return const SizedBox.shrink();
   }
 }

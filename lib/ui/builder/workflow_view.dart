@@ -65,6 +65,18 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   void _parseWorkflow(Map<String, dynamic> jsonMap) {
     final List<WorkflowNode> nodes = [];
 
+    // 白名单节点类型：仅在这些节点内做参数扩展，避免把连线引用等噪声暴露出来
+    const whitelist = {
+      'KSampler',
+      'KSamplerAdvanced',
+      'CLIPTextEncode',
+      'LoadImage',
+      'PrimitiveNode',
+      'String Input',
+      'Text Input',
+      'CheckpointLoaderSimple',
+    };
+
     jsonMap.forEach((nodeId, nodeData) {
       if (nodeData is! Map) return;
 
@@ -73,40 +85,65 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       final meta = nodeData['_meta'] as Map<String, dynamic>?;
 
       if (classType == null || inputs == null) return;
+      if (!whitelist.contains(classType)) return;
 
       final title = meta?['title'] as String? ?? 'Node $nodeId';
 
-      // 1. 提取采样器的随机种子
-      if (classType == 'KSampler') {
-        if (inputs.containsKey('seed') && inputs['seed'] is! List) {
-          nodes.add(WorkflowNode(id: nodeId, classType: classType, key: 'seed', alias: title, exposed: true));
+      inputs.forEach((key, rawValue) {
+        if (isLinkReference(rawValue)) return; // 连线引用不暴露
+
+        // seed 是整数，需特殊识别为 seed 类型（带随机按钮）
+        if ((key == 'seed' || key == 'noise_seed') && rawValue is! List) {
+          nodes.add(WorkflowNode(
+            id: nodeId,
+            classType: classType,
+            key: key,
+            alias: _defaultAlias(key, title),
+            exposed: true,
+            paramType: ParamType.seed,
+            value: rawValue is num ? rawValue.toInt() : rawValue,
+          ));
+          return;
         }
-      } else if (classType == 'KSamplerAdvanced') {
-        // KSamplerAdvanced 的种子键是 noise_seed，而非 seed
-        if (inputs.containsKey('noise_seed') && inputs['noise_seed'] is! List) {
-          nodes.add(WorkflowNode(id: nodeId, classType: classType, key: 'noise_seed', alias: title, exposed: true));
+
+        // image 图片参数
+        if (key == 'image' && rawValue is String) {
+          nodes.add(WorkflowNode(
+            id: nodeId,
+            classType: classType,
+            key: key,
+            alias: _defaultAlias(key, title),
+            exposed: true,
+            paramType: ParamType.image,
+            value: rawValue,
+          ));
+          return;
         }
-      }
-      // 2. 提取原生 CLIP 文本
-      else if (classType == 'CLIPTextEncode') {
-        if (inputs.containsKey('text') && inputs['text'] is String) {
-          nodes.add(WorkflowNode(id: nodeId, classType: classType, key: 'text', alias: title, exposed: true));
-        }
-      }
-      // 3. 提取主流自定义文本节点
-      else if (classType == 'PrimitiveNode') {
-        if (inputs.containsKey('text') && inputs['text'] is String) {
-          nodes.add(WorkflowNode(id: nodeId, classType: classType, key: 'text', alias: title, exposed: true));
-        } else if (inputs.containsKey('value') && inputs['value'] is String) {
-          nodes.add(WorkflowNode(id: nodeId, classType: classType, key: 'value', alias: title, exposed: true));
-        }
-      }
-      // 4. 提取图片上传节点
-      else if (classType == 'LoadImage') {
-        if (inputs.containsKey('image') && inputs['image'] is String) {
-          nodes.add(WorkflowNode(id: nodeId, classType: classType, key: 'image', alias: title, exposed: true));
-        }
-      }
+
+        // 其余参数按值类型推断
+        final type = inferParamType(key, rawValue);
+        if (type == null) return;
+
+        // 文本类型：优先显示为文本控件
+        final effectiveType = (key == 'text' || key == 'value') && rawValue is String
+            ? ParamType.text
+            : type;
+
+        final List<String> options = effectiveType == ParamType.enumType
+            ? _enumOptions(rawValue)
+            : const [];
+
+        nodes.add(WorkflowNode(
+          id: nodeId,
+          classType: classType,
+          key: key,
+          alias: _defaultAlias(key, title),
+          exposed: isDefaultExposed(key, classType),
+          paramType: effectiveType,
+          options: options,
+          value: _normalizeValue(effectiveType, rawValue),
+        ));
+      });
     });
 
     // 优先使用历史保存的配置
@@ -115,6 +152,67 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       _extractableNodes = savedConfig;
     } else {
       _extractableNodes = nodes;
+    }
+  }
+
+  // 配置面板里参数卡片的一行摘要：类型 + 当前值
+  String _describeParam(WorkflowNode node) {
+    final typeName = {
+      ParamType.text: '文本',
+      ParamType.seed: '种子',
+      ParamType.image: '图片',
+      ParamType.intType: '整数',
+      ParamType.float: '小数',
+      ParamType.boolType: '开关',
+      ParamType.enumType: '选项',
+    }[node.paramType] ?? '参数';
+
+    final v = node.value;
+    String valueStr = '';
+    if (v != null) {
+      valueStr = v.toString();
+      if (valueStr.length > 20) valueStr = '${valueStr.substring(0, 20)}…';
+    }
+    return valueStr.isEmpty ? '类型: $typeName' : '类型: $typeName · 当前值: $valueStr';
+  }
+
+  // 给参数起一个可读的默认别名
+  String _defaultAlias(String key, String title) {    const map = {
+      'seed': '随机种子',
+      'noise_seed': '随机种子',
+      'text': '提示词',
+      'value': '文本内容',
+      'image': '参考图片',
+      'steps': '采样步数',
+      'cfg': 'CFG 强度',
+      'sampler_name': '采样器',
+      'scheduler': '调度器',
+      'denoise': '重绘幅度',
+      'width': '宽度',
+      'height': '高度',
+      'positive': '正向提示词',
+      'negative': '负向提示词',
+    };
+    return map[key] ?? title;
+  }
+
+  // 枚举选项：当前只取工作流里的当前值作为唯一下拉项
+  List<String> _enumOptions(dynamic value) {
+    if (value is List) {
+      return value.map((e) => e.toString()).toList();
+    }
+    if (value is String) return [value];
+    if (value != null) return [value.toString()];
+    return const [];
+  }
+
+  // 把值规整为可序列化、可回填的形态
+  dynamic _normalizeValue(ParamType type, dynamic rawValue) {
+    switch (type) {
+      case ParamType.enumType:
+        return rawValue is List ? (rawValue.isNotEmpty ? rawValue.first : null) : rawValue;
+      default:
+        return rawValue;
     }
   }
 
@@ -156,7 +254,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                 ? const Center(
                     child: Padding(
                       padding: EdgeInsets.all(32.0),
-                      child: Text('此工作流没有找到支持动态修改的节点（缺少提示词、图片加载或采样器）。', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+                      child: Text('此工作流没有找到可动态修改的参数。', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
                     ),
                   )
                 : ListView.builder(
@@ -179,8 +277,12 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                               CheckboxListTile(
                                 contentPadding: EdgeInsets.zero,
                                 title: Text(
-                                  '[${node.classType}] Node: ${node.id}',
+                                  '[${node.classType}] ${node.alias}',
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                subtitle: Text(
+                                  _describeParam(node),
+                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
                                 ),
                                 value: node.exposed,
                                 onChanged: (val) {
@@ -194,7 +296,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                               if (node.exposed) ...[
                                 Padding(
                                   padding: const EdgeInsets.only(left: 48.0, top: 8.0, bottom: 8.0),
-                                  child: Text('参数: ${node.key}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                  child: Text('参数名: ${node.key}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.only(left: 48.0),
