@@ -19,7 +19,7 @@ jobs:
 
       # 2. 配置 Node.js 环境 (用于编译 Vue)
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
@@ -61,6 +61,7 @@ jobs:
           alias: ${{ secrets.SIGNING_KEY_ALIAS }}
           keyStorePassword: ${{ secrets.SIGNING_STORE_PASSWORD }}
           keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          buildToolsVersion: 34.0.0
 
       # 9. 重命名生成的 APK 文件，去掉默认的 app-release 丑陋命名
       - name: Rename APK File
