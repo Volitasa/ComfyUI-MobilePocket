@@ -114,11 +114,24 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   @override
   Widget build(BuildContext context) {
     final tasks = ref.watch(taskManagerProvider).history;
+    final configState = ref.watch(connectionProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('生成记录', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          if (configState.isConnected)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: '同步任务状态',
+              onPressed: () {
+                // 与工作流页刷新按钮一致：向服务器对账未终结任务的状态
+                ref.read(taskManagerProvider.notifier).reconcilePendingTasks();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('已同步任务状态')),
+                );
+              },
+            ),
           ConnectionStatusBadge(
             onTap: () => ref.read(mainTabIndexProvider.notifier).state = MainTabs.setup,
           ),
