@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io';
+import 'dart:typed_data';
 import '../../theme.dart';
+import '../../services/media_saver.dart';
 import '../../providers/task_manager.dart';
 import '../../providers/connection_provider.dart';
 import '../../models/task_history.dart';
@@ -374,38 +374,24 @@ class _MediaViewerState extends State<MediaViewer> {
     setState(() => _saving = true);
     try {
       final currentMedia = widget.mediaList[_currentIndex];
-      final url = widget.urlBuilder(currentMedia);
-      final isVideo = widget.isVideoChecker(currentMedia['filename']);
+      final filename = currentMedia['filename']?.toString() ?? 'image.png';
 
-      // 请求相册权限
-      final hasAccess = await Gal.requestAccess();
-      if (!hasAccess) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('需要相册权限')));
-        return;
-      }
-
-      // 下载媒体
-      final bytes = await http.readBytes(Uri.parse(url));
-
-      if (isVideo) {
-        // 视频需先写入临时文件，再调用 putVideo 保存
-        final ext = (currentMedia['filename']?.toString().split('.').last ?? 'mp4');
-        final tmpDir = await getTemporaryDirectory();
-        final tmpFile = File('${tmpDir.path}/comfy_${DateTime.now().millisecondsSinceEpoch}.$ext');
-        await tmpFile.writeAsBytes(bytes);
-        await Gal.putVideo(tmpFile.path);
-        // 清理临时文件
-        try {
-          await tmpFile.delete();
-        } catch (_) {}
+      // 优先读取已本地化的文件（避免重复下载，且与画廊页行为一致）；
+      // 没有本地文件（未下载过或已被删除）时才回退网络
+      final localPath = currentMedia['localPath'];
+      Uint8List bytes;
+      if (localPath is String && localPath.isNotEmpty && File(localPath).existsSync()) {
+        bytes = await File(localPath).readAsBytes();
       } else {
-        // 图片：按真实扩展名保存
-        final ext = (currentMedia['filename']?.toString().split('.').last ?? 'jpg');
-        final name = 'comfy_${DateTime.now().millisecondsSinceEpoch}.$ext';
-        await Gal.putImageBytes(bytes, name: name);
+        bytes = await http.readBytes(Uri.parse(widget.urlBuilder(currentMedia)));
       }
+      if (!mounted) return;
 
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ 已保存到手机相册')));
+      // 与画廊页共用保存逻辑：PNG 可选「带工作流原图」或「剔除信息」
+      final saved = await MediaSaver.save(context, bytes: bytes, filename: filename);
+      if (saved && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ 已保存到手机相册')));
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存失败')));
     } finally {

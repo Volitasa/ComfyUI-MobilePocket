@@ -1,12 +1,9 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gal/gal.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../providers/task_manager.dart';
 import '../../services/gallery_store.dart';
-import '../../services/png_metadata_stripper.dart';
+import '../../services/media_saver.dart';
 
 /// 画廊：浏览所有本地化保存的生成图片。
 /// 图片以原始文件保存在 App 沙盒，内嵌 ComfyUI 工作流元数据，
@@ -163,68 +160,23 @@ class _GalleryViewerState extends State<_GalleryViewer> {
         return;
       }
 
-      final hasAccess = await Gal.requestAccess();
-      if (!hasAccess) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('需要相册权限')));
-        return;
-      }
-
       final bytes = await _current.readAsBytes();
-      final ext = _current.path.split('.').last.toLowerCase();
+      if (!mounted) return;
 
-      if (ext == 'png') {
-        // PNG 支持元数据选择
-        final choice = await _showMetadataChoice();
-        if (choice == null) return; // 用户取消
-
-        Uint8List finalBytes = bytes;
-        if (choice == 'plain') {
-          finalBytes = PngMetadataStripper.strip(bytes);
-        }
-        await Gal.putImageBytes(finalBytes, name: 'comfy_${DateTime.now().millisecondsSinceEpoch}.png');
-      } else {
-        // 视频走 putVideo，其它图片直接存
-        if (['mp4', 'webm', 'mov'].contains(ext)) {
-          final tmpDir = await getTemporaryDirectory();
-          final tmp = File('${tmpDir.path}/tmp_$ext');
-          await tmp.writeAsBytes(bytes);
-          await Gal.putVideo(tmp.path);
-          try {
-            await tmp.delete();
-          } catch (_) {}
-        } else {
-          await Gal.putImageBytes(bytes, name: 'comfy_${DateTime.now().millisecondsSinceEpoch}.$ext');
-        }
+      // 保存逻辑与生成记录页共用，保证两处行为一致
+      final saved = await MediaSaver.save(
+        context,
+        bytes: bytes,
+        filename: _current.path.split('/').last,
+      );
+      if (saved && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ 已保存到手机相册')));
       }
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ 已保存到手机相册')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存失败')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
-  }
-
-  // 返回 'with_workflow' 或 'plain'，取消返回 null
-  Future<String?> _showMetadataChoice() {
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('保存到相册'),
-        content: const Text('这张 PNG 内嵌了工作流信息。选择保存方式：'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, 'plain'),
-            child: const Text('普通图片（剔除信息）'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.green),
-            onPressed: () => Navigator.pop(ctx, 'with_workflow'),
-            child: const Text('带工作流原图'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _delete() async {
