@@ -10,7 +10,7 @@ import '../../utils.dart';
 import '../builder/workflow_view.dart';
 import '../builder/run_view.dart';
 import '../widgets/connection_status_badge.dart';
-import '../main_screen.dart';
+import '../settings/server_config_view.dart';
 
 class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
@@ -105,7 +105,11 @@ class _HomeViewState extends ConsumerState<HomeView> {
               onPressed: () => ref.read(workflowProvider.notifier).fetchRemoteList(),
             ),
           ConnectionStatusBadge(
-            onTap: () => ref.read(mainTabIndexProvider.notifier).state = MainTabs.setup,
+            // 直接进服务器连接页，而不是只切到「设置」Tab
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ServerConfigView()),
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -129,8 +133,11 @@ class _HomeViewState extends ConsumerState<HomeView> {
             FilledButton.icon(
               icon: const Icon(Icons.settings),
               onPressed: () {
-                // 直接通过 Provider 将底部导航栏硬切到“服务器配置”页 (索引为 2)
-                ref.read(mainTabIndexProvider.notifier).state = MainTabs.setup;
+                // 直接进服务器连接页
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ServerConfigView()),
+                );
               },
               label: const Text('前往配置'),
             ),

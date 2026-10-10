@@ -7,6 +7,13 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/release_info.dart';
 
+/// 接口返回的原始结果（状态码 + 已解析的 JSON）
+class _ApiResp {
+  final int statusCode;
+  final dynamic json;
+  const _ApiResp(this.statusCode, this.json);
+}
+
 /// 更新失败的可读原因，直接展示给用户。
 class UpdateException implements Exception {
   final String message;
@@ -28,6 +35,8 @@ class UpdateService {
 
   static const String latestReleaseUrl =
       'https://api.github.com/repos/$repoOwner/$repoName/releases/latest';
+  static const String releasesUrl =
+      'https://api.github.com/repos/$repoOwner/$repoName/releases';
   static const String repoHomeUrl =
       'https://github.com/$repoOwner/$repoName';
 
@@ -35,41 +44,38 @@ class UpdateService {
 
   /// 查询最新 Release。没有可用安装包时抛 UpdateException。
   Future<ReleaseInfo> fetchLatestRelease() async {
-    final uri = Uri.parse(latestReleaseUrl);
-    http.Response resp;
-    try {
-      resp = await http
-          .get(
-            uri,
-            headers: {
-              'Accept': 'application/vnd.github+json',
-              // GitHub 要求请求带 User-Agent，否则会拒绝
-              'User-Agent': '$repoName-App',
-            },
-          )
-          .timeout(_timeout);
-    } on TimeoutException {
-      throw UpdateException('连接 GitHub 超时，请检查网络后重试');
-    } on SocketException {
-      throw UpdateException('无法连接 GitHub，请检查网络后重试');
-    } catch (_) {
-      throw UpdateException('查询更新失败，请检查网络后重试');
+    final latest = await _request(latestReleaseUrl);
+
+    Map<String, dynamic>? data;
+    if (latest.statusCode == 200 && latest.json is Map<String, dynamic>) {
+      data = latest.json as Map<String, dynamic>;
+    } else if (latest.statusCode == 404) {
+      // latest 接口会排除草稿与预发布版本：仓库可能只有这类发布。
+      // 退回列表接口再找一次，避免把「没有 latest」误报成「没发过版本」。
+      final list = await _request(releasesUrl);
+      if (list.statusCode == 200 && list.json is List) {
+        final items = (list.json as List)
+            .whereType<Map<String, dynamic>>()
+            .where((r) => r['draft'] != true)
+            .toList();
+        data = items.isEmpty ? null : items.first;
+      }
+    } else if (latest.statusCode == 403) {
+      throw UpdateException(
+        'GitHub 接口访问受限（未认证请求每小时 60 次），请稍后再试',
+      );
+    } else if (latest.statusCode != 200) {
+      throw UpdateException('查询更新失败（HTTP ${latest.statusCode}）');
     }
 
-    if (resp.statusCode == 403) {
-      throw UpdateException('GitHub 接口访问受限，请稍后再试');
-    }
-    if (resp.statusCode == 404) {
-      throw UpdateException('该仓库还没有发布任何版本');
-    }
-    if (resp.statusCode != 200) {
-      throw UpdateException('查询更新失败（HTTP ${resp.statusCode}）');
+    if (data == null) {
+      // 注意：git tag 不等于 GitHub Release，只有 Release 才带安装包
+      throw UpdateException(
+        '该仓库还没有发布带安装包的版本（仅有 git tag 不会被识别）',
+      );
     }
 
-    final decoded = jsonDecode(resp.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw UpdateException('更新信息格式异常');
-    }
+    final decoded = data;
 
     final tag = (decoded['tag_name'] ?? '').toString();
     final version = normalizeVersion(tag);
@@ -89,6 +95,39 @@ class UpdateService {
       sizeBytes: (asset['size'] is num) ? (asset['size'] as num).toInt() : 0,
       downloadUrl: (asset['browser_download_url'] ?? '').toString(),
     );
+  }
+
+  /// 统一 GET：网络类异常直接转成可读的 UpdateException。
+  /// 404 不抛异常，交由调用方决定是否回退到列表接口。
+  Future<_ApiResp> _request(String url) async {
+    try {
+      final resp = await http
+          .get(
+            Uri.parse(url),
+            headers: {
+              'Accept': 'application/vnd.github+json',
+              // GitHub 要求请求带 User-Agent，否则会拒绝
+              'User-Agent': '$repoName-App',
+            },
+          )
+          .timeout(_timeout);
+
+      dynamic json;
+      if (resp.body.isNotEmpty) {
+        try {
+          json = jsonDecode(resp.body);
+        } catch (_) {
+          json = null;
+        }
+      }
+      return _ApiResp(resp.statusCode, json);
+    } on TimeoutException {
+      throw UpdateException('连接 GitHub 超时，请检查网络后重试');
+    } on SocketException {
+      throw UpdateException('无法连接 GitHub，请检查网络后重试');
+    } catch (_) {
+      throw UpdateException('查询更新失败，请检查网络后重试');
+    }
   }
 
   /// 选择安装包：只有一个 APK 就直接用；多个时优先 arm64（绝大多数现代机型）。

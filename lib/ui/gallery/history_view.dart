@@ -10,7 +10,7 @@ import '../../providers/task_manager.dart';
 import '../../providers/connection_provider.dart';
 import '../../models/task_history.dart';
 import '../widgets/connection_status_badge.dart';
-import '../main_screen.dart';
+import '../settings/server_config_view.dart';
 
 class HistoryView extends ConsumerStatefulWidget {
   const HistoryView({super.key});
@@ -186,7 +186,11 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
               },
             ),
           ConnectionStatusBadge(
-            onTap: () => ref.read(mainTabIndexProvider.notifier).state = MainTabs.setup,
+            // 直接进服务器连接页，而不是只切到「设置」Tab
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ServerConfigView()),
+            ),
           ),
           const SizedBox(width: 8),
         ],
