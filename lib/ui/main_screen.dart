@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'home/home_view.dart';
 import 'gallery/history_view.dart';
 import 'gallery/gallery_view.dart';
-import 'setup/setup_view.dart';
+import 'settings/settings_view.dart';
 
 // 全局暴露的 Tab 索引状态，默认 0 (工作流)
 final mainTabIndexProvider = StateProvider<int>((ref) => 0);
@@ -32,7 +32,7 @@ class MainScreen extends ConsumerWidget {
           HomeView(),
           HistoryView(),
           GalleryView(),
-          SetupView(),
+          SettingsView(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -60,7 +60,7 @@ class MainScreen extends ConsumerWidget {
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
-            label: '服务器配置',
+            label: '设置',
           ),
         ],
       ),

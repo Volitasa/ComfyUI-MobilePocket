@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- 允许 App 访问网络 (ComfyUI HTTP 和 WebSocket 必需) -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- 应用内更新：安装下载到的 APK（Android 8.0+ 需要此权限） -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     
     <!-- 允许 App 读写相册 (gal 插件保存图片/视频必需) -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />

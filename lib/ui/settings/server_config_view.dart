@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/connection_provider.dart';
 
-class SetupView extends ConsumerStatefulWidget {
-  const SetupView({super.key});
+class ServerConfigView extends ConsumerStatefulWidget {
+  const ServerConfigView({super.key});
 
   @override
-  ConsumerState<SetupView> createState() => _SetupViewState();
+  ConsumerState<ServerConfigView> createState() => _ServerConfigViewState();
 }
 
-class _SetupViewState extends ConsumerState<SetupView> {
+class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
   @override
   Widget build(BuildContext context) {
     final config = ref.watch(connectionProvider);
