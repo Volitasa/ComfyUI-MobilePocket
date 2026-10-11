@@ -10,6 +10,7 @@ import '../../providers/task_manager.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../models/task_history.dart';
+import '../../models/workflow_snapshot.dart';
 import '../widgets/connection_status_badge.dart';
 import '../builder/run_view.dart';
 import '../settings/server_config_view.dart';
@@ -30,15 +31,21 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   }
 
   /// 卡片底部的操作区：左右各占一半，仅用图标颜色做轻度区分，不加重装饰
-  Widget _buildActionBar(TaskHistory task) {
+  Widget _buildActionBar(TaskHistory task, List<WorkflowSnapshot> snapshots) {
+    // 记录里有 snapshotId 还不够，必须快照当前真的存在——
+    // 用户可能已经在设置页把它删掉了
+    final canRerun = task.snapshotId != null &&
+        snapshots.any((s) => s.id == task.snapshotId);
+
     return Row(
       children: [
         _ActionKey(
           icon: Icons.replay,
           label: '再次运行',
-          color: AppColors.primary,
-          // 无快照时置灰，点击仍会说明原因而不是静默无反应
-          enabled: task.snapshotId != null,
+          // 用沉一点的成功色而非品牌亮绿，小图标不至于抢过内容
+          color: AppColors.success,
+          // 置灰但仍可点：点击会说明具体原因，而不是静默无反应
+          enabled: canRerun,
           onTap: () => _runAgain(task),
         ),
         _ActionKey(
@@ -261,6 +268,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   Widget build(BuildContext context) {
     final tasks = ref.watch(taskManagerProvider).history;
     final configState = ref.watch(connectionProvider);
+    final snapshots = ref.watch(snapshotProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -411,7 +419,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                               const Divider(height: 1),
                               // 操作区放在卡片底部左右排开，不再挤在缩略图下方：
                               // 两个按钮各占一半宽度，触控目标也更大
-                              _buildActionBar(task),
+                              _buildActionBar(task, snapshots),
                             ],
                           ),
                         ),
@@ -444,18 +452,20 @@ class _ActionKey extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = enabled ? color : Colors.grey.shade400;
+    // 只有图标带语义色，文字统一中性灰，让操作区整体后退
+    final iconColor = enabled ? color : Colors.grey.shade400;
+    final textColor = enabled ? Colors.grey.shade600 : Colors.grey.shade400;
     return Expanded(
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          height: 40,
+          height: 36,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 17, color: fg),
-              const SizedBox(width: 6),
-              Text(label, style: TextStyle(fontSize: 13, color: fg)),
+              Icon(icon, size: 16, color: iconColor),
+              const SizedBox(width: 5),
+              Text(label, style: TextStyle(fontSize: 12, color: textColor)),
             ],
           ),
         ),

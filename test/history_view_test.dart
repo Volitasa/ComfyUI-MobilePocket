@@ -6,17 +6,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:comfyui_mobilepocket/providers/connection_provider.dart';
+import 'package:comfyui_mobilepocket/theme.dart';
 import 'package:comfyui_mobilepocket/ui/gallery/history_view.dart';
 
 /// 用给定的历史记录构建 HistoryView。
 /// 历史通过 SharedPreferences 注入，TaskManager 在 build 时自行读取。
 Future<void> _pumpHistory(
   WidgetTester tester,
-  List<Map<String, dynamic>> history,
-) async {
+  List<Map<String, dynamic>> history, {
+  List<Map<String, dynamic>> snapshots = const [],
+}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString('comfy_task_history', jsonEncode(history));
+  if (snapshots.isNotEmpty) {
+    await prefs.setString('comfy_workflow_snapshots', jsonEncode(snapshots));
+  }
 
   await tester.pumpWidget(
     ProviderScope(
@@ -106,6 +111,44 @@ void main() {
   });
 
   group('HistoryView 再次运行', () {
+    testWidgets('快照存在时按钮为正常色；快照被删后置灰', (tester) async {
+      final snap = {
+        'id': 'snap_ok',
+        'displayName': '基础文生图 · 10-11 20:00',
+        'sourceName': '基础文生图',
+        'createdAt': 1791579799776,
+        'serverId': 'srv_test',
+        'workflowJson': {
+          '1': {
+            'inputs': {'text': 'a cat'},
+            'class_type': 'CLIPTextEncode',
+          }
+        },
+        'mappingConfig': [],
+      };
+
+      // 有快照：按钮应是可用色，而不是置灰
+      await _pumpHistory(
+        tester,
+        [_task(status: '已完成', promptId: 'p-ok', snapshotId: 'snap_ok')],
+        snapshots: [snap],
+      );
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.replay)).color,
+        AppColors.success,
+      );
+
+      // 快照被手动删除（记录里仍留着 snapshotId）：必须置灰
+      await _pumpHistory(
+        tester,
+        [_task(status: '已完成', promptId: 'p-gone', snapshotId: 'snap_gone')],
+      );
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.replay)).color,
+        Colors.grey.shade400,
+      );
+    });
+
     testWidgets('无快照的旧记录点击会说明原因，而不是静默无反应', (tester) async {
       await _pumpHistory(tester, [_task(status: '已完成', promptId: 'p-legacy')]);
 

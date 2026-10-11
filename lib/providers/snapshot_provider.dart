@@ -51,6 +51,10 @@ class SnapshotNotifier extends Notifier<List<WorkflowSnapshot>> {
     return null;
   }
 
+  /// 该快照 id 当前是否真的存在。
+  /// 记录里持有 snapshotId 不代表快照还在——可能已被用户手动删除。
+  bool exists(String? id) => id != null && byId(id) != null;
+
   /// 由工作流内容推导快照 id。
   /// 只取 workflowJson，不含节点配置 —— 改暴露配置不能让 id 变，
   /// 否则已存在的生成记录会引用到一个失效的快照。
