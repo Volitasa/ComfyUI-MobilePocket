@@ -8,6 +8,7 @@ import '../models/task_history.dart';
 import '../services/gallery_store.dart';
 import '../utils.dart';
 import 'connection_provider.dart';
+import 'local_workflow_provider.dart';
 import 'workflow_provider.dart';
 
 class TaskState {
@@ -50,7 +51,8 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   }) {
     // 记住任务所属的服务器连接，切换服务器时不会把旧服务器的任务误判
     final config = ref.read(connectionProvider);
-    final title = workflowDisplayName(workflowId);
+    // 本地工作流用库里的名称，否则记录里全是「本地导入」无法分辨
+    final title = resolveWorkflowName(ref.read(localWorkflowProvider), workflowId);
     final newTask = TaskHistory(
       promptId: promptId,
       workflowId: workflowId,

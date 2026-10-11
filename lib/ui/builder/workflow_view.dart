@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/local_workflow.dart';
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
 import '../../providers/snapshot_provider.dart';
+import '../../providers/local_workflow_provider.dart';
 import '../../utils.dart';
 import 'run_view.dart'; // 下一步我们将创建运行页面
 
@@ -43,9 +45,14 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
   bool get _isSnapshotMode => widget.snapshotId != null;
 
+  bool get _isLocal => widget.workflowId.startsWith('local_');
+
+  /// 本地工作流条目（本地工作流已持久化，不再依赖内存缓存）
+  LocalWorkflow? get _localEntry =>
+      _isLocal ? ref.read(localWorkflowProvider.notifier).byId(widget.workflowId) : null;
+
   Future<void> _initData() async {
     final notifier = ref.read(workflowProvider.notifier);
-    final state = ref.read(workflowProvider);
 
     if (_isSnapshotMode) {
       final snapshot = ref.read(snapshotProvider.notifier).byId(widget.snapshotId!);
@@ -58,14 +65,18 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       }
       // 用快照里保存的配置作为「已保存配置」，不读线上的 mapping_
       _parseWorkflow(snapshot.workflowJson, savedConfig: snapshot.mappingConfig);
-    } else if (widget.workflowId.startsWith('local_')) {
-      // 本地导入：校验缓存数据确实属于当前本地工作流
-      if (!state.hasDataFor(widget.workflowId)) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('本地数据已丢失，请重新选择文件')));
+    } else if (_isLocal) {
+      // 本地工作流：从本地库读取（重启后依然可用），顺带写进缓存供运行页消费
+      final entry = _localEntry;
+      if (entry == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('本地工作流已不存在，可能已被删除')));
         Navigator.pop(context);
         return;
       }
-      _parseWorkflow(state.currentWorkflowData!);
+      ref.read(workflowProvider.notifier)
+          .setLocalWorkflowData(entry.workflowJson, workflowId: widget.workflowId);
+      _parseWorkflow(entry.workflowJson);
     } else {
       final success = await notifier.fetchWorkflowContent(widget.workflowId);
       if (!success) {
@@ -241,27 +252,12 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   // 重新解析：放弃已保存的映射，用工作流当前结构重新提取参数。
   // 用于服务器端工作流更新后，让 App 重新识别新参数。
   Future<void> _reparse() async {
-    // 本地分支必须校验归属：可能已切换到其它本地工作流，缓存不属于当前 ID
-    if (widget.workflowId.startsWith('local_') &&
-        !ref.read(workflowProvider).hasDataFor(widget.workflowId)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('本地数据已丢失，请重新选择文件')));
-      return;
-    }
-    final data = ref.read(workflowProvider).currentWorkflowData;
-    if (data == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('无可用工作流数据，无法重新解析')));
-      return;
-    }
-
     setState(() {
       _extractableNodes = [];
       _isReady = false;
     });
 
-    // 本地导入的工作流数据已在 currentWorkflowData 中，直接重新解析；
-    // 线上工作流则先重新拉取最新内容再解析；快照则直接用快照里的 JSON
+    // 快照用快照里的 JSON；本地从本地库读；线上则重新拉取最新内容
     if (_isSnapshotMode) {
       final snapshot = ref.read(snapshotProvider.notifier).byId(widget.snapshotId!);
       if (snapshot == null) {
@@ -272,8 +268,16 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         return;
       }
       _parseWorkflow(snapshot.workflowJson, useSavedConfig: false);
-    } else if (widget.workflowId.startsWith('local_')) {
-      _parseWorkflow(data, useSavedConfig: false);
+    } else if (_isLocal) {
+      final entry = _localEntry;
+      if (entry == null) {
+        if (!mounted) return;
+        setState(() => _isReady = true);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('本地工作流已不存在，可能已被删除')));
+        return;
+      }
+      _parseWorkflow(entry.workflowJson, useSavedConfig: false);
     } else {
       final ok = await ref.read(workflowProvider.notifier).fetchWorkflowContent(widget.workflowId);
       if (!ok) {
@@ -460,7 +464,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       );
     }
 
-    final displayName = workflowDisplayName(widget.workflowId);
+    final displayName = resolveWorkflowName(ref.read(localWorkflowProvider), widget.workflowId);
 
     return Scaffold(
       appBar: AppBar(

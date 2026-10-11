@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
 import '../../providers/snapshot_provider.dart';
+import '../../providers/local_workflow_provider.dart';
 import '../../providers/task_manager.dart';
 import '../../providers/ws_event_provider.dart';
 import '../../providers/connection_provider.dart';
@@ -160,7 +161,17 @@ class _RunViewState extends ConsumerState<RunView> {
     // 数据已就绪且归属匹配当前工作流 → 无需拉取
     if (state.hasDataFor(_dataOwnerId)) return;
 
-    if (widget.workflowId.startsWith('local_')) return; // 本地导入由导入流程写入
+    // 本地工作流：从本地库加载，重启后依然可用
+    if (widget.workflowId.startsWith('local_')) {
+      final entry =
+          ref.read(localWorkflowProvider.notifier).byId(widget.workflowId);
+      if (entry == null) return;
+      ref.read(workflowProvider.notifier).setLocalWorkflowData(
+            entry.workflowJson,
+            workflowId: widget.workflowId,
+          );
+      return;
+    }
 
     await ref.read(workflowProvider.notifier).fetchWorkflowContent(widget.workflowId);
   }
@@ -332,7 +343,7 @@ class _RunViewState extends ConsumerState<RunView> {
         final snapshotId = ref.read(snapshotProvider.notifier).upsert(
               workflowJson: workflowData,
               mappingConfig: _formConfig,
-              sourceName: workflowDisplayName(widget.workflowId),
+              sourceName: resolveWorkflowName(ref.read(localWorkflowProvider), widget.workflowId),
               serverId: ref.read(connectionProvider).activeServerId,
             );
         taskManager.createNewTask(
@@ -369,7 +380,7 @@ class _RunViewState extends ConsumerState<RunView> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = workflowDisplayName(widget.workflowId);
+    final displayName = resolveWorkflowName(ref.read(localWorkflowProvider), widget.workflowId);
 
     return Scaffold(
       appBar: AppBar(

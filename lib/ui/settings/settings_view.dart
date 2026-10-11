@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/snapshot_provider.dart';
+import '../../providers/local_workflow_provider.dart';
 import '../../providers/github_token_provider.dart';
 import 'server_config_view.dart';
 import 'about_view.dart';
 import 'snapshot_list_view.dart';
+import 'workflow_storage_view.dart';
 import 'github_token_view.dart';
 
 /// 设置中心：服务器配置下沉为子项，后续设置项都挂在这里。
@@ -17,6 +19,7 @@ class SettingsView extends ConsumerWidget {
     final config = ref.watch(connectionProvider);
     final serverCount = config.servers.length;
     final snapshotCount = ref.watch(snapshotProvider).length;
+    final localCount = ref.watch(localWorkflowProvider).length;
     final tokenConfigured = ref.watch(githubTokenProvider).trim().isNotEmpty;
 
     return Scaffold(
@@ -40,6 +43,17 @@ class SettingsView extends ConsumerWidget {
           ),
           const Divider(height: 24),
           _SectionTitle('数据'),
+          _EntryTile(
+            icon: Icons.folder_copy_outlined,
+            title: '工作流存储',
+            subtitle: localCount == 0
+                ? '导入或另存工作流后显示'
+                : '已保存 $localCount 个工作流',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const WorkflowStorageView()),
+            ),
+          ),
           _EntryTile(
             icon: Icons.photo_library_outlined,
             title: '工作流快照',
