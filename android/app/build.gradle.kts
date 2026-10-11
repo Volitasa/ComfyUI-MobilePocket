@@ -6,22 +6,33 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Release 签名配置：从 android/key.properties 读取（该文件不入库，见 key.properties.example）。
-// CI 由 .github/workflows/release.yml 用仓库 Secrets 现场生成同名文件。
+// Release 签名配置：从 android/key.properties 读取。
+// 本地：参考 android/key.properties.example 自建（含密码，不入库）。
+// CI ：由 .github/workflows/release.yml 用仓库 Secrets 在打包前现场生成同名文件。
 val signingPropsFile = rootProject.file("key.properties")
 val signingProps = Properties().apply {
-    if (!signingPropsFile.exists()) {
-        throw GradleException(
-            "缺少 ${signingPropsFile.absolutePath}，无法进行 release 签名。\n" +
-                "请参考 android/key.properties.example 创建该文件（内容含密码，切勿提交到仓库）。"
-        )
+    if (signingPropsFile.exists()) {
+        signingPropsFile.inputStream().use { load(it) }
     }
-    signingPropsFile.inputStream().use { load(it) }
 }
 
-fun requireSigningProp(key: String): String =
-    signingProps.getProperty(key)
-        ?: throw GradleException("android/key.properties 缺少必需字段：$key")
+// 只有真正构建 release 时才强制要求签名配置，否则本地 debug 运行也会被引爆。
+val isReleaseBuild = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
+
+fun releaseSigningProp(key: String): String {
+    val value = signingProps.getProperty(key)
+    if (value.isNullOrBlank()) {
+        if (isReleaseBuild) {
+            throw GradleException(
+                "release 签名缺少配置：$key。\n" +
+                    "请提供 ${signingPropsFile.absolutePath}（参考 android/key.properties.example），\n" +
+                    "CI 则由 .github/workflows/release.yml 用 Secrets 自动生成，请检查 KEYSTORE_BASE64 等 4 个 Secret。"
+            )
+        }
+        return ""
+    }
+    return value
+}
 
 android {
     namespace = "com.example.comfyui_mobilepocket"
@@ -50,14 +61,17 @@ android {
 
     signingConfigs {
         create("release") {
-            val ksFile = file(requireSigningProp("storeFile"))
-            if (!ksFile.exists()) {
-                throw GradleException("签名文件不存在：${ksFile.absolutePath}")
+            val storePath = releaseSigningProp("storeFile")
+            if (storePath.isNotEmpty()) {
+                val ksFile = file(storePath)
+                if (isReleaseBuild && !ksFile.exists()) {
+                    throw GradleException("签名文件不存在：${ksFile.absolutePath}")
+                }
+                storeFile = ksFile
             }
-            storeFile = ksFile
-            storePassword = requireSigningProp("storePassword")
-            keyAlias = requireSigningProp("keyAlias")
-            keyPassword = requireSigningProp("keyPassword")
+            storePassword = releaseSigningProp("storePassword")
+            keyAlias = releaseSigningProp("keyAlias")
+            keyPassword = releaseSigningProp("keyPassword")
         }
     }
 

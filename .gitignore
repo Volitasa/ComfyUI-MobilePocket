@@ -56,5 +56,4 @@ ui-ux-review.md
 # Android signing keystore
 comfy-release-key.jks
 keystore_base64.txt
-keystore_base64.utf16.bak
 android/key.properties
