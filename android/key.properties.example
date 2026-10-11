@@ -1,0 +1,7 @@
+# 复制成本文件为 android/key.properties 并填入真实值（key.properties 已在 .gitignore 中，切勿提交）
+#
+# storeFile 路径相对于 android/app/，即 ../../ 指向仓库根目录
+storeFile=../../comfy-release-key.jks
+storePassword=替换为 SIGNING_STORE_PASSWORD
+keyAlias=comfy
+keyPassword=替换为 SIGNING_KEY_PASSWORD
