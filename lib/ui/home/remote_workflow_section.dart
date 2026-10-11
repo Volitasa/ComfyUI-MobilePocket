@@ -29,25 +29,83 @@ class RemoteWorkflowSection extends ConsumerWidget {
         child: Center(child: CircularProgressIndicator()),
       );
     }
-    if (workflowState.workflowList.isEmpty) return _buildEmpty();
+    if (workflowState.isEmpty) return _buildEmpty();
 
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        ...workflowState.workflowList.map(
-          (file) => _buildWorkflowCard(context, ref, file, workflowState),
-        ),
-        const SizedBox(height: 12),
+        // 分组按格式而非状态：条目解析后不会在两组之间跳来跳去
+        if (workflowState.workflowList.isNotEmpty) ...[
+          _buildGroupTitle('API 工作流 · 可直接运行'),
+          ...workflowState.workflowList.map(
+            (file) => _buildWorkflowCard(context, ref, file, workflowState),
+          ),
+          const SizedBox(height: 18),
+        ],
+        if (workflowState.uiWorkflowList.isNotEmpty) ...[
+          _buildGroupTitle('UI 工作流 · 需解析'),
+          ...workflowState.uiWorkflowList.map(_buildUiWorkflowCard),
+          const SizedBox(height: 12),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              'UI 格式是 ComfyUI 界面保存的原始结构，需转换为 API 结构后才能运行。',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ),
+          const SizedBox(height: 18),
+        ],
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 4),
           child: Text(
-            '提示：工作流来自 ComfyUI 的 userdata/workflows 目录下的 _api.json 文件。'
-            '这些 API JSON 由 ComfyUI-AutoSaveAPI 插件自动生成'
+            '提示：工作流来自 ComfyUI 的 userdata/workflows 目录。'
+            '其中 API JSON 由 ComfyUI-AutoSaveAPI 插件自动生成'
             '（https://github.com/Volitasa/ComfyUI-AutoSaveAPI.git）。',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildGroupTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      ),
+    );
+  }
+
+  /// UI 格式工作流：尚未支持解析，只列出来让用户知道服务器上有什么。
+  /// 虚线描边表示「还不能用」，不给点击反馈，避免做成假入口。
+  Widget _buildUiWorkflowCard(String filename) {
+    final title = workflowDisplayName(filename).replaceAll(RegExp(r'\.json$'), '');
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade300, style: BorderStyle.solid),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              '尚未解析 · 暂不可运行',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -92,7 +150,7 @@ class RemoteWorkflowSection extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           const Text(
-            '服务器上没有找到 _api.json 后缀的工作流',
+            '服务器上没有找到工作流 JSON 文件',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey, fontSize: 12),
           ),

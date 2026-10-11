@@ -6,6 +6,15 @@ import '../models/workflow_node.dart';
 import '../utils.dart';
 import 'connection_provider.dart';
 
+bool isWorkflowFile(String name) => name.endsWith('.json');
+
+/// API 格式工作流（ComfyUI-AutoSaveAPI 生成的 `_api.json`），可直接提交运行
+bool isApiWorkflowFile(String name) => name.endsWith('_api.json');
+
+/// UI 格式工作流（ComfyUI 界面保存的 `*.json`），需转换为 API 结构后才能运行
+bool isUiWorkflowFile(String name) =>
+    isWorkflowFile(name) && !isApiWorkflowFile(name);
+
 /// 工作流节点配置的当前状态（用于列表上提示是否需要重新配置）
 enum WorkflowMappingStatus {
   /// 尚未检测
@@ -22,7 +31,12 @@ enum WorkflowMappingStatus {
 }
 
 class WorkflowState {
+  /// API 格式工作流（`_api.json`），可直接提交运行
   final List<String> workflowList;
+
+  /// UI 格式工作流（`*.json` 且非 `_api.json`），需转换为 API 结构后才能运行
+  final List<String> uiWorkflowList;
+
   final bool isLoading;
 
   /// 正在后台比对各工作流的内容是否变化
@@ -39,12 +53,15 @@ class WorkflowState {
 
   WorkflowState({
     this.workflowList = const [],
+    this.uiWorkflowList = const [],
     this.isLoading = false,
     this.isChecking = false,
     this.currentWorkflowData,
     this.currentWorkflowId,
     this.statuses = const {},
   });
+
+  bool get isEmpty => workflowList.isEmpty && uiWorkflowList.isEmpty;
 
   /// 指定工作流的数据是否已就绪（数据存在且归属匹配）
   bool hasDataFor(String workflowId) =>
@@ -55,6 +72,7 @@ class WorkflowState {
 
   WorkflowState copyWith({
     List<String>? workflowList,
+    List<String>? uiWorkflowList,
     bool? isLoading,
     bool? isChecking,
     Map<String, dynamic>? currentWorkflowData,
@@ -63,6 +81,7 @@ class WorkflowState {
   }) {
     return WorkflowState(
       workflowList: workflowList ?? this.workflowList,
+      uiWorkflowList: uiWorkflowList ?? this.uiWorkflowList,
       isLoading: isLoading ?? this.isLoading,
       isChecking: isChecking ?? this.isChecking,
       currentWorkflowData: currentWorkflowData ?? this.currentWorkflowData,
@@ -96,15 +115,15 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
         final decoded = jsonDecode(response.body);
         List<dynamic> filesRaw = decoded is List ? decoded : (decoded['files'] ?? []);
 
-        final files = filesRaw
-            .map((e) => e.toString())
-            .where((name) => name.endsWith('_api.json'))
-            .toList();
+        final files = filesRaw.map((e) => e.toString()).where(isWorkflowFile).toList();
+        final apiFiles = files.where(isApiWorkflowFile).toList();
+        final uiFiles = files.where(isUiWorkflowFile).toList();
 
-        state = state.copyWith(workflowList: files);
+        state = state.copyWith(workflowList: apiFiles, uiWorkflowList: uiFiles);
 
-        // 列表就绪后立刻比对各工作流的内容，让需要重新配置的条目显形
-        await refreshStatuses(files);
+        // 列表就绪后立刻比对各 API 工作流的内容，让需要重新配置的条目显形
+        // （UI 工作流尚未解析，没有可比对的对象）
+        await refreshStatuses(apiFiles);
       }
     } catch (e) {
       // 生产环境可接入日志
