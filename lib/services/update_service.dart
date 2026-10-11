@@ -78,7 +78,11 @@ class UpdateService {
         );
       }
     } else if (latest.statusCode == 401) {
-      throw UpdateException('GitHub 令牌无效或已过期，请在「设置 → GitHub 访问令牌」中更新');
+      // 仓库若已转为公开，清除令牌即可恢复匿名访问，不必重新生成
+      throw UpdateException(
+        'GitHub 令牌无效或已过期。可在「设置 → GitHub 访问令牌」中更新；'
+        '若仓库已公开，直接清除令牌即可',
+      );
     } else if (latest.statusCode == 403) {
       throw UpdateException(
         hasToken
