@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/connection_provider.dart';
+import '../../providers/snapshot_provider.dart';
 import 'server_config_view.dart';
 import 'about_view.dart';
+import 'snapshot_list_view.dart';
 
 /// 设置中心：服务器配置下沉为子项，后续设置项都挂在这里。
 class SettingsView extends ConsumerWidget {
@@ -12,6 +14,7 @@ class SettingsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final config = ref.watch(connectionProvider);
     final serverCount = config.servers.length;
+    final snapshotCount = ref.watch(snapshotProvider).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -30,6 +33,19 @@ class SettingsView extends ConsumerWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ServerConfigView()),
+            ),
+          ),
+          const Divider(height: 24),
+          _SectionTitle('数据'),
+          _EntryTile(
+            icon: Icons.photo_library_outlined,
+            title: '工作流快照',
+            subtitle: snapshotCount == 0
+                ? '运行工作流后自动生成'
+                : '已固化 $snapshotCount 份快照',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SnapshotListView()),
             ),
           ),
           const Divider(height: 24),

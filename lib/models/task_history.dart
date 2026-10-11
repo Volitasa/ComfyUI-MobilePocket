@@ -12,6 +12,12 @@ class TaskHistory {
   /// 用于切换服务器时区分任务归属：对新服务器的对账不应该
   /// 把旧服务器上正在跑的任务误判为“已中断”。旧数据为空。
   final String? serverId;
+  /// 本次运行固化下来的工作流快照 ID。
+  /// 用于「再次运行」——凭快照还原当时的表单结构。旧数据为空。
+  final String? snapshotId;
+  /// 本次运行实际提交的表单值，键为 nodeParamKey(节点id, 参数名)。
+  /// 用于「再次运行」时预填。旧数据为空。
+  final Map<String, dynamic>? params;
 
   TaskHistory({
     required this.promptId,
@@ -24,6 +30,8 @@ class TaskHistory {
     this.images = const [],
     int? timestamp,
     this.serverId,
+    this.snapshotId,
+    this.params,
   }) : timestamp = timestamp ?? DateTime.now().millisecondsSinceEpoch;
 
   factory TaskHistory.fromJson(Map<String, dynamic> json) {
@@ -38,6 +46,10 @@ class TaskHistory {
       images: List<Map<String, dynamic>>.from(json['images'] ?? []),
       timestamp: json['timestamp'],
       serverId: json['serverId'],
+      snapshotId: json['snapshotId'],
+      params: json['params'] is Map
+          ? Map<String, dynamic>.from(json['params'] as Map)
+          : null,
     );
   }
 
@@ -52,5 +64,7 @@ class TaskHistory {
         'images': images,
         'timestamp': timestamp,
         'serverId': serverId,
+        'snapshotId': snapshotId,
+        'params': params,
       };
 }

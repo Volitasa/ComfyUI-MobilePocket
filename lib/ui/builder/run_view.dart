@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
+import '../../providers/snapshot_provider.dart';
 import '../../providers/task_manager.dart';
 import '../../providers/ws_event_provider.dart';
 import '../../providers/connection_provider.dart';
@@ -14,7 +15,17 @@ import 'workflow_view.dart';
 
 class RunView extends ConsumerStatefulWidget {
   final String workflowId;
-  const RunView({super.key, required this.workflowId});
+  /// 非空时进入「快照模式」：表单结构与工作流数据都取自快照，不请求服务端。
+  final String? snapshotId;
+  /// 预填的表单值（键为 nodeParamKey），用于「再次运行」。
+  final Map<String, dynamic>? initialParams;
+
+  const RunView({
+    super.key,
+    required this.workflowId,
+    this.snapshotId,
+    this.initialParams,
+  });
 
   @override
   ConsumerState<RunView> createState() => _RunViewState();
@@ -30,6 +41,16 @@ class _RunViewState extends ConsumerState<RunView> {
   // 节点分组的展开/收起状态
   final Set<String> _expandedNodeIds = {};
   final Set<String> _collapsedNodeIds = {};
+  // 「再次运行」时因配置变更而套用不到的参数条数（不能静默丢弃，要告知用户）
+  int _unappliedCount = 0;
+  // 原记录里的 seed，供「用原 seed」一键回填
+  final Map<String, dynamic> _originalSeeds = {};
+
+  /// 工作流数据在缓存中的归属 ID：快照模式下用快照 id，否则用工作流 id。
+  /// 两者必须区分，否则快照数据会被判成属于另一个工作流（串台）。
+  String get _dataOwnerId => widget.snapshotId ?? widget.workflowId;
+
+  bool get _isSnapshotMode => widget.snapshotId != null;
 
   @override
   void initState() {
@@ -38,7 +59,28 @@ class _RunViewState extends ConsumerState<RunView> {
   }
 
   void _initForm() {
-    final savedConfig = ref.read(workflowProvider.notifier).getMappingConfig(widget.workflowId);
+    final List<WorkflowNode>? savedConfig;
+
+    if (_isSnapshotMode) {
+      final snapshot = ref.read(snapshotProvider.notifier).byId(widget.snapshotId!);
+      if (snapshot == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('对应的工作流快照已被删除，无法再次运行')));
+          Navigator.pop(context);
+        });
+        return;
+      }
+      savedConfig = snapshot.mappingConfig;
+      // 快照自带工作流数据，直接写入缓存，不请求服务端
+      ref.read(workflowProvider.notifier)
+          .setLocalWorkflowData(snapshot.workflowJson, workflowId: _dataOwnerId);
+    } else {
+      savedConfig =
+          ref.read(workflowProvider.notifier).getMappingConfig(widget.workflowId);
+    }
+
     if (savedConfig == null || savedConfig.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -49,42 +91,58 @@ class _RunViewState extends ConsumerState<RunView> {
     }
 
     _formConfig = savedConfig.where((node) => node.exposed).toList();
+
+    final params = widget.initialParams;
+    if (params != null) {
+      // 配置被改过 → 部分参数在当前表单里已不存在，统计出来提示用户
+      final exposedKeys = _formConfig.map((n) => nodeParamKey(n.id, n.key)).toSet();
+      _unappliedCount = params.keys.where((k) => !exposedKeys.contains(k)).length;
+    }
+
     for (var node in _formConfig) {
       // 同一节点可有多个参数，控制器/状态统一用 id:key 复合键，避免串台
       final k = nodeParamKey(node.id, node.key);
+      final dynamic fromParams = params?[k];
+      final bool hasInitial = params != null && params.containsKey(k);
+      // 预填优先，否则退回配置里保存的默认值
+      final dynamic initial = hasInitial ? fromParams : node.value;
+
       switch (node.paramType) {
         case ParamType.seed:
-          // 有初值则用初值，否则随机
-          if (node.value is int) {
-            _setSeedValue(k, node.value as int);
+          if (hasInitial) {
+            // 再次运行：seed 默认重新随机，但把原值留着供一键回填
+            _originalSeeds[k] = initial;
+            _generateSeed(k);
+          } else if (initial is int) {
+            _setSeedValue(k, initial);
           } else {
             _generateSeed(k);
           }
           break;
         case ParamType.text:
-          _controllers[k] = TextEditingController(text: node.value?.toString() ?? '');
+          _controllers[k] = TextEditingController(text: initial?.toString() ?? '');
           break;
         case ParamType.intType:
-          _controllers[k] = TextEditingController(text: _numToString(node.value));
+          _controllers[k] = TextEditingController(text: _numToString(initial));
           break;
         case ParamType.float:
-          _controllers[k] = TextEditingController(text: _numToString(node.value));
+          _controllers[k] = TextEditingController(text: _numToString(initial));
           break;
         case ParamType.boolType:
-          _widgetValues[k] = node.value ?? false;
+          _widgetValues[k] = initial ?? false;
           break;
         case ParamType.enumType:
           // 下拉当前值：取 value，若为空则取 options 第一项
           final opts = node.options;
-          final current = node.value?.toString();
+          final current = initial?.toString();
           _widgetValues[k] = (current != null && opts.contains(current))
               ? current
               : (opts.isNotEmpty ? opts.first : (current ?? ''));
           break;
         case ParamType.image:
           // 图片初值为服务器上已有的文件名，仅作展示，不预载图片
-          if (node.value is String && (node.value as String).isNotEmpty) {
-            _widgetValues[k] = node.value;
+          if (initial is String && initial.isNotEmpty) {
+            _widgetValues[k] = initial;
           }
           break;
       }
@@ -97,13 +155,69 @@ class _RunViewState extends ConsumerState<RunView> {
   }
 
   Future<void> _ensureWorkflowData() async {
+    if (_isSnapshotMode) return; // 快照模式：数据已由 _initForm 写入缓存
+
     final state = ref.read(workflowProvider);
     // 数据已就绪且归属匹配当前工作流 → 无需拉取
-    if (state.hasDataFor(widget.workflowId)) return;
+    if (state.hasDataFor(_dataOwnerId)) return;
 
     if (widget.workflowId.startsWith('local_')) return; // 本地导入由导入流程写入
 
     await ref.read(workflowProvider.notifier).fetchWorkflowContent(widget.workflowId);
+  }
+
+  /// 收集当前表单值，供「再次运行」预填
+  Map<String, dynamic> _collectParams() {
+    final params = <String, dynamic>{};
+    for (final node in _formConfig) {
+      final k = nodeParamKey(node.id, node.key);
+      if (node.paramType == ParamType.image) {
+        // 图片只记录服务端文件名（原图可能已被服务端清理）
+        final v = _widgetValues[k];
+        if (v is String && v.isNotEmpty) params[k] = v;
+        continue;
+      }
+      final v = _resolveValue(node);
+      if (v == null || v == '') continue;
+      params[k] = v;
+    }
+    return params;
+  }
+
+  void _restoreOriginalSeeds() {
+    for (final entry in _originalSeeds.entries) {
+      final v = entry.value;
+      final seed = v is int ? v : int.tryParse(v.toString());
+      if (seed != null) _setSeedValue(entry.key, seed);
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已恢复原记录的 seed')));
+    }
+  }
+
+  /// 「再次运行」时顶部的提示条：说明参数来源与未能套用的条数
+  Widget _buildRestoreBanner() {
+    final text = _unappliedCount > 0
+        ? '已套用当时参数（$_unappliedCount 项因配置变更未能套用），seed 已重新随机'
+        : '已套用当时参数，seed 已重新随机';
+    return Container(
+      width: double.infinity,
+      color: Colors.amber.shade50,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          const Icon(Icons.history_toggle_off, size: 16, color: Colors.amber),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 12))),
+          if (_originalSeeds.isNotEmpty)
+            TextButton(
+              onPressed: _restoreOriginalSeeds,
+              child: const Text('用原 seed'),
+            ),
+        ],
+      ),
+    );
   }
 
   String _numToString(dynamic v) {
@@ -177,8 +291,8 @@ class _RunViewState extends ConsumerState<RunView> {
 
   Future<void> _handleExecute() async {
     final wfState = ref.read(workflowProvider);
-    // 提交前再次校验：数据必须存在且属于当前工作流，避免提交错误的工作流
-    if (!wfState.hasDataFor(widget.workflowId)) {
+    // 提交前再次校验：数据必须存在且归属匹配，避免提交错误的工作流
+    if (!wfState.hasDataFor(_dataOwnerId)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('工作流数据未就绪，请返回重试')));
       }
@@ -200,13 +314,17 @@ class _RunViewState extends ConsumerState<RunView> {
       for (var node in _formConfig) {
         dynamic value;
 
+        final paramKey = nodeParamKey(node.id, node.key);
+
         if (node.paramType == ParamType.image) {
           // 图片：只有用户重新选择了本地图片才上传；否则沿用工作流里的原值
-          final picked = _formData[nodeParamKey(node.id, node.key)];
+          final picked = _formData[paramKey];
           if (picked != null) {
             final uploadedName = await taskManager.uploadImage(picked['bytes'], picked['filename']);
             if (uploadedName == null) throw Exception('图片上传失败');
             value = uploadedName;
+            // 记进快照参数，否则再次运行时会丢掉本次上传的图
+            _widgetValues[paramKey] = uploadedName;
           } else {
             // 未重新选择，保持工作流原有图片文件名不变
             continue;
@@ -228,7 +346,19 @@ class _RunViewState extends ConsumerState<RunView> {
         throw Exception('提交失败：无法连接服务器或请求超时');
       }
       if (result.containsKey('prompt_id')) {
-        taskManager.createNewTask(result['prompt_id'], widget.workflowId);
+        // 固化快照：内容没变则复用同一份，供后续「再次运行」还原表单
+        final snapshotId = ref.read(snapshotProvider.notifier).upsert(
+              workflowJson: workflowData,
+              mappingConfig: _formConfig,
+              sourceName: workflowDisplayName(widget.workflowId),
+              serverId: ref.read(connectionProvider).activeServerId,
+            );
+        taskManager.createNewTask(
+          result['prompt_id'],
+          widget.workflowId,
+          snapshotId: snapshotId,
+          params: _collectParams(),
+        );
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('任务下发成功！')));
@@ -270,13 +400,20 @@ class _RunViewState extends ConsumerState<RunView> {
             // 与配置页「保存并进入运行页」的 pushReplacement 对称，避免栈内重复）
             onPressed: () => Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => WorkflowView(workflowId: widget.workflowId)),
+              MaterialPageRoute(
+                builder: (_) => WorkflowView(
+                  workflowId: widget.workflowId,
+                  snapshotId: widget.snapshotId,
+                ),
+              ),
             ),
           )
         ],
       ),
       body: Column(
         children: [
+          // 由「再次运行」进入时，说明参数来源与 seed 的处理方式
+          if (widget.initialParams != null) _buildRestoreBanner(),
           Expanded(
             child: Builder(builder: (context) {
               // 按节点分组展示：同一节点的多个参数合并为一张卡片，支持展开/折叠

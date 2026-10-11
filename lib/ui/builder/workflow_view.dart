@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
+import '../../providers/snapshot_provider.dart';
 import '../../utils.dart';
 import 'run_view.dart'; // 下一步我们将创建运行页面
 
 class WorkflowView extends ConsumerStatefulWidget {
   final String workflowId;
+  /// 非空时进入「快照模式」：解析快照里的工作流 JSON，
+  /// 保存配置只写回快照，不碰线上工作流的 mapping 配置。
+  final String? snapshotId;
 
-  const WorkflowView({super.key, required this.workflowId});
+  const WorkflowView({super.key, required this.workflowId, this.snapshotId});
 
   @override
   ConsumerState<WorkflowView> createState() => _WorkflowViewState();
@@ -37,11 +41,24 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     _initData();
   }
 
+  bool get _isSnapshotMode => widget.snapshotId != null;
+
   Future<void> _initData() async {
     final notifier = ref.read(workflowProvider.notifier);
     final state = ref.read(workflowProvider);
 
-    if (widget.workflowId.startsWith('local_')) {
+    if (_isSnapshotMode) {
+      final snapshot = ref.read(snapshotProvider.notifier).byId(widget.snapshotId!);
+      if (snapshot == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('工作流快照已被删除')));
+        Navigator.pop(context);
+        return;
+      }
+      // 用快照里保存的配置作为「已保存配置」，不读线上的 mapping_
+      _parseWorkflow(snapshot.workflowJson, savedConfig: snapshot.mappingConfig);
+    } else if (widget.workflowId.startsWith('local_')) {
       // 本地导入：校验缓存数据确实属于当前本地工作流
       if (!state.hasDataFor(widget.workflowId)) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('本地数据已丢失，请重新选择文件')));
@@ -66,7 +83,12 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     });
   }
 
-  void _parseWorkflow(Map<String, dynamic> jsonMap, {bool useSavedConfig = true}) {
+  void _parseWorkflow(
+    Map<String, dynamic> jsonMap, {
+    bool useSavedConfig = true,
+    /// 直接指定「已保存配置」（快照模式用），优先级高于从 prefs 读
+    List<WorkflowNode>? savedConfig,
+  }) {
     final List<WorkflowNode> nodes = [];
 
     // 白名单节点类型：在这些节点内做全参数类型识别
@@ -183,8 +205,10 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     // 参数集合/类型/当前值取新解析（保证旧配置自动补齐新参数、类型不回退），
     // 仅保留用户在旧配置里的勾选状态与别名
     if (useSavedConfig) {
-      final savedConfig = ref.read(workflowProvider.notifier).getMappingConfig(widget.workflowId);
-      if (savedConfig != null && savedConfig.isNotEmpty) {
+      final config = savedConfig ??
+          ref.read(workflowProvider.notifier).getMappingConfig(widget.workflowId);
+      if (config != null && config.isNotEmpty) {
+        final savedConfig = config;
         if (nodes.isEmpty) {
           // 新解析为空（工作流内容异常等）时兜底保留旧配置，避免误清空
           _extractableNodes = savedConfig;
@@ -237,8 +261,18 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     });
 
     // 本地导入的工作流数据已在 currentWorkflowData 中，直接重新解析；
-    // 线上工作流则先重新拉取最新内容再解析
-    if (widget.workflowId.startsWith('local_')) {
+    // 线上工作流则先重新拉取最新内容再解析；快照则直接用快照里的 JSON
+    if (_isSnapshotMode) {
+      final snapshot = ref.read(snapshotProvider.notifier).byId(widget.snapshotId!);
+      if (snapshot == null) {
+        if (!mounted) return;
+        setState(() => _isReady = true);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('工作流快照已被删除')));
+        return;
+      }
+      _parseWorkflow(snapshot.workflowJson, useSavedConfig: false);
+    } else if (widget.workflowId.startsWith('local_')) {
       _parseWorkflow(data, useSavedConfig: false);
     } else {
       final ok = await ref.read(workflowProvider.notifier).fetchWorkflowContent(widget.workflowId);
@@ -397,10 +431,22 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   }
 
   void _handleSaveMapping() {
-    ref.read(workflowProvider.notifier).saveMappingConfig(widget.workflowId, _extractableNodes);
+    if (_isSnapshotMode) {
+      // 只写回快照：此刻原工作流未必还在，不能去改线上的 mapping 配置
+      ref.read(snapshotProvider.notifier)
+          .updateMappingConfig(widget.snapshotId!, _extractableNodes);
+    } else {
+      ref.read(workflowProvider.notifier)
+          .saveMappingConfig(widget.workflowId, _extractableNodes);
+    }
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => RunView(workflowId: widget.workflowId)),
+      MaterialPageRoute(
+        builder: (_) => RunView(
+          workflowId: widget.workflowId,
+          snapshotId: widget.snapshotId,
+        ),
+      ),
     );
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('配置已保存')));
   }

@@ -8,8 +8,10 @@ import '../../theme.dart';
 import '../../services/media_saver.dart';
 import '../../providers/task_manager.dart';
 import '../../providers/connection_provider.dart';
+import '../../providers/snapshot_provider.dart';
 import '../../models/task_history.dart';
 import '../widgets/connection_status_badge.dart';
+import '../builder/run_view.dart';
 import '../settings/server_config_view.dart';
 
 class HistoryView extends ConsumerStatefulWidget {
@@ -25,6 +27,74 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   @override
   void initState() {
     super.initState();
+  }
+
+  /// 「再次运行」：凭这条记录留下的快照还原表单，并预填当时的参数。
+  Future<void> _runAgain(TaskHistory task) async {
+    final snapshotId = task.snapshotId;
+
+    if (snapshotId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('这条记录没有工作流快照（旧版本生成），无法再次运行')),
+      );
+      return;
+    }
+
+    final snapshot = ref.read(snapshotProvider.notifier).byId(snapshotId);
+    if (snapshot == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('对应的工作流快照已被删除，无法再次运行')),
+      );
+      return;
+    }
+
+    // 服务器一致性：环境不同，模型/节点可能缺失，先让用户知情
+    final config = ref.read(connectionProvider);
+    final currentId = config.activeServerId;
+    if (task.serverId != currentId) {
+      String nameOf(String? id) {
+        if (id == null) return '未知服务器';
+        for (final s in config.servers) {
+          if (s.id == id) return s.name;
+        }
+        return '未知服务器';
+      }
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('运行服务器不一致'),
+          content: Text(
+            '这条记录当时运行在「${nameOf(task.serverId)}」，'
+            '当前连接的是「${nameOf(currentId)}」。\n\n'
+            '两台服务器的模型、插件节点可能不同，继续运行可能出现'
+            '「模型不存在／节点类型不存在」之类的报错。是否继续？',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('仍要运行'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RunView(
+          workflowId: task.workflowId,
+          snapshotId: snapshotId,
+          initialParams: task.params,
+        ),
+      ),
+    );
   }
 
   // 任务状态 → 展示色（成功绿 / 失败红 / 中断灰 / 进行中橙）
@@ -304,6 +374,23 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                                                 ],
                                               )
                                             : Center(child: _noOutputPlaceholder(task.status, statusColor)),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    // 再次运行：凭快照还原表单并预填当时参数
+                                    // 无快照时置灰，点击会说明原因而不是静默无反应
+                                    InkWell(
+                                      onTap: () => _runAgain(task),
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(2),
+                                        child: Icon(
+                                          Icons.replay,
+                                          size: 16,
+                                          color: task.snapshotId == null
+                                              ? Colors.grey.shade300
+                                              : Colors.grey,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 4),

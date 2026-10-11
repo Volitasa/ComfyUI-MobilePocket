@@ -42,7 +42,12 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     state = TaskState(history: newHistory);
   }
 
-  void createNewTask(String promptId, String workflowId) {
+  void createNewTask(
+    String promptId,
+    String workflowId, {
+    String? snapshotId,
+    Map<String, dynamic>? params,
+  }) {
     // 记住任务所属的服务器连接，切换服务器时不会把旧服务器的任务误判
     final config = ref.read(connectionProvider);
     final title = workflowDisplayName(workflowId);
@@ -51,6 +56,8 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       workflowId: workflowId,
       title: title,
       serverId: config.activeServerId,
+      snapshotId: snapshotId,
+      params: params,
     );
 
     final updatedList = [newTask, ...state.history];

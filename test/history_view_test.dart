@@ -36,6 +36,7 @@ Map<String, dynamic> _task({
   String nodeInfo = '',
   int progressValue = 0,
   int progressMax = 0,
+  String? snapshotId,
 }) {
   return {
     'promptId': promptId,
@@ -48,6 +49,7 @@ Map<String, dynamic> _task({
     'images': images,
     'timestamp': 1791579799776,
     'serverId': 'srv_test',
+    'snapshotId': ?snapshotId,
   };
 }
 
@@ -100,6 +102,30 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
       expect(find.byIcon(Icons.error_outline), findsNothing);
+    });
+  });
+
+  group('HistoryView 再次运行', () {
+    testWidgets('无快照的旧记录点击会说明原因，而不是静默无反应', (tester) async {
+      await _pumpHistory(tester, [_task(status: '已完成', promptId: 'p-legacy')]);
+
+      await tester.tap(find.byIcon(Icons.replay));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('这条记录没有工作流快照（旧版本生成），无法再次运行'), findsOneWidget);
+    });
+
+    testWidgets('快照已被删除的记录点击会说明原因', (tester) async {
+      await _pumpHistory(tester, [
+        _task(status: '已完成', promptId: 'p-gone', snapshotId: 'snap_deleted'),
+      ]);
+
+      await tester.tap(find.byIcon(Icons.replay));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('对应的工作流快照已被删除，无法再次运行'), findsOneWidget);
     });
   });
 }
