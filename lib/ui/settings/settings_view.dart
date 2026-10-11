@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/snapshot_provider.dart';
+import '../../providers/github_token_provider.dart';
 import 'server_config_view.dart';
 import 'about_view.dart';
 import 'snapshot_list_view.dart';
+import 'github_token_view.dart';
 
 /// 设置中心：服务器配置下沉为子项，后续设置项都挂在这里。
 class SettingsView extends ConsumerWidget {
@@ -15,6 +17,7 @@ class SettingsView extends ConsumerWidget {
     final config = ref.watch(connectionProvider);
     final serverCount = config.servers.length;
     final snapshotCount = ref.watch(snapshotProvider).length;
+    final tokenConfigured = ref.watch(githubTokenProvider).trim().isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -46,6 +49,19 @@ class SettingsView extends ConsumerWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SnapshotListView()),
+            ),
+          ),
+          const Divider(height: 24),
+          _SectionTitle('更新'),
+          _EntryTile(
+            icon: Icons.key_outlined,
+            title: 'GitHub 访问令牌',
+            subtitle: tokenConfigured
+                ? '已配置，可检查私有仓库的更新'
+                : '未配置。仓库为私有时必须配置才能检查更新',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const GithubTokenView()),
             ),
           ),
           const Divider(height: 24),

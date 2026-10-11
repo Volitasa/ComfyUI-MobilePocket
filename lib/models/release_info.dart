@@ -17,7 +17,13 @@ class ReleaseInfo {
   /// 选中的安装包信息
   final String assetName;
   final int sizeBytes;
+
+  /// 浏览器下载地址（仅公开仓库可直接使用）
   final String downloadUrl;
+
+  /// API 资产地址（形如 /repos/{owner}/{repo}/releases/assets/{id}）。
+  /// 私有仓库必须走这里并携带令牌，配合 Accept: application/octet-stream。
+  final String assetApiUrl;
 
   const ReleaseInfo({
     required this.version,
@@ -28,6 +34,7 @@ class ReleaseInfo {
     required this.assetName,
     required this.sizeBytes,
     required this.downloadUrl,
+    this.assetApiUrl = '',
   });
 
   /// 人类可读的包大小，例如 18.4 MB

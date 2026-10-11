@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_filex/open_filex.dart';
 
 import '../../providers/update_provider.dart';
+import '../../providers/github_token_provider.dart';
 import '../../services/update_service.dart';
 import '../../theme.dart';
+import 'github_token_view.dart';
 
 /// 关于页：展示版本号，并提供手动检查更新入口。
 class AboutView extends ConsumerStatefulWidget {
@@ -154,13 +156,29 @@ class _AboutViewState extends ConsumerState<AboutView> {
         );
 
       case UpdateStatus.error:
+        // 未配置令牌时，最可能的原因就是私有仓库导致匿名访问被拒，
+        // 直接给出通往配置页的入口，而不是让人对着报错猜
+        final needsToken = ref.watch(githubTokenProvider).trim().isEmpty;
         return _InfoRow(
           icon: Icons.error_outline,
           color: AppColors.danger,
           text: state.message ?? '检查更新失败',
-          action: TextButton(
-            onPressed: () => ref.read(updateProvider.notifier).checkForUpdate(),
-            child: const Text('重试'),
+          action: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                onPressed: () => ref.read(updateProvider.notifier).checkForUpdate(),
+                child: const Text('重试'),
+              ),
+              if (needsToken)
+                TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const GithubTokenView()),
+                  ),
+                  child: const Text('配置令牌'),
+                ),
+            ],
           ),
         );
 

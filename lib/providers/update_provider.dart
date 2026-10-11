@@ -3,6 +3,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../models/release_info.dart';
 import '../services/update_service.dart';
+import 'github_token_provider.dart';
 
 /// 更新检查的状态：仅手动触发，没有自动检查。
 enum UpdateStatus {
@@ -82,7 +83,9 @@ class UpdateNotifier extends Notifier<UpdateState> {
     );
 
     try {
-      final release = await UpdateService.instance.fetchLatestRelease();
+      // 私有仓库需要令牌；未配置时按匿名请求走（仅公开仓库可用）
+      final release = await UpdateService.instance
+          .fetchLatestRelease(token: ref.read(githubTokenProvider));
       final current = state.currentVersion;
       final hasUpdate = current.isEmpty ||
           UpdateService.compareVersion(release.version, current) > 0;
@@ -116,6 +119,7 @@ class UpdateNotifier extends Notifier<UpdateState> {
     try {
       final path = await UpdateService.instance.downloadApk(
         release,
+        token: ref.read(githubTokenProvider),
         onProgress: (p) {
           state = state.copyWith(progress: p);
         },
