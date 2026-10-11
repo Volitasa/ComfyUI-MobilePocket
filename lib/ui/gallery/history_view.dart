@@ -29,6 +29,33 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     super.initState();
   }
 
+  /// 卡片底部的操作区：两个琴键式按钮左右排列，用底色与阴影区分语义
+  Widget _buildActionBar(TaskHistory task) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      child: Row(
+        children: [
+          _ActionKey(
+            icon: Icons.replay,
+            label: '再次运行',
+            color: AppColors.primary,
+            // 无快照时置灰，点击仍会说明原因而不是静默无反应
+            enabled: task.snapshotId != null,
+            onTap: () => _runAgain(task),
+          ),
+          const SizedBox(width: 10),
+          _ActionKey(
+            icon: Icons.delete_outline,
+            label: '删除',
+            color: AppColors.danger,
+            enabled: true,
+            onTap: () => _confirmDelete(task),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 「再次运行」：凭这条记录留下的快照还原表单，并预填当时的参数。
   Future<void> _runAgain(TaskHistory task) async {
     final snapshotId = task.snapshotId;
@@ -295,11 +322,15 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                         // 状态色条：一屏内快速区分成功/失败/中断/进行中
                         Container(width: 4, color: statusColor),
                         Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(14.0),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(14.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,37 +407,16 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                                             : Center(child: _noOutputPlaceholder(task.status, statusColor)),
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    // 再次运行：凭快照还原表单并预填当时参数
-                                    // 无快照时置灰，点击会说明原因而不是静默无反应
-                                    InkWell(
-                                      onTap: () => _runAgain(task),
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(2),
-                                        child: Icon(
-                                          Icons.replay,
-                                          size: 16,
-                                          color: task.snapshotId == null
-                                              ? Colors.grey.shade300
-                                              : Colors.grey,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    // 删除按钮移到底部，避免紧贴标题误触
-                                    InkWell(
-                                      onTap: () => _confirmDelete(task),
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: const Padding(
-                                        padding: EdgeInsets.all(2),
-                                        child: Icon(Icons.delete_outline, size: 16, color: Colors.grey),
-                                      ),
-                                    ),
                                   ],
                                 ),
                               ],
-                            ),
+                              ),
+                              ),
+                              const Divider(height: 1),
+                              // 操作区放在卡片底部左右排开，不再挤在缩略图下方：
+                              // 两个按钮各占一半宽度，触控目标也更大
+                              _buildActionBar(task),
+                            ],
                           ),
                         ),
                       ],
@@ -415,6 +425,58 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                 );
               },
             ),
+    );
+  }
+}
+
+/// 琴键式操作按钮：带底色与轻微阴影，靠颜色区分语义。
+class _ActionKey extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _ActionKey({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = enabled ? color : Colors.grey;
+    return Expanded(
+      child: Material(
+        color: enabled ? color.withValues(alpha: 0.08) : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+        elevation: enabled ? 1.5 : 0,
+        shadowColor: color.withValues(alpha: 0.35),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: SizedBox(
+            height: 42,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 18, color: fg),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: fg,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

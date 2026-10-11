@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/github_token_provider.dart';
+import '../../theme.dart';
 
 /// GitHub 访问令牌配置页。
 ///
-/// 本应用的仓库是私有的，而 GitHub 对无权限的匿名请求一律返回 404
-/// （不会返回 403，以免泄露仓库是否存在）。因此必须配置一个只读令牌，
-/// 检查更新与下载安装包才能正常工作。
+/// 仓库为私有时，匿名请求 releases 接口会被 GitHub 一律回 404，
+/// 需要配置一个对该仓库有 Contents 读取权限的令牌才能检查更新。
 class GithubTokenView extends ConsumerStatefulWidget {
   const GithubTokenView({super.key});
 
@@ -70,33 +70,23 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
                 side: BorderSide(color: Colors.grey.shade200),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          configured ? Icons.check_circle_outline : Icons.info_outline,
-                          size: 20,
-                          color: configured ? Colors.green : Colors.orange,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          configured ? '已配置' : '未配置',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: configured ? Colors.green.shade800 : Colors.orange.shade800,
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      configured ? Icons.check_circle_outline : Icons.info_outline,
+                      size: 20,
+                      color: configured ? AppColors.success : AppColors.neutral,
                     ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      '更新功能读取的是 GitHub Releases。若仓库为私有，'
-                      '匿名请求会一律返回 404，表现为「没有发布带安装包的版本」。'
-                      '配置一个只读令牌即可正常检查更新与下载。',
-                      style: TextStyle(fontSize: 13, height: 1.5),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        configured ? '已配置' : '未配置',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: configured ? AppColors.success : AppColors.neutral,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -123,6 +113,7 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
               icon: const Icon(Icons.save_outlined),
               label: const Text('保存'),
               style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
@@ -135,21 +126,10 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             const Text(
-              '如何创建令牌',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '1. GitHub → Settings → Developer settings\n'
-              '2. Personal access tokens → Fine-grained tokens → Generate new token\n'
-              '3. Repository access 只勾选本仓库\n'
-              '4. Permissions → Repository permissions → Contents 设为 Read-only\n'
-              '5. 生成后复制，粘贴到上面保存\n\n'
-              '提示：细粒度令牌有有效期，过期后检查更新会提示令牌无效，'
-              '届时重新生成并更新即可。令牌仅保存在本机，不会上传。',
-              style: TextStyle(fontSize: 13, height: 1.6),
+              '令牌仅保存在本机，不会上传。',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),

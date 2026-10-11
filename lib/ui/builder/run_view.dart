@@ -43,8 +43,6 @@ class _RunViewState extends ConsumerState<RunView> {
   final Set<String> _collapsedNodeIds = {};
   // 「再次运行」时因配置变更而套用不到的参数条数（不能静默丢弃，要告知用户）
   int _unappliedCount = 0;
-  // 原记录里的 seed，供「用原 seed」一键回填
-  final Map<String, dynamic> _originalSeeds = {};
 
   /// 工作流数据在缓存中的归属 ID：快照模式下用快照 id，否则用工作流 id。
   /// 两者必须区分，否则快照数据会被判成属于另一个工作流（串台）。
@@ -109,12 +107,13 @@ class _RunViewState extends ConsumerState<RunView> {
 
       switch (node.paramType) {
         case ParamType.seed:
-          if (hasInitial) {
-            // 再次运行：seed 默认重新随机，但把原值留着供一键回填
-            _originalSeeds[k] = initial;
-            _generateSeed(k);
-          } else if (initial is int) {
-            _setSeedValue(k, initial);
+          // 原样沿用：工作流本身可能就设了固定种子，且用户未必想换，
+          // 替他随机反而是帮倒忙。只有完全没有初值时才生成。
+          final seed = initial is int
+              ? initial
+              : int.tryParse(initial?.toString() ?? '');
+          if (seed != null) {
+            _setSeedValue(k, seed);
           } else {
             _generateSeed(k);
           }
@@ -184,23 +183,11 @@ class _RunViewState extends ConsumerState<RunView> {
     return params;
   }
 
-  void _restoreOriginalSeeds() {
-    for (final entry in _originalSeeds.entries) {
-      final v = entry.value;
-      final seed = v is int ? v : int.tryParse(v.toString());
-      if (seed != null) _setSeedValue(entry.key, seed);
-    }
-    if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('已恢复原记录的 seed')));
-    }
-  }
-
   /// 「再次运行」时顶部的提示条：说明参数来源与未能套用的条数
   Widget _buildRestoreBanner() {
     final text = _unappliedCount > 0
-        ? '已套用当时参数（$_unappliedCount 项因配置变更未能套用），seed 已重新随机'
-        : '已套用当时参数，seed 已重新随机';
+        ? '已套用当时的参数（$_unappliedCount 项因配置变更未能套用）'
+        : '已套用当时的参数';
     return Container(
       width: double.infinity,
       color: Colors.amber.shade50,
@@ -210,11 +197,6 @@ class _RunViewState extends ConsumerState<RunView> {
           const Icon(Icons.history_toggle_off, size: 16, color: Colors.amber),
           const SizedBox(width: 8),
           Expanded(child: Text(text, style: const TextStyle(fontSize: 12))),
-          if (_originalSeeds.isNotEmpty)
-            TextButton(
-              onPressed: _restoreOriginalSeeds,
-              child: const Text('用原 seed'),
-            ),
         ],
       ),
     );
