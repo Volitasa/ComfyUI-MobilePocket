@@ -114,7 +114,7 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
               label: const Text('保存'),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               ),
             ),
             const SizedBox(height: 8),
@@ -123,7 +123,7 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
               icon: const Icon(Icons.delete_outline),
               label: const Text('清除令牌'),
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               ),
             ),
             const SizedBox(height: 16),

@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_filex/open_filex.dart';
 
+import '../../models/release_info.dart';
 import '../../providers/update_provider.dart';
 import '../../providers/github_token_provider.dart';
 import '../../services/update_service.dart';
 import '../../theme.dart';
+import '../../utils/release_notes.dart';
 import 'github_token_view.dart';
 
 /// 关于页：展示版本号，并提供手动检查更新入口。
@@ -73,8 +75,10 @@ class _AboutViewState extends ConsumerState<AboutView> {
               icon: const Icon(Icons.system_update_alt),
               label: const Text('检查更新'),
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: AppColors.primary,
+                // 水平 padding 不能省：styleFrom 会覆盖默认值，
+                // 只给 vertical 会让图标与文字紧贴边缘甚至被裁切
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               ),
             ),
             const SizedBox(height: 16),
@@ -200,8 +204,9 @@ class _AboutViewState extends ConsumerState<AboutView> {
     }
   }
 
-  Widget _buildReleaseCard(UpdateState state, release) {
+  Widget _buildReleaseCard(UpdateState state, ReleaseInfo release) {
     final downloading = state.status == UpdateStatus.downloading;
+    final notes = parseReleaseNotes(release.notes);
 
     return Card(
       elevation: 0,
@@ -234,7 +239,8 @@ class _AboutViewState extends ConsumerState<AboutView> {
               '${release.assetName} · ${release.sizeText}',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
-            if (release.notes.isNotEmpty) ...[
+            // GitHub 自动生成的说明含 Markdown 与裸链接，需清洗后再展示
+            if (notes.text.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Text('更新说明', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
@@ -242,10 +248,19 @@ class _AboutViewState extends ConsumerState<AboutView> {
                 constraints: const BoxConstraints(maxHeight: 180),
                 child: SingleChildScrollView(
                   child: Text(
-                    release.notes,
-                    style: const TextStyle(fontSize: 13, height: 1.5),
+                    notes.text,
+                    style: const TextStyle(fontSize: 13, height: 1.6),
                   ),
                 ),
+              ),
+            ] else if (notes.changelogUrl.isNotEmpty) ...[
+              // 没有手写说明时，至少把「完整变更」链接给出来，而不是留空白
+              const SizedBox(height: 12),
+              const Text('完整变更记录', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              SelectableText(
+                notes.changelogUrl,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
             const SizedBox(height: 14),
@@ -269,13 +284,16 @@ class _AboutViewState extends ConsumerState<AboutView> {
                 ],
               )
             else
-              FilledButton.icon(
-                onPressed: _downloadAndInstall,
-                icon: const Icon(Icons.download),
-                label: const Text('下载并安装'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _downloadAndInstall,
+                  icon: const Icon(Icons.download),
+                  label: const Text('下载并安装'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  ),
                 ),
               ),
           ],

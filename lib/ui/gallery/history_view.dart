@@ -29,30 +29,26 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     super.initState();
   }
 
-  /// 卡片底部的操作区：两个琴键式按钮左右排列，用底色与阴影区分语义
+  /// 卡片底部的操作区：左右各占一半，仅用图标颜色做轻度区分，不加重装饰
   Widget _buildActionBar(TaskHistory task) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      child: Row(
-        children: [
-          _ActionKey(
-            icon: Icons.replay,
-            label: '再次运行',
-            color: AppColors.primary,
-            // 无快照时置灰，点击仍会说明原因而不是静默无反应
-            enabled: task.snapshotId != null,
-            onTap: () => _runAgain(task),
-          ),
-          const SizedBox(width: 10),
-          _ActionKey(
-            icon: Icons.delete_outline,
-            label: '删除',
-            color: AppColors.danger,
-            enabled: true,
-            onTap: () => _confirmDelete(task),
-          ),
-        ],
-      ),
+    return Row(
+      children: [
+        _ActionKey(
+          icon: Icons.replay,
+          label: '再次运行',
+          color: AppColors.primary,
+          // 无快照时置灰，点击仍会说明原因而不是静默无反应
+          enabled: task.snapshotId != null,
+          onTap: () => _runAgain(task),
+        ),
+        _ActionKey(
+          icon: Icons.delete_outline,
+          label: '删除',
+          color: AppColors.danger,
+          enabled: true,
+          onTap: () => _confirmDelete(task),
+        ),
+      ],
     );
   }
 
@@ -429,7 +425,8 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   }
 }
 
-/// 琴键式操作按钮：带底色与轻微阴影，靠颜色区分语义。
+/// 底部操作项：图标 + 文字，无底色无阴影，仅靠图标颜色区分语义。
+/// 用 InkWell 提供点击涟漪，保持与列表其它区域的观感一致。
 class _ActionKey extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -447,33 +444,19 @@ class _ActionKey extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = enabled ? color : Colors.grey;
+    final fg = enabled ? color : Colors.grey.shade400;
     return Expanded(
-      child: Material(
-        color: enabled ? color.withValues(alpha: 0.08) : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(10),
-        elevation: enabled ? 1.5 : 0,
-        shadowColor: color.withValues(alpha: 0.35),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: onTap,
-          child: SizedBox(
-            height: 42,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 18, color: fg),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: fg,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 40,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 17, color: fg),
+              const SizedBox(width: 6),
+              Text(label, style: TextStyle(fontSize: 13, color: fg)),
+            ],
           ),
         ),
       ),
