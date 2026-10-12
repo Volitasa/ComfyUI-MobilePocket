@@ -1,7 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/parsed_workflow_provider.dart';
+
+/// 连接探测结果 → 展示文案。结果本身只描述“发生了什么”，
+/// 这里才按当前语言拼出句子（颜色也由 ok 决定，不再靠文案里的字眼判断）。
+String testResultText(AppLocalizations l, ConnectionTestResult r) => switch (r.kind) {
+      ConnectionTestKind.activatedPrimary => l.serverActivatedPrimary(r.name),
+      ConnectionTestKind.activatedBackup => l.serverActivatedBackup(r.name),
+      ConnectionTestKind.activateFailed => l.serverActivateFailed(r.name),
+      ConnectionTestKind.testPrimaryOk => l.serverTestPrimaryOk,
+      ConnectionTestKind.testBackupOk => l.serverTestBackupOk,
+      ConnectionTestKind.testAllFailed => l.serverTestAllFailed,
+      ConnectionTestKind.emptyPrimary => l.serverTestEmptyPrimary,
+    };
+
+/// 连接名：旧数据可能没有名称，这里按当前语言补默认名
+String serverDisplayName(AppLocalizations l, String name) =>
+    name.trim().isEmpty ? l.serverDefaultName : name;
 
 class ServerConfigView extends ConsumerStatefulWidget {
   const ServerConfigView({super.key});
@@ -13,43 +30,48 @@ class ServerConfigView extends ConsumerStatefulWidget {
 class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final config = ref.watch(connectionProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('服务器配置', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l.serverTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
       ),
       body: config.servers.isEmpty
-          ? _buildEmpty()
+          ? _buildEmpty(l)
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 // 连接结果提示
-                if (config.testResultMessage != null) ...[
+                if (config.testResult != null) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: config.isConnected ? Colors.green.shade50 : Colors.red.shade50,
+                      color: config.testResult!.ok
+                          ? Colors.green.shade50
+                          : Colors.red.shade50,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      config.testResultMessage!,
+                      testResultText(l, config.testResult!),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
-                        color: config.isConnected ? Colors.green.shade800 : Colors.red.shade800,
+                        color: config.testResult!.ok
+                            ? Colors.green.shade800
+                            : Colors.red.shade800,
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
                 ],
-                ...config.servers.map((s) => _buildServerCard(config, s)),
+                ...config.servers.map((s) => _buildServerCard(config, s, l)),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
                   onPressed: config.isTesting ? null : () => _showServerDialog(),
                   icon: const Icon(Icons.add),
-                  label: const Text('新增连接'),
+                  label: Text(l.serverAdd),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     side: const BorderSide(color: Colors.grey),
@@ -57,33 +79,34 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  '提示：点击卡片启用对应连接（同时只能启用一个）。每个连接可配置主/备两个地址，连接时先尝试主地址，不通则自动尝试备用地址。',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                Text(
+                  l.serverHint,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
     );
   }
 
-  Widget _buildEmpty() {
+  Widget _buildEmpty(AppLocalizations l) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('还没有保存的服务器连接', style: TextStyle(color: Colors.black54)),
+          Text(l.serverEmpty, style: const TextStyle(color: Colors.black54)),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: () => _showServerDialog(),
             icon: const Icon(Icons.add),
-            label: const Text('新增连接'),
+            label: Text(l.serverAdd),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildServerCard(ConfigState config, ServerConfig server) {
+  Widget _buildServerCard(
+      ConfigState config, ServerConfig server, AppLocalizations l) {
     final isActive = config.activeServerId == server.id;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -108,7 +131,7 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
           children: [
             Expanded(
               child: Text(
-                server.name,
+                serverDisplayName(l, server.name),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -121,7 +144,7 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  config.isConnected ? '已连接' : '已启用',
+                  config.isConnected ? l.serverConnected : l.serverActivated,
                   style: TextStyle(
                     fontSize: 10,
                     color: config.isConnected ? Colors.green.shade700 : Colors.orange.shade800,
@@ -134,9 +157,17 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 2),
-            Text('主: ${server.primaryUrl}', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+            Text(
+              l.serverPrimaryPrefix(server.primaryUrl),
+              style: const TextStyle(fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
             if (server.backupUrl.trim().isNotEmpty)
-              Text('备: ${server.backupUrl}', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+              Text(
+                l.serverBackupPrefix(server.backupUrl),
+                style: const TextStyle(fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
           ],
         ),
         // 点击卡片主体 = 启用该连接
@@ -152,12 +183,12 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
           children: [
             IconButton(
               icon: const Icon(Icons.edit_outlined, size: 20),
-              tooltip: '编辑',
+              tooltip: l.serverEditTooltip,
               onPressed: () => _showServerDialog(existing: server),
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-              tooltip: '删除',
+              tooltip: l.delete,
               onPressed: () => _confirmDelete(server),
             ),
           ],
@@ -186,17 +217,18 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
   }
 
   Future<void> _confirmDelete(ServerConfig server) async {
+    final l = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除连接'),
-        content: Text('确定删除「${server.name}」吗？'),
+        title: Text(l.serverDeleteTitle),
+        content: Text(l.serverDeleteConfirm(serverDisplayName(l, server.name))),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.cancel)),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删除'),
+            child: Text(l.delete),
           ),
         ],
       ),
@@ -230,7 +262,8 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _primaryCtrl;
   late final TextEditingController _backupCtrl;
-  String _testMsg = '';
+  // 探测结果只存“发生了什么”，文案与颜色都交给 build 处理
+  ConnectionTestResult? _testResult;
   bool _testing = false;
 
   @override
@@ -252,37 +285,41 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
 
   Future<void> _test() async {
     if (_primaryCtrl.text.trim().isEmpty) {
-      setState(() => _testMsg = '请先填写主地址');
+      setState(() => _testResult = const ConnectionTestResult(
+            ok: false,
+            kind: ConnectionTestKind.emptyPrimary,
+          ));
       return;
     }
     setState(() {
       _testing = true;
-      _testMsg = '';
+      _testResult = null;
     });
-    final msg = await ref
+    final result = await ref
         .read(connectionProvider.notifier)
         .testUrls(_primaryCtrl.text, _backupCtrl.text);
     if (!mounted) return;
     setState(() {
       _testing = false;
-      _testMsg = msg;
+      _testResult = result;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(widget.existing == null ? '新增连接' : '编辑连接'),
+      title: Text(widget.existing == null ? l.serverAdd : l.serverEdit),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(
-                labelText: '名称',
-                hintText: '例如: 家里内网 / 公司外网',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l.serverFormName,
+                hintText: l.serverFormNameHint,
+                border: const OutlineInputBorder(),
                 isDense: true,
               ),
             ),
@@ -290,10 +327,10 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
             TextField(
               controller: _primaryCtrl,
               keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                labelText: '主地址（优先尝试）',
-                hintText: '例如: http://192.168.1.100:8188',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l.serverFormPrimary,
+                hintText: l.serverFormPrimaryHint,
+                border: const OutlineInputBorder(),
                 isDense: true,
               ),
             ),
@@ -301,20 +338,20 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
             TextField(
               controller: _backupCtrl,
               keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                labelText: '备用地址（可选）',
-                hintText: '主地址不通时使用，如外网地址',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l.serverFormBackup,
+                hintText: l.serverFormBackupHint,
+                border: const OutlineInputBorder(),
                 isDense: true,
               ),
             ),
-            if (_testMsg.isNotEmpty) ...[
+            if (_testResult != null) ...[
               const SizedBox(height: 10),
               Text(
-                _testMsg,
+                testResultText(l, _testResult!),
                 style: TextStyle(
                   fontSize: 12,
-                  color: _testMsg.contains('不可用') ? Colors.red.shade700 : Colors.green.shade700,
+                  color: _testResult!.ok ? Colors.green.shade700 : Colors.red.shade700,
                 ),
               ),
             ],
@@ -324,7 +361,7 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
               icon: _testing
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.wifi_find, size: 18),
-              label: const Text('测试连接'),
+              label: Text(l.serverTest),
             ),
           ],
         ),
@@ -332,7 +369,7 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
+          child: Text(l.cancel),
         ),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: Colors.green),
@@ -343,7 +380,7 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
               _ServerFormResult(_nameCtrl.text, _primaryCtrl.text, _backupCtrl.text),
             );
           },
-          child: const Text('保存'),
+          child: Text(l.save),
         ),
       ],
     );

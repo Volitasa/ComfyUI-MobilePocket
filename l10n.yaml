@@ -1,0 +1,6 @@
+arb-dir: lib/l10n
+template-arb-file: app_zh.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+# 非空 getter：UI 里直接 AppLocalizations.of(context) 使用，不必到处写 !
+nullable-getter: false

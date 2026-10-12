@@ -4,10 +4,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
-// 用于全局注入 SharedPreferences 实例
-final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('须在 main.dart 中初始化');
-});
+import 'locale_provider.dart';
+
+// 原有引用点（main.dart、各 provider）仍可从本文件拿到 SharedPreferences provider
+export 'shared_preferences_provider.dart';
+
+/// 连接探测的结果类型：只说明“发生了什么”，不含任何展示文案。
+/// 以前这里直接存整句中文，界面换语言后译不了，
+/// 颜色也只能靠在文案里找「不可用」两个字来判断。
+enum ConnectionTestKind {
+  activatedPrimary, // 启用成功，走的是主地址
+  activatedBackup, // 启用成功，走的是备用地址
+  activateFailed, // 启用失败：主备都不通
+  testPrimaryOk, // 表单内探测：主地址可用
+  testBackupOk, // 表单内探测：备用地址可用
+  testAllFailed, // 表单内探测：都不可用
+  emptyPrimary, // 主地址还没填
+}
+
+/// 结构化的连接探测结果。[name] 是需要插进文案的连接名，没有则留空。
+class ConnectionTestResult {
+  final bool ok;
+  final ConnectionTestKind kind;
+  final String name;
+
+  const ConnectionTestResult({
+    required this.ok,
+    required this.kind,
+    this.name = '',
+  });
+}
 
 /// 单个服务器连接配置：支持主/备双地址（适配内外网环境）。
 /// 连接时先探测主地址，不通再探测备用地址，哪个通用哪个。
@@ -33,7 +59,9 @@ class ServerConfig {
 
   factory ServerConfig.fromJson(Map<String, dynamic> json) => ServerConfig(
         id: json['id'],
-        name: json['name'] ?? '服务器',
+        // 旧数据缺失名称时留空，由界面按当前语言补默认名——
+        // 不在持久化层写死中文
+        name: (json['name'] as String?) ?? '',
         primaryUrl: json['primary'] ?? '',
         backupUrl: json['backup'] ?? '',
       );
@@ -49,7 +77,7 @@ class ConfigState {
   final String clientId;
   final bool isConnected;
   final bool isTesting;
-  final String? testResultMessage;
+  final ConnectionTestResult? testResult;
 
   const ConfigState({
     this.servers = const [],
@@ -58,7 +86,7 @@ class ConfigState {
     this.clientId = '',
     this.isConnected = false,
     this.isTesting = false,
-    this.testResultMessage,
+    this.testResult,
   });
 
   ConfigState copyWith({
@@ -68,7 +96,9 @@ class ConfigState {
     String? clientId,
     bool? isConnected,
     bool? isTesting,
-    String? testResultMessage,
+    ConnectionTestResult? testResult,
+    // 传 null 无法区分“不改”和“清空”，另给一个显式的清除开关
+    bool clearTestResult = false,
   }) {
     return ConfigState(
       servers: servers ?? this.servers,
@@ -77,7 +107,7 @@ class ConfigState {
       clientId: clientId ?? this.clientId,
       isConnected: isConnected ?? this.isConnected,
       isTesting: isTesting ?? this.isTesting,
-      testResultMessage: testResultMessage,
+      testResult: clearTestResult ? null : (testResult ?? this.testResult),
     );
   }
 }
@@ -127,7 +157,13 @@ class ConnectionNotifier extends Notifier<ConfigState> {
     // 旧版本迁移：只有单条 comfyUrl 时转成一条默认服务器，不丢数据
     final legacy = _prefs.getString('comfyUrl');
     if (legacy != null && legacy.isNotEmpty) {
-      return [ServerConfig(id: _newId(), name: '默认服务器', primaryUrl: legacy)];
+      return [
+        ServerConfig(
+          id: _newId(),
+          name: l10nFor(ref.read(localeProvider)).serverDefaultName,
+          primaryUrl: legacy,
+        ),
+      ];
     }
     return [];
   }
@@ -144,9 +180,13 @@ class ConnectionNotifier extends Notifier<ConfigState> {
   }
 
   Future<void> addServer(String name, String primary, String backup) async {
+    final trimmed = name.trim();
     final server = ServerConfig(
       id: _newId(),
-      name: name.trim().isEmpty ? '服务器 ${state.servers.length + 1}' : name.trim(),
+      name: trimmed.isEmpty
+          ? l10nFor(ref.read(localeProvider))
+              .serverDefaultNameWithIndex(state.servers.length + 1)
+          : trimmed,
       primaryUrl: _cleanUrl(primary),
       backupUrl: _cleanUrl(backup),
     );
@@ -224,14 +264,18 @@ class ConnectionNotifier extends Notifier<ConfigState> {
     }
     if (server == null) return;
 
-    state = state.copyWith(isTesting: true, isConnected: false, testResultMessage: null);
+    state = state.copyWith(isTesting: true, isConnected: false, clearTestResult: true);
 
     final url = await _probe(server);
     if (url == null) {
       state = state.copyWith(
         isTesting: false,
         isConnected: false,
-        testResultMessage: '「${server.name}」连接失败：主/备地址均无法连通',
+        testResult: ConnectionTestResult(
+          ok: false,
+          kind: ConnectionTestKind.activateFailed,
+          name: server.name,
+        ),
       );
       return;
     }
@@ -244,16 +288,32 @@ class ConnectionNotifier extends Notifier<ConfigState> {
       isConnected: true,
       activeServerId: id,
       comfyUrl: url,
-      testResultMessage: usedPrimary ? '已连接「${server.name}」（主地址）' : '已连接「${server.name}」（备用地址）',
+      testResult: ConnectionTestResult(
+        ok: true,
+        kind: usedPrimary
+            ? ConnectionTestKind.activatedPrimary
+            : ConnectionTestKind.activatedBackup,
+        name: server.name,
+      ),
     );
   }
 
   // 编辑对话框内的双地址测试（不改变启用状态）
-  Future<String> testUrls(String primary, String backup) async {
+  Future<ConnectionTestResult> testUrls(String primary, String backup) async {
     final tmp = ServerConfig(id: 'tmp', name: 'tmp', primaryUrl: primary, backupUrl: backup);
     final url = await _probe(tmp);
-    if (url == null) return '主/备地址均无法连通';
-    return url == _cleanUrl(primary) ? '主地址可用' : '备用地址可用';
+    if (url == null) {
+      return const ConnectionTestResult(
+        ok: false,
+        kind: ConnectionTestKind.testAllFailed,
+      );
+    }
+    return ConnectionTestResult(
+      ok: true,
+      kind: url == _cleanUrl(primary)
+          ? ConnectionTestKind.testPrimaryOk
+          : ConnectionTestKind.testBackupOk,
+    );
   }
 
   // 启动时静默自动连接：先试上次生效的地址（快速路径），失败再走完整主备探测

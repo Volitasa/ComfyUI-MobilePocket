@@ -32,6 +32,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations: # Material 内置组件文案（菜单、日期选择器等）随语言切换
+    sdk: flutter
   flutter_riverpod: ^2.5.1
   shared_preferences: ^2.2.3
   http: ^1.2.1
@@ -64,6 +66,8 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  # 开启 flutter gen-l10n：由 lib/l10n/*.arb 生成 AppLocalizations
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

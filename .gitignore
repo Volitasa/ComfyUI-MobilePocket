@@ -54,6 +54,7 @@ app.*.map.json
 ui-ux-review.md
 全功能逻辑说明.md
 工作流页面重构设计方案.md
+英文版UI可行性评估.md
 
 # Android signing keystore
 comfy-release-key.jks
