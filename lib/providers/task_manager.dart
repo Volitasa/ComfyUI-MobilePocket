@@ -5,9 +5,11 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 import '../models/task_history.dart';
+import '../models/task_status.dart';
 import '../services/gallery_store.dart';
 import '../utils.dart';
 import 'connection_provider.dart';
+import 'locale_provider.dart';
 import 'local_workflow_provider.dart';
 import 'workflow_provider.dart';
 
@@ -18,8 +20,6 @@ class TaskState {
 
 class TaskManagerNotifier extends Notifier<TaskState> {
   late SharedPreferences _prefs;
-  // 各任务当前正在执行的节点（promptId → 节点显示名），供 progress 事件拼装文案
-  final Map<String, String> _currentNode = {};
 
   @override
   TaskState build() {
@@ -51,8 +51,13 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   }) {
     // 记住任务所属的服务器连接，切换服务器时不会把旧服务器的任务误判
     final config = ref.read(connectionProvider);
-    // 本地资产用库里的名称、解析缓存用文件名，否则记录里全是「本地导入」无法分辨
-    final title = resolveWorkflowName(ref.read(knownWorkflowEntriesProvider), workflowId);
+    // 本地资产用库里的名称、解析缓存用文件名，否则记录里全是「本地导入」无法分辨。
+    // Notifier 没有 context，用当前语言偏好取文案（只读一次，不建立依赖）
+    final title = resolveWorkflowName(
+      ref.read(knownWorkflowEntriesProvider),
+      workflowId,
+      localLabel: l10nFor(ref.read(localeProvider)).workflowLocalImport,
+    );
     final newTask = TaskHistory(
       promptId: promptId,
       workflowId: workflowId,
@@ -184,7 +189,7 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   Future<void> reconcilePendingTasks() async {
     final currentServerId = ref.read(connectionProvider).activeServerId;
     final pending = state.history
-        .where((t) => t.status == '排队中' || t.status == '生成中')
+        .where((t) => t.status.isPending)
         // 只处理属于当前服务器（或旧数据无归属）的任务：
         // 其它服务器上正在跑的任务在新服务器上查不到，
         // 不能据此判定为中断，否则会污染本地已有记录
@@ -244,8 +249,9 @@ class TaskManagerNotifier extends Notifier<TaskState> {
             messages.any((m) => m is List && m.isNotEmpty && m.first == 'execution_interrupted');
 
         if (interrupted) {
-          task.status = '已中断';
-          task.nodeInfo = '⏹️ 任务已被中断';
+          task.status = TaskStatus.interrupted;
+          task.nodePhase = TaskNodePhase.interrupted;
+          task.nodeDetail = '';
         } else if (statusStr == 'success') {
           final media = _extractOutputs(entry['outputs']);
           if (media.isNotEmpty) {
@@ -256,25 +262,30 @@ class TaskManagerNotifier extends Notifier<TaskState> {
               toLocalize[task.promptId] = fresh;
             }
           }
-          task.status = '已完成';
+          task.status = TaskStatus.completed;
           task.progressValue = task.progressMax;
-          task.nodeInfo = '✅ 生成成功';
+          task.nodePhase = TaskNodePhase.done;
+          task.nodeDetail = '';
         } else {
-          task.status = '已失败';
-          task.nodeInfo = '❌ 执行出错（服务端记录）';
+          // 服务端记录的非成功终态，没有错误详情可展示
+          task.status = TaskStatus.failed;
+          task.nodePhase = TaskNodePhase.error;
+          task.nodeDetail = '';
         }
         changed = true;
       } else if (running.contains(task.promptId)) {
-        task.status = '生成中';
+        task.status = TaskStatus.running;
         changed = true;
       } else if (queued.contains(task.promptId)) {
-        task.status = '排队中';
-        task.nodeInfo = '等待执行...';
+        task.status = TaskStatus.queued;
+        task.nodePhase = TaskNodePhase.waiting;
+        task.nodeDetail = '';
         changed = true;
       } else {
         // 既不在历史也不在队列：服务端已重启或任务丢失，终结避免永久卡住
-        task.status = '已中断';
-        task.nodeInfo = '⏹️ 未在服务端找到该任务（可能已重启）';
+        task.status = TaskStatus.interrupted;
+        task.nodePhase = TaskNodePhase.lost;
+        task.nodeDetail = '';
         changed = true;
       }
     }
@@ -360,55 +371,48 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     final data = msg['data'];
 
     if (type == 'execution_start') {
-      _currentNode.remove(promptId);
-      task.status = '生成中';
-      task.nodeInfo = '🚀 任务开始...';
+      task.status = TaskStatus.running;
+      task.nodePhase = TaskNodePhase.started;
+      task.nodeDetail = '';
     } else if (type == 'execution_cached') {
-      task.status = '生成中';
-      task.nodeInfo = '⚡ 命中缓存...';
+      task.status = TaskStatus.running;
+      task.nodePhase = TaskNodePhase.cached;
+      task.nodeDetail = '';
     } else if (type == 'progress') {
       // 任何执行活动都意味着任务已不在排队（execution_start 可能因竞态被错过）
-      task.status = '生成中';
-      final v = data['value'] ?? 0;
-      final m = data['max'] ?? 0;
-      task.progressValue = v;
-      task.progressMax = m;
-      final node = _currentNode[promptId];
-      task.nodeInfo = m > 0
-          ? (node != null ? '🔄 $node · ${(v / m * 100).round()}%' : '🔄 处理中 ${(v / m * 100).round()}%')
-          : (node != null ? '🔄 $node' : '🔄 处理节点...');
+      task.status = TaskStatus.running;
+      task.nodePhase = TaskNodePhase.running;
+      task.progressValue = data['value'] ?? 0;
+      task.progressMax = data['max'] ?? 0;
+      // 节点名已由 executing 事件写进 nodeDetail，这里只更新进度
     } else if (type == 'executing') {
       if (data['node'] != null) {
-        // 记住当前节点供 progress 事件拼装文案；用节点标题代替裸节点 ID
+        // 用节点标题代替裸节点 ID，存进 nodeDetail 供进度展示拼接
         final label = _nodeLabel(task.workflowId, data['node']);
-        _currentNode[promptId] = label;
-        task.status = '生成中';
-        task.nodeInfo = '执行: $label';
+        task.status = TaskStatus.running;
+        task.nodePhase = TaskNodePhase.running;
+        task.nodeDetail = label;
       } else {
-        _currentNode.remove(promptId);
         // executing(node=null) 是执行结束的收尾信号，正常完成与中断/出错后都会发。
         // 已中断/已失败是终态，不能被它覆盖成“已完成”
-        if (task.status == '已中断' || task.status == '已失败') {
-          // 保持终态不变
-        } else {
-          task.status = '已完成';
+        if (!task.status.isTerminal) {
+          task.status = TaskStatus.completed;
           task.progressValue = task.progressMax;
-          // 防止流程结束的提示覆盖掉成功的提示
-          if (task.nodeInfo != '✅ 生成成功') {
-            task.nodeInfo = '✅ 流程结束';
-          }
+          task.nodePhase = TaskNodePhase.done;
+          task.nodeDetail = '';
         }
       }
     } else if (type == 'execution_error') {
-      _currentNode.remove(promptId);
       // 服务端执行出错：必须终结任务状态，否则 UI 会永远停留在“生成中”
-      task.status = '已失败';
-      final errMsg = data['exception_message'] ?? data['exception_type'] ?? '未知错误';
-      task.nodeInfo = '❌ 执行出错: $errMsg';
+      task.status = TaskStatus.failed;
+      task.nodePhase = TaskNodePhase.error;
+      // 详情留空时展示层只说“执行出错”，不编造内容
+      task.nodeDetail =
+          (data['exception_message'] ?? data['exception_type'])?.toString() ?? '';
     } else if (type == 'execution_interrupted') {
-      _currentNode.remove(promptId);
-      task.status = '已中断';
-      task.nodeInfo = '⏹️ 任务已被中断';
+      task.status = TaskStatus.interrupted;
+      task.nodePhase = TaskNodePhase.interrupted;
+      task.nodeDetail = '';
     } else if (type == 'executed') {
       try {
         final output = data['output'];
@@ -429,15 +433,17 @@ class TaskManagerNotifier extends Notifier<TaskState> {
 
         // 3. 赋值（注：如果未来发现 UI 不刷新，需将 TaskHistory 改造为 copyWith 模式）
         task.images = combinedImages;
-        task.status = '已完成';
-        task.nodeInfo = '✅ 生成成功';
+        task.status = TaskStatus.completed;
+        task.nodePhase = TaskNodePhase.done;
+        task.nodeDetail = '';
 
         // 4. 异步把新图下载到本地画廊（保留原图元数据，可拖回 ComfyUI 复现）
         final newMediaCopy = List<Map<String, dynamic>>.from(newMedia);
         unawaited(_localizeMedia(promptId, newMediaCopy));
       } catch (e) {
-        task.status = '已失败';
-        task.nodeInfo = '❌ 结果数据解析失败';
+        task.status = TaskStatus.failed;
+        task.nodePhase = TaskNodePhase.parseFailed;
+        task.nodeDetail = '';
       }
     }
 

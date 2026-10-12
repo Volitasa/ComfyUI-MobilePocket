@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
 import '../../providers/snapshot_provider.dart';
@@ -474,7 +475,11 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       );
     }
 
-    final displayName = resolveWorkflowName(ref.read(knownWorkflowEntriesProvider), widget.workflowId);
+    final displayName = resolveWorkflowName(
+      ref.read(knownWorkflowEntriesProvider),
+      widget.workflowId,
+      localLabel: AppLocalizations.of(context).workflowLocalImport,
+    );
 
     return Scaffold(
       appBar: AppBar(

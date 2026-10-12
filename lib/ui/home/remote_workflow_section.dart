@@ -2,9 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../../models/local_workflow.dart';
 import '../../providers/connection_provider.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../providers/parsed_workflow_provider.dart';
 import '../../providers/workflow_provider.dart';
@@ -381,7 +383,10 @@ class RemoteWorkflowSection extends ConsumerWidget {
     String filename,
     WorkflowState state,
   ) {
-    final title = workflowDisplayName(filename);
+    final title = workflowDisplayName(
+      filename,
+      localLabel: AppLocalizations.of(context).workflowLocalImport,
+    );
     final status = state.statusOf(filename);
     final exposedCount = ref
             .read(workflowProvider.notifier)
@@ -516,7 +521,12 @@ class RemoteWorkflowSection extends ConsumerWidget {
 
     final name = await showDialog<String>(
       context: context,
-      builder: (_) => _SaveToLocalDialog(initialName: workflowDisplayName(filename)),
+      builder: (_) => _SaveToLocalDialog(
+        initialName: workflowDisplayName(
+          filename,
+          localLabel: l10nFor(ref.read(localeProvider)).workflowLocalImport,
+        ),
+      ),
     );
     if (name == null || name.trim().isEmpty) return;
 

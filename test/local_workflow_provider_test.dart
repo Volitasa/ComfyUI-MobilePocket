@@ -196,10 +196,19 @@ void main() {
         ),
       ];
 
-      expect(resolveWorkflowName(workflows, 'local_x1'), '我的写真');
-      // 库里没有对应条目时回退旧文案，而不是崩掉
-      expect(resolveWorkflowName(<LocalWorkflow>[], 'local_x1'), '本地导入');
-      expect(resolveWorkflowName(workflows, 'upscale_api.json'), 'upscale');
+      expect(
+        resolveWorkflowName(workflows, 'local_x1', localLabel: '本地导入'),
+        '我的写真',
+      );
+      // 库里没有对应条目时回退到调用方给的本地标签，而不是崩掉
+      expect(
+        resolveWorkflowName(<LocalWorkflow>[], 'local_x1', localLabel: '本地导入'),
+        '本地导入',
+      );
+      expect(
+        resolveWorkflowName(workflows, 'upscale_api.json', localLabel: '本地导入'),
+        'upscale',
+      );
     });
   });
 

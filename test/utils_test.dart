@@ -4,16 +4,18 @@ import 'package:comfyui_mobilepocket/models/workflow_node.dart';
 
 void main() {
   group('workflowDisplayName', () {
-    test('本地工作流显示为“本地导入”', () {
-      expect(workflowDisplayName('local_abc123'), '本地导入');
+    // 本地标签由调用方按当前语言传入，函数本身不产出任何文案
+    test('本地工作流显示为传入的本地标签', () {
+      expect(workflowDisplayName('local_abc123', localLabel: '本地导入'), '本地导入');
+      expect(workflowDisplayName('local_abc123', localLabel: 'Local import'), 'Local import');
     });
 
     test('线上工作流去掉 _api.json 后缀', () {
-      expect(workflowDisplayName('txt2img_api.json'), 'txt2img');
+      expect(workflowDisplayName('txt2img_api.json', localLabel: '本地导入'), 'txt2img');
     });
 
     test('无后缀名原样返回', () {
-      expect(workflowDisplayName('foo'), 'foo');
+      expect(workflowDisplayName('foo', localLabel: '本地导入'), 'foo');
     });
   });
 

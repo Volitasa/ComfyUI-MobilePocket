@@ -236,7 +236,11 @@ void main() {
         );
 
     expect(
-      resolveWorkflowName(container.read(knownWorkflowEntriesProvider), id),
+      resolveWorkflowName(
+        container.read(knownWorkflowEntriesProvider),
+        id,
+        localLabel: '本地导入',
+      ),
       '基础文生图',
     );
   });

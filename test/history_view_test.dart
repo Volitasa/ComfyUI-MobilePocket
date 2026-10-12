@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:comfyui_mobilepocket/providers/connection_provider.dart';
@@ -26,7 +27,12 @@ Future<void> _pumpHistory(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-      child: const MaterialApp(home: HistoryView()),
+      child: MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const HistoryView(),
+      ),
     ),
   );
   // 不用 pumpAndSettle：连接状态徽标可能带常驻动画，会一直等到超时
@@ -34,11 +40,14 @@ Future<void> _pumpHistory(
   await tester.pump(const Duration(milliseconds: 100));
 }
 
+/// [nodeInfo] 只用来模拟旧版本数据（整句中文）；新数据走 nodePhase/nodeDetail。
 Map<String, dynamic> _task({
   required String status,
   required String promptId,
   List<Map<String, dynamic>> images = const [],
   String nodeInfo = '',
+  String? nodePhase,
+  String nodeDetail = '',
   int progressValue = 0,
   int progressMax = 0,
   String? snapshotId,
@@ -50,11 +59,13 @@ Map<String, dynamic> _task({
     'status': status,
     'progressValue': progressValue,
     'progressMax': progressMax,
+    if (nodePhase != null) 'nodePhase': nodePhase,
+    'nodeDetail': nodeDetail,
     'nodeInfo': nodeInfo,
     'images': images,
     'timestamp': 1791579799776,
     'serverId': 'srv_test',
-    'snapshotId': ?snapshotId,
+    'snapshotId': snapshotId,
   };
 }
 
@@ -62,7 +73,13 @@ void main() {
   group('HistoryView 无输出时的缩略图占位', () {
     testWidgets('已失败记录不再显示加载动画，改为错误图标', (tester) async {
       await _pumpHistory(tester, [
-        _task(status: '已失败', promptId: 'p-failed', nodeInfo: "❌ 执行出错: 'NextDiT' object has no attribute 'patch'"),
+        _task(
+          status: 'failed',
+          promptId: 'p-failed',
+          nodePhase: 'error',
+          // 服务端错误原文：只存原始值，不掺展示文案
+          nodeDetail: "'NextDiT' object has no attribute 'patch'",
+        ),
       ]);
 
       // 关键断言：失败是终态，不能继续转圈
@@ -70,13 +87,18 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       // 终态也不该留着永远不动的进度条
       expect(find.byType(LinearProgressIndicator), findsNothing);
-      // 状态文案仍然是失败
+      // 状态文案仍然是失败，且错误原文原样透出
       expect(find.textContaining('已失败'), findsOneWidget);
+      expect(find.textContaining("attribute 'patch'"), findsOneWidget);
     });
 
     testWidgets('已中断记录不显示加载动画', (tester) async {
       await _pumpHistory(tester, [
-        _task(status: '已中断', promptId: 'p-interrupted', nodeInfo: '⏹️ 任务已被中断'),
+        _task(
+          status: 'interrupted',
+          promptId: 'p-interrupted',
+          nodePhase: 'interrupted',
+        ),
       ]);
 
       expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -86,7 +108,7 @@ void main() {
 
     testWidgets('已完成但无图的记录显示“无图”', (tester) async {
       await _pumpHistory(tester, [
-        _task(status: '已完成', promptId: 'p-done', nodeInfo: '✅ 生成成功'),
+        _task(status: 'completed', promptId: 'p-done', nodePhase: 'done'),
       ]);
 
       expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -96,9 +118,10 @@ void main() {
     testWidgets('生成中的记录仍然显示加载动画与进度条', (tester) async {
       await _pumpHistory(tester, [
         _task(
-          status: '生成中',
+          status: 'running',
           promptId: 'p-running',
-          nodeInfo: '🔄 K采样器 · 80%',
+          nodePhase: 'running',
+          nodeDetail: 'K采样器',
           progressValue: 8,
           progressMax: 10,
         ),
@@ -107,6 +130,32 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
       expect(find.byIcon(Icons.error_outline), findsNothing);
+    });
+  });
+
+  group('旧版本中文数据的迁移', () {
+    testWidgets('中文状态能映射回枚举，错误详情从整句里捞回来', (tester) async {
+      await _pumpHistory(tester, [
+        _task(
+          status: '已失败',
+          promptId: 'p-legacy',
+          // 旧格式：只有一整句中文
+          nodeInfo: "❌ 执行出错: 'NextDiT' object has no attribute 'patch'",
+        ),
+      ]);
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.textContaining('已失败'), findsOneWidget);
+      expect(find.textContaining("attribute 'patch'"), findsOneWidget);
+    });
+
+    testWidgets('中文「已完成」按终态处理，不再转圈', (tester) async {
+      await _pumpHistory(tester, [
+        _task(status: '已完成', promptId: 'p-legacy-done', nodeInfo: '✅ 生成成功'),
+      ]);
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('无图'), findsOneWidget);
     });
   });
 
@@ -130,7 +179,7 @@ void main() {
       // 有快照：按钮应是可用色，而不是置灰
       await _pumpHistory(
         tester,
-        [_task(status: '已完成', promptId: 'p-ok', snapshotId: 'snap_ok')],
+        [_task(status: 'completed', promptId: 'p-ok', nodePhase: 'done', snapshotId: 'snap_ok')],
         snapshots: [snap],
       );
       expect(
@@ -141,7 +190,7 @@ void main() {
       // 快照被手动删除（记录里仍留着 snapshotId）：必须置灰
       await _pumpHistory(
         tester,
-        [_task(status: '已完成', promptId: 'p-gone', snapshotId: 'snap_gone')],
+        [_task(status: 'completed', promptId: 'p-gone', nodePhase: 'done', snapshotId: 'snap_gone')],
       );
       expect(
         tester.widget<Icon>(find.byIcon(Icons.replay)).color,
@@ -150,7 +199,9 @@ void main() {
     });
 
     testWidgets('无快照的旧记录点击会说明原因，而不是静默无反应', (tester) async {
-      await _pumpHistory(tester, [_task(status: '已完成', promptId: 'p-legacy')]);
+      await _pumpHistory(tester, [
+        _task(status: 'completed', promptId: 'p-legacy', nodePhase: 'done'),
+      ]);
 
       await tester.tap(find.byIcon(Icons.replay));
       await tester.pump();
@@ -161,7 +212,12 @@ void main() {
 
     testWidgets('快照已被删除的记录点击会说明原因', (tester) async {
       await _pumpHistory(tester, [
-        _task(status: '已完成', promptId: 'p-gone', snapshotId: 'snap_deleted'),
+        _task(
+          status: 'completed',
+          promptId: 'p-gone',
+          nodePhase: 'done',
+          snapshotId: 'snap_deleted',
+        ),
       ]);
 
       await tester.tap(find.byIcon(Icons.replay));

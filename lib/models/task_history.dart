@@ -1,11 +1,17 @@
+import 'task_status.dart';
+
 class TaskHistory {
   final String promptId;
   final String workflowId;
   final String title;
-  String status;
+  TaskStatus status;
   int progressValue;
   int progressMax;
-  String nodeInfo;
+  /// 当前执行阶段（结构化枚举，只存名字）。
+  TaskNodePhase nodePhase;
+  /// 阶段的动态内容：执行中的节点名，或出错时服务端的错误原文。
+  /// 只存原始值，不含任何展示文案。
+  String nodeDetail;
   List<Map<String, dynamic>> images;
   final int timestamp;
   /// 任务提交时所属的服务器连接 ID。
@@ -23,10 +29,11 @@ class TaskHistory {
     required this.promptId,
     required this.workflowId,
     required this.title,
-    this.status = '排队中',
+    this.status = TaskStatus.queued,
     this.progressValue = 0,
     this.progressMax = 0,
-    this.nodeInfo = '等待执行...',
+    this.nodePhase = TaskNodePhase.waiting,
+    this.nodeDetail = '',
     this.images = const [],
     int? timestamp,
     this.serverId,
@@ -35,14 +42,16 @@ class TaskHistory {
   }) : timestamp = timestamp ?? DateTime.now().millisecondsSinceEpoch;
 
   factory TaskHistory.fromJson(Map<String, dynamic> json) {
+    final status = taskStatusFromStorage(json['status']);
     return TaskHistory(
       promptId: json['promptId'],
       workflowId: json['workflowId'],
       title: json['title'],
-      status: json['status'] ?? '排队中',
+      status: status,
       progressValue: json['progressValue'] ?? 0,
       progressMax: json['progressMax'] ?? 0,
-      nodeInfo: json['nodeInfo'] ?? '',
+      nodePhase: _migratePhase(json, status),
+      nodeDetail: _migrateDetail(json),
       images: List<Map<String, dynamic>>.from(json['images'] ?? []),
       timestamp: json['timestamp'],
       serverId: json['serverId'],
@@ -53,14 +62,40 @@ class TaskHistory {
     );
   }
 
+  /// 旧版本把整句中文写进 nodeInfo（如「❌ 执行出错: xxx」），
+  /// 这里尽力还原出阶段：带错误详情的一律算 error，其余按状态推断。
+  static TaskNodePhase _migratePhase(
+      Map<String, dynamic> json, TaskStatus status) {
+    if (json['nodePhase'] != null) {
+      return taskPhaseFromStorage(json['nodePhase'], status);
+    }
+    final legacy = json['nodeInfo']?.toString() ?? '';
+    if (legacy.contains(_legacyErrorMarker)) return TaskNodePhase.error;
+    return taskPhaseFromStatus(status);
+  }
+
+  static const String _legacyErrorMarker = '执行出错: ';
+
+  /// 旧记录的错误详情藏在 nodeInfo 的后半段，切出来继续用；
+  /// 拿不到就留空（展示层会退化成不带详情的错误文案）。
+  static String _migrateDetail(Map<String, dynamic> json) {
+    final detail = json['nodeDetail'];
+    if (detail != null) return detail.toString();
+    final legacy = json['nodeInfo']?.toString() ?? '';
+    final i = legacy.indexOf(_legacyErrorMarker);
+    if (i == -1) return '';
+    return legacy.substring(i + _legacyErrorMarker.length);
+  }
+
   Map<String, dynamic> toJson() => {
         'promptId': promptId,
         'workflowId': workflowId,
         'title': title,
-        'status': status,
+        'status': status.storageKey,
         'progressValue': progressValue,
         'progressMax': progressMax,
-        'nodeInfo': nodeInfo,
+        'nodePhase': nodePhase.storageKey,
+        'nodeDetail': nodeDetail,
         'images': images,
         'timestamp': timestamp,
         'serverId': serverId,

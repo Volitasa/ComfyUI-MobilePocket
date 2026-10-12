@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../providers/task_manager.dart';
@@ -345,7 +347,11 @@ class _RunViewState extends ConsumerState<RunView> {
         final snapshotId = ref.read(snapshotProvider.notifier).upsert(
               workflowJson: workflowData,
               mappingConfig: _formConfig,
-              sourceName: resolveWorkflowName(ref.read(localWorkflowProvider), widget.workflowId),
+              sourceName: resolveWorkflowName(
+                ref.read(localWorkflowProvider),
+                widget.workflowId,
+                localLabel: l10nFor(ref.read(localeProvider)).workflowLocalImport,
+              ),
               serverId: ref.read(connectionProvider).activeServerId,
             );
         taskManager.createNewTask(
@@ -382,7 +388,11 @@ class _RunViewState extends ConsumerState<RunView> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = resolveWorkflowName(ref.read(knownWorkflowEntriesProvider), widget.workflowId);
+    final displayName = resolveWorkflowName(
+      ref.read(knownWorkflowEntriesProvider),
+      widget.workflowId,
+      localLabel: AppLocalizations.of(context).workflowLocalImport,
+    );
 
     return Scaffold(
       appBar: AppBar(

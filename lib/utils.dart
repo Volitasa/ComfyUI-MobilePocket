@@ -5,9 +5,9 @@ import 'models/workflow_node.dart';
 
 /// 由工作流 ID 得到用于界面展示的名称。
 /// 本地导入的工作流使用内容哈希作为 ID（形如 local_x1a2b3），
-/// 统一展示为“本地导入”。
-String workflowDisplayName(String workflowId) {
-  if (workflowId.startsWith('local_')) return '本地导入';
+/// 统一展示为传入的 [localLabel]（由调用方按当前语言给出）。
+String workflowDisplayName(String workflowId, {required String localLabel}) {
+  if (workflowId.startsWith('local_')) return localLabel;
   return workflowId.replaceAll('_api.json', '');
 }
 
@@ -126,13 +126,17 @@ Future<void> scheduleProviderWrite(void Function() action) => Future<void>(actio
 ///
 /// 收 [WorkflowEntry] 列表而不是 ref —— WidgetRef 不继承 Ref，
 /// UI 与 Notifier 拿到的都是列表，因此可以共用同一个函数。
-String resolveWorkflowName(List<WorkflowEntry> known, String workflowId) {
+String resolveWorkflowName(
+  List<WorkflowEntry> known,
+  String workflowId, {
+  required String localLabel,
+}) {
   if (workflowId.startsWith('local_') || workflowId.startsWith('parsed_')) {
     for (final w in known) {
       if (w.id == workflowId && w.name.trim().isNotEmpty) return w.name;
     }
   }
-  return workflowDisplayName(workflowId);
+  return workflowDisplayName(workflowId, localLabel: localLabel);
 }
 
 /// 字节数格式化（工作流占用、快照大小等共用同一口径）

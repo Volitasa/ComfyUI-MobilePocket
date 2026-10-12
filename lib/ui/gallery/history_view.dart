@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 import 'dart:io';
@@ -10,7 +11,9 @@ import '../../providers/task_manager.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../models/task_history.dart';
+import '../../models/task_status.dart';
 import '../../models/workflow_snapshot.dart';
+import '../../utils/task_display.dart';
 import '../widgets/connection_status_badge.dart';
 import '../builder/run_view.dart';
 import '../settings/server_config_view.dart';
@@ -31,7 +34,8 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   }
 
   /// 卡片底部的操作区：左右各占一半，仅用图标颜色做轻度区分，不加重装饰
-  Widget _buildActionBar(TaskHistory task, List<WorkflowSnapshot> snapshots) {
+  Widget _buildActionBar(
+      TaskHistory task, List<WorkflowSnapshot> snapshots, AppLocalizations l) {
     // 记录里有 snapshotId 还不够，必须快照当前真的存在——
     // 用户可能已经在设置页把它删掉了
     final canRerun = task.snapshotId != null &&
@@ -41,7 +45,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
       children: [
         _ActionKey(
           icon: Icons.replay,
-          label: '再次运行',
+          label: l.historyRerun,
           // 用沉一点的成功色而非品牌亮绿，小图标不至于抢过内容
           color: AppColors.success,
           // 置灰但仍可点：点击会说明具体原因，而不是静默无反应
@@ -50,7 +54,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
         ),
         _ActionKey(
           icon: Icons.delete_outline,
-          label: '删除',
+          label: l.delete,
           color: AppColors.danger,
           enabled: true,
           onTap: () => _confirmDelete(task),
@@ -61,11 +65,12 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
 
   /// 「再次运行」：凭这条记录留下的快照还原表单，并预填当时的参数。
   Future<void> _runAgain(TaskHistory task) async {
+    final l = AppLocalizations.of(context);
     final snapshotId = task.snapshotId;
 
     if (snapshotId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('这条记录没有工作流快照（旧版本生成），无法再次运行')),
+        SnackBar(content: Text(l.historyNoSnapshot)),
       );
       return;
     }
@@ -73,7 +78,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     final snapshot = ref.read(snapshotProvider.notifier).byId(snapshotId);
     if (snapshot == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('对应的工作流快照已被删除，无法再次运行')),
+        SnackBar(content: Text(l.historySnapshotDeleted)),
       );
       return;
     }
@@ -83,30 +88,28 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     final currentId = config.activeServerId;
     if (task.serverId != currentId) {
       String nameOf(String? id) {
-        if (id == null) return '未知服务器';
+        if (id == null) return l.historyUnknownServer;
         for (final s in config.servers) {
           if (s.id == id) return s.name;
         }
-        return '未知服务器';
+        return l.historyUnknownServer;
       }
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('运行服务器不一致'),
-          content: Text(
-            '这条记录当时运行在「${nameOf(task.serverId)}」，'
-            '当前连接的是「${nameOf(currentId)}」。\n\n'
-            '两台服务器的模型、插件节点可能不同，继续运行可能出现'
-            '「模型不存在／节点类型不存在」之类的报错。是否继续？',
-          ),
+          title: Text(l.historyServerMismatchTitle),
+          content: Text(l.historyServerMismatchBody(
+            nameOf(task.serverId),
+            nameOf(currentId),
+          )),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消'),
+              child: Text(l.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('仍要运行'),
+              child: Text(l.historyRunAnyway),
             ),
           ],
         ),
@@ -128,36 +131,30 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   }
 
   // 任务状态 → 展示色（成功绿 / 失败红 / 中断灰 / 进行中橙）
-  Color _statusColor(String status) {
-    switch (status) {
-      case '已完成':
-        return AppColors.success;
-      case '已失败':
-        return AppColors.danger;
-      case '已中断':
-        return AppColors.neutral;
-      default:
-        return AppColors.warning;
-    }
-  }
+  Color _statusColor(TaskStatus status) => switch (status) {
+        TaskStatus.completed => AppColors.success,
+        TaskStatus.failed => AppColors.danger,
+        TaskStatus.interrupted => AppColors.neutral,
+        TaskStatus.queued || TaskStatus.running => AppColors.warning,
+      };
 
   // 无输出时的缩略图占位：终结态给出明确结果，只有进行中才转圈
-  Widget _noOutputPlaceholder(String status, Color statusColor) {
-    switch (status) {
-      case '已完成':
-        return const Text('无图', style: TextStyle(fontSize: 12, color: Colors.grey));
-      case '已失败':
-        return Icon(Icons.error_outline, size: 22, color: statusColor);
-      case '已中断':
-        return Icon(Icons.remove_circle_outline, size: 22, color: statusColor);
-      default:
-        // 排队中 / 生成中：确实还在等输出
-        return const SizedBox(
+  Widget _noOutputPlaceholder(
+      TaskHistory task, Color statusColor, AppLocalizations l) {
+    return switch (task.status) {
+      TaskStatus.completed => Text(l.historyNoImage,
+          style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      TaskStatus.failed =>
+        Icon(Icons.error_outline, size: 22, color: statusColor),
+      TaskStatus.interrupted =>
+        Icon(Icons.remove_circle_outline, size: 22, color: statusColor),
+      // 排队中 / 生成中：确实还在等输出
+      TaskStatus.queued || TaskStatus.running => const SizedBox(
           width: 20,
           height: 20,
           child: CircularProgressIndicator(strokeWidth: 2),
-        );
-    }
+        ),
+    };
   }
 
   // 本地化的时间显示（yyyy-MM-dd HH:mm）
@@ -169,6 +166,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
 
   // 删除确认：让用户选择是否连带删除画廊里对应的本地图片
   Future<void> _confirmDelete(TaskHistory task) async {
+    final l = AppLocalizations.of(context);
     final hasLocal = task.images.any((img) {
       final p = img['localPath'];
       return p is String && p.isNotEmpty;
@@ -177,33 +175,32 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     final choice = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除记录'),
+        title: Text(l.historyDeleteTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('确定删除「${task.title}」这条生成记录吗？'),
+            Text(l.historyDeleteConfirm(task.title)),
             if (hasLocal) ...[
               const SizedBox(height: 10),
-              const Text(
-                '选择"同时删除画廊图片"会一并移除该记录已保存到画廊的本地图片，'
-                '此操作不可恢复；仅删除记录则保留画廊图片。',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+              Text(
+                l.historyDeleteImagesNote,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(ctx, null), child: Text(l.cancel)),
           if (hasLocal)
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('仅删除记录'),
+              child: Text(l.historyDeleteRecordOnly),
             ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(hasLocal ? '同时删除画廊图片' : '删除'),
+            child: Text(hasLocal ? l.historyDeleteWithImages : l.delete),
           ),
         ],
       ),
@@ -266,23 +263,24 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final tasks = ref.watch(taskManagerProvider).history;
     final configState = ref.watch(connectionProvider);
     final snapshots = ref.watch(snapshotProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('生成记录', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l.historyTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           if (configState.isConnected)
             IconButton(
               icon: const Icon(Icons.refresh),
-              tooltip: '同步任务状态',
+              tooltip: l.historySyncTooltip,
               onPressed: () {
                 // 与工作流页刷新按钮一致：向服务器对账未终结任务的状态
                 ref.read(taskManagerProvider.notifier).reconcilePendingTasks();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('已同步任务状态')),
+                  SnackBar(content: Text(l.historySynced)),
                 );
               },
             ),
@@ -297,17 +295,13 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
         ],
       ),
       body: tasks.isEmpty
-          ? const Center(child: Text('暂无生成记录', style: TextStyle(color: Colors.grey)))
+          ? Center(
+              child: Text(l.historyEmpty, style: const TextStyle(color: Colors.grey)))
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: tasks.length,
               itemBuilder: (context, index) {
                 final task = tasks[index];
-                final isDone = task.status == '已完成';
-                // 终结态：任务已结束、不会再有输出（失败/中断同样如此），
-                // 不能继续显示加载动画，否则会永久转圈
-                final isTerminal =
-                    isDone || task.status == '已失败' || task.status == '已中断';
                 final statusColor = _statusColor(task.status);
                 final progress = task.progressMax > 0 ? (task.progressValue / task.progressMax) : 0.0;
 
@@ -348,13 +342,13 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                                       ),
                                       const SizedBox(height: 6),
                                       Text(
-                                        '${task.status} · ${task.nodeInfo}',
+                                        '${taskStatusLabel(l, task.status)} · ${taskNodeText(l, task)}',
                                         style: TextStyle(fontSize: 13, color: statusColor),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       // 终结态不再显示进度条（失败/中断时它是条永远不动的空槽）
-                                      if (!isTerminal) ...[
+                                      if (task.status.isPending) ...[
                                         const SizedBox(height: 8),
                                         LinearProgressIndicator(
                                           value: progress,
@@ -408,7 +402,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                                                     )
                                                 ],
                                               )
-                                            : Center(child: _noOutputPlaceholder(task.status, statusColor)),
+                                            : Center(child: _noOutputPlaceholder(task, statusColor, l)),
                                       ),
                                     ),
                                   ],
@@ -419,7 +413,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                               const Divider(height: 1),
                               // 操作区放在卡片底部左右排开，不再挤在缩略图下方：
                               // 两个按钮各占一半宽度，触控目标也更大
-                              _buildActionBar(task, snapshots),
+                              _buildActionBar(task, snapshots, l),
                             ],
                           ),
                         ),
@@ -513,6 +507,7 @@ class _MediaViewerState extends State<MediaViewer> {
 
   Future<void> _saveToLocal() async {
     if (_saving) return;
+    final l = AppLocalizations.of(context);
     setState(() => _saving = true);
     try {
       final currentMedia = widget.mediaList[_currentIndex];
@@ -532,10 +527,14 @@ class _MediaViewerState extends State<MediaViewer> {
       // 与画廊页共用保存逻辑：PNG 可选「带工作流原图」或「剔除信息」
       final saved = await MediaSaver.save(context, bytes: bytes, filename: filename);
       if (saved && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ 已保存到手机相册')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l.historySavedToAlbum)));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存失败')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l.historySaveFailed)));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -543,6 +542,7 @@ class _MediaViewerState extends State<MediaViewer> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -582,7 +582,10 @@ class _MediaViewerState extends State<MediaViewer> {
             icon: _saving
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                 : const Icon(Icons.save_alt),
-            label: Text(_saving ? '保存中...' : '保存到本地', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            label: Text(
+              _saving ? l.historySaving : l.historySaveToLocal,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ),
@@ -634,7 +637,12 @@ class _VideoItemState extends State<_VideoItem> {
   @override
   Widget build(BuildContext context) {
     if (_failed) {
-      return const Center(child: Text('视频加载失败', style: TextStyle(color: Colors.white70)));
+      return Center(
+        child: Text(
+          AppLocalizations.of(context).historyVideoLoadFailed,
+          style: const TextStyle(color: Colors.white70),
+        ),
+      );
     }
     final controller = _controller;
     if (controller == null) {
