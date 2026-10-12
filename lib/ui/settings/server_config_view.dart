@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/connection_provider.dart';
+import '../../providers/parsed_workflow_provider.dart';
 
 class ServerConfigView extends ConsumerStatefulWidget {
   const ServerConfigView({super.key});
@@ -202,6 +203,8 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
     );
     if (confirmed == true && mounted) {
       await ref.read(connectionProvider.notifier).removeServer(server.id);
+      // 该连接名下的解析缓存再也无从刷新或校验，一并清掉避免变成永久孤儿
+      ref.read(parsedWorkflowProvider.notifier).removeByServer(server.id);
     }
   }
 }

@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/workflow_node.dart';
+import '../services/workflow_api_converter.dart';
 import '../utils.dart';
 import 'connection_provider.dart';
+import 'parsed_workflow_provider.dart';
 
 bool isWorkflowFile(String name) => name.endsWith('.json');
 
@@ -14,6 +16,21 @@ bool isApiWorkflowFile(String name) => name.endsWith('_api.json');
 /// UI 格式工作流（ComfyUI 界面保存的 `*.json`），需转换为 API 结构后才能运行
 bool isUiWorkflowFile(String name) =>
     isWorkflowFile(name) && !isApiWorkflowFile(name);
+
+/// UI 工作流的解析状态
+enum UiWorkflowStatus {
+  /// 尚未检测
+  unknown,
+
+  /// 没有解析缓存，需要用户手动解析
+  unparsed,
+
+  /// 已解析，且与服务器内容一致
+  parsed,
+
+  /// 已解析，但服务器内容已变化
+  stale,
+}
 
 /// 工作流节点配置的当前状态（用于列表上提示是否需要重新配置）
 enum WorkflowMappingStatus {
@@ -51,6 +68,9 @@ class WorkflowState {
   /// workflowId → 配置状态，由 refreshStatuses 填充
   final Map<String, WorkflowMappingStatus> statuses;
 
+  /// UI 工作流文件名 → 解析状态，由 refreshUiStatuses 填充
+  final Map<String, UiWorkflowStatus> uiStatuses;
+
   WorkflowState({
     this.workflowList = const [],
     this.uiWorkflowList = const [],
@@ -59,6 +79,7 @@ class WorkflowState {
     this.currentWorkflowData,
     this.currentWorkflowId,
     this.statuses = const {},
+    this.uiStatuses = const {},
   });
 
   bool get isEmpty => workflowList.isEmpty && uiWorkflowList.isEmpty;
@@ -70,6 +91,9 @@ class WorkflowState {
   WorkflowMappingStatus statusOf(String workflowId) =>
       statuses[workflowId] ?? WorkflowMappingStatus.unknown;
 
+  UiWorkflowStatus uiStatusOf(String filename) =>
+      uiStatuses[filename] ?? UiWorkflowStatus.unknown;
+
   WorkflowState copyWith({
     List<String>? workflowList,
     List<String>? uiWorkflowList,
@@ -78,6 +102,7 @@ class WorkflowState {
     Map<String, dynamic>? currentWorkflowData,
     String? currentWorkflowId,
     Map<String, WorkflowMappingStatus>? statuses,
+    Map<String, UiWorkflowStatus>? uiStatuses,
   }) {
     return WorkflowState(
       workflowList: workflowList ?? this.workflowList,
@@ -87,6 +112,7 @@ class WorkflowState {
       currentWorkflowData: currentWorkflowData ?? this.currentWorkflowData,
       currentWorkflowId: currentWorkflowId ?? this.currentWorkflowId,
       statuses: statuses ?? this.statuses,
+      uiStatuses: uiStatuses ?? this.uiStatuses,
     );
   }
 }
@@ -121,9 +147,10 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
 
         state = state.copyWith(workflowList: apiFiles, uiWorkflowList: uiFiles);
 
-        // 列表就绪后立刻比对各 API 工作流的内容，让需要重新配置的条目显形
-        // （UI 工作流尚未解析，没有可比对的对象）
+        // 列表就绪后立刻比对内容：API 工作流看配置是否过期，
+        // UI 工作流看解析缓存是否过期。两者都只比对哈希，都不需要解析。
         await refreshStatuses(apiFiles);
+        await refreshUiStatuses(uiFiles);
       }
     } catch (e) {
       // 生产环境可接入日志
@@ -177,6 +204,61 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
     }
   }
 
+  /// 比对 UI 工作流的解析缓存是否还跟得上服务器。
+  ///
+  /// **只比对哈希，不解析**——解析要加载整个前端（约 12 MB），
+  /// 比对只要拉一份几十 KB 的 JSON，所以刷新时可以批量做。
+  /// 未解析的条目没有基线，不参与比对。
+  Future<void> refreshUiStatuses(List<String> files) async {
+    final config = ref.read(connectionProvider);
+    final serverId = config.activeServerId;
+    if (!config.isConnected || serverId == null || files.isEmpty) return;
+
+    state = state.copyWith(isChecking: true);
+    final results = <String, UiWorkflowStatus>{};
+
+    try {
+      await Future.wait(files.map((filename) async {
+        final cached =
+            ref.read(parsedWorkflowProvider.notifier).byServerFile(serverId, filename);
+        if (cached == null) {
+          results[filename] = UiWorkflowStatus.unparsed;
+          return;
+        }
+
+        final text = await fetchWorkflowRawText(filename);
+        if (text == null) {
+          // 拉取失败不误报成「有更新」
+          results[filename] = UiWorkflowStatus.parsed;
+          return;
+        }
+
+        results[filename] =
+            WorkflowApiConverter.sourceHashOf(text) == cached.sourceHash
+                ? UiWorkflowStatus.parsed
+                : UiWorkflowStatus.stale;
+      }));
+    } finally {
+      state = state.copyWith(uiStatuses: results, isChecking: false);
+    }
+  }
+
+  /// 拉取工作流文件的原始文本（不做解析）。
+  /// 解析缓存的哈希基于原文计算，所以这里必须拿未经 jsonDecode 的字节。
+  Future<String?> fetchWorkflowRawText(String filename) async {
+    final config = ref.read(connectionProvider);
+    try {
+      final fileParam = Uri.encodeComponent('workflows/$filename');
+      final uri = Uri.parse('${config.comfyUrl}/userdata/$fileParam');
+      final response =
+          await http.get(uri).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) return response.body;
+    } catch (e) {
+      // 生产环境可接入日志
+    }
+    return null;
+  }
+
   // 获取单个工作流 JSON 内容（载入时统一归一化，兼容 prompt 包装格式）
   Future<bool> fetchWorkflowContent(String filename) async {
     final data = await _fetchContent(filename);
@@ -211,8 +293,9 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
     return null;
   }
 
-  // 设置本地导入的 JSON 数据（同样做归一化，保证与线上工作流结构一致）
-  void setLocalWorkflowData(Map<String, dynamic> data, {required String workflowId}) {
+  // 直接写入工作流数据并标注归属（本地资产、解析缓存、快照都走这里）。
+  // 同样做归一化，保证与线上工作流结构一致。
+  void setWorkflowData(Map<String, dynamic> data, {required String workflowId}) {
     state = state.copyWith(
       currentWorkflowData: normalizeWorkflowJson(data),
       currentWorkflowId: workflowId,

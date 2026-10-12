@@ -1,3 +1,4 @@
+import 'models/workflow_entry.dart';
 import 'models/workflow_node.dart';
 
 // 通用工具函数
@@ -9,6 +10,10 @@ String workflowDisplayName(String workflowId) {
   if (workflowId.startsWith('local_')) return '本地导入';
   return workflowId.replaceAll('_api.json', '');
 }
+
+/// UI 工作流（`*.json`）的展示名：只去掉 .json 后缀
+String uiWorkflowTitle(String filename) =>
+    filename.replaceAll(RegExp(r'\.json$'), '');
 
 /// 稳定的字符串哈希（31 位截断，Web 平台下也不会溢出）。
 /// 用于为本地导入的工作流生成确定性 ID，同一文件重复导入可命中同一份配置。
@@ -106,6 +111,29 @@ bool isDefaultExposed(String key, String classType) {
 
 /// 参数在表单/控制器中的唯一键：同一节点可有多个参数，node.id 会冲突。
 String nodeParamKey(String nodeId, String key) => '$nodeId:$key';
+
+/// 把「会修改 provider 的动作」推到下一个事件再执行。
+///
+/// Riverpod 禁止在构建期（build / initState / dispose…）修改状态，
+/// 直接写会抛「Tried to modify a provider while the widget tree was building」。
+/// `Future.microtask` 仍可能落在同一帧里，必须走事件队列（普通 `Future`）。
+///
+/// 可以 await：await 后续阶段就能保证缓存已写入。
+Future<void> scheduleProviderWrite(void Function() action) => Future<void>(action);
+
+/// 工作流展示名：本地资产与解析缓存取库里保存的名称（后者跟随服务器文件名），
+/// 其余沿用「文件名去掉 _api.json」的旧规则。
+///
+/// 收 [WorkflowEntry] 列表而不是 ref —— WidgetRef 不继承 Ref，
+/// UI 与 Notifier 拿到的都是列表，因此可以共用同一个函数。
+String resolveWorkflowName(List<WorkflowEntry> known, String workflowId) {
+  if (workflowId.startsWith('local_') || workflowId.startsWith('parsed_')) {
+    for (final w in known) {
+      if (w.id == workflowId && w.name.trim().isNotEmpty) return w.name;
+    }
+  }
+  return workflowDisplayName(workflowId);
+}
 
 /// 字节数格式化（工作流占用、快照大小等共用同一口径）
 String formatBytes(int bytes) {

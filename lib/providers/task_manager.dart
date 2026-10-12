@@ -51,8 +51,8 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   }) {
     // 记住任务所属的服务器连接，切换服务器时不会把旧服务器的任务误判
     final config = ref.read(connectionProvider);
-    // 本地工作流用库里的名称，否则记录里全是「本地导入」无法分辨
-    final title = resolveWorkflowName(ref.read(localWorkflowProvider), workflowId);
+    // 本地资产用库里的名称、解析缓存用文件名，否则记录里全是「本地导入」无法分辨
+    final title = resolveWorkflowName(ref.read(knownWorkflowEntriesProvider), workflowId);
     final newTask = TaskHistory(
       promptId: promptId,
       workflowId: workflowId,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../models/local_workflow.dart';
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
 import '../../providers/snapshot_provider.dart';
@@ -47,9 +46,11 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
   bool get _isLocal => widget.workflowId.startsWith('local_');
 
-  /// 本地工作流条目（本地工作流已持久化，不再依赖内存缓存）
-  LocalWorkflow? get _localEntry =>
-      _isLocal ? ref.read(localWorkflowProvider.notifier).byId(widget.workflowId) : null;
+  bool get _isParsed => widget.workflowId.startsWith('parsed_');
+
+  /// 本地资产与解析缓存的持久化数据（命中则不必请求服务器）
+  Map<String, dynamic>? get _persisted =>
+      persistedWorkflowJson(ref, widget.workflowId);
 
   Future<void> _initData() async {
     final notifier = ref.read(workflowProvider.notifier);
@@ -65,18 +66,23 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       }
       // 用快照里保存的配置作为「已保存配置」，不读线上的 mapping_
       _parseWorkflow(snapshot.workflowJson, savedConfig: snapshot.mappingConfig);
-    } else if (_isLocal) {
-      // 本地工作流：从本地库读取（重启后依然可用），顺带写进缓存供运行页消费
-      final entry = _localEntry;
+    } else if (_isLocal || _isParsed) {
+      // 本地资产与解析缓存都持久化在本地，重启后依然可用
+      final entry = _persisted;
       if (entry == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('本地工作流已不存在，可能已被删除')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_isLocal ? '本地工作流已不存在，可能已被删除' : '解析结果已被清除，请重新解析'),
+        ));
         Navigator.pop(context);
         return;
       }
-      ref.read(workflowProvider.notifier)
-          .setLocalWorkflowData(entry.workflowJson, workflowId: widget.workflowId);
-      _parseWorkflow(entry.workflowJson);
+      // 顺带写进缓存，供运行页直接从缓存取，不必再回各自的库里读一次。
+      // 首屏是从 initState 进来的，写 provider 必须让出当前帧。
+      await scheduleProviderWrite(() => ref
+          .read(workflowProvider.notifier)
+          .setWorkflowData(entry, workflowId: widget.workflowId));
+      _parseWorkflow(entry);
     } else {
       final success = await notifier.fetchWorkflowContent(widget.workflowId);
       if (!success) {
@@ -268,16 +274,20 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         return;
       }
       _parseWorkflow(snapshot.workflowJson, useSavedConfig: false);
-    } else if (_isLocal) {
-      final entry = _localEntry;
+    } else if (_isLocal || _isParsed) {
+      final entry = _persisted;
       if (entry == null) {
         if (!mounted) return;
         setState(() => _isReady = true);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('本地工作流已不存在，可能已被删除')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_isLocal ? '本地工作流已不存在，可能已被删除' : '解析结果已被清除，请重新解析'),
+        ));
         return;
       }
-      _parseWorkflow(entry.workflowJson, useSavedConfig: false);
+      await scheduleProviderWrite(() => ref
+          .read(workflowProvider.notifier)
+          .setWorkflowData(entry, workflowId: widget.workflowId));
+      _parseWorkflow(entry, useSavedConfig: false);
     } else {
       final ok = await ref.read(workflowProvider.notifier).fetchWorkflowContent(widget.workflowId);
       if (!ok) {
@@ -464,7 +474,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       );
     }
 
-    final displayName = resolveWorkflowName(ref.read(localWorkflowProvider), widget.workflowId);
+    final displayName = resolveWorkflowName(ref.read(knownWorkflowEntriesProvider), widget.workflowId);
 
     return Scaffold(
       appBar: AppBar(

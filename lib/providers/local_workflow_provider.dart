@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/local_workflow.dart';
+import '../models/parsed_workflow.dart';
+import '../models/workflow_entry.dart';
 import '../utils.dart';
 import 'connection_provider.dart';
+import 'parsed_workflow_provider.dart';
 import 'workflow_provider.dart';
 
 /// 本地工作流持久化键（SharedPreferences）
@@ -136,16 +139,33 @@ final localWorkflowProvider =
   return LocalWorkflowNotifier();
 });
 
-/// 工作流展示名：本地工作流取库里保存的名称（用户可改），
-/// 其余沿用「文件名去掉 _api.json」的旧规则。
+/// 本地资产与解析缓存的合集，供展示名解析使用。
+/// WidgetRef 不继承 Ref，所以没法做成收 ref 的函数。
+List<WorkflowEntry> knownWorkflows(
+  List<LocalWorkflow> local,
+  List<ParsedWorkflow> parsed,
+) =>
+    [...local, ...parsed];
+
+/// 参与展示名解析的全部已知条目（本地资产 + 解析缓存）。
+/// 比手搓 knownWorkflows 更省事，也不用每个调用点都读两个 provider。
+final knownWorkflowEntriesProvider = Provider<List<WorkflowEntry>>((ref) {
+  return knownWorkflows(
+    ref.watch(localWorkflowProvider),
+    ref.watch(parsedWorkflowProvider),
+  );
+});
+
+/// 取本地持久化的工作流数据：本地资产或解析缓存命中即返回，两者都不请求服务器。
 ///
-/// 接收本地工作流列表而不是 ref —— WidgetRef 与 Ref 都拿得到列表，
-/// UI 与 Notifier 都能调用同一个函数。
-String resolveWorkflowName(List<LocalWorkflow> workflows, String workflowId) {
+/// 返回 null 表示这条 id 归属服务器，需要另行拉取。
+/// 收 WidgetRef —— 只有页面层需要它，Notifier 走各自的 provider。
+Map<String, dynamic>? persistedWorkflowJson(WidgetRef ref, String workflowId) {
   if (workflowId.startsWith('local_')) {
-    for (final w in workflows) {
-      if (w.id == workflowId && w.name.trim().isNotEmpty) return w.name;
-    }
+    return ref.read(localWorkflowProvider.notifier).byId(workflowId)?.workflowJson;
   }
-  return workflowDisplayName(workflowId);
+  if (workflowId.startsWith('parsed_')) {
+    return ref.read(parsedWorkflowProvider.notifier).byId(workflowId)?.workflowJson;
+  }
+  return null;
 }

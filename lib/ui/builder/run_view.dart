@@ -72,9 +72,11 @@ class _RunViewState extends ConsumerState<RunView> {
         return;
       }
       savedConfig = snapshot.mappingConfig;
-      // 快照自带工作流数据，直接写入缓存，不请求服务端
-      ref.read(workflowProvider.notifier)
-          .setLocalWorkflowData(snapshot.workflowJson, workflowId: _dataOwnerId);
+      // 快照自带工作流数据，直接写入缓存，不请求服务端。
+      // 这里还在 initState 里，写 provider 得让出当前帧
+      scheduleProviderWrite(() => ref
+          .read(workflowProvider.notifier)
+          .setWorkflowData(snapshot.workflowJson, workflowId: _dataOwnerId));
     } else {
       savedConfig =
           ref.read(workflowProvider.notifier).getMappingConfig(widget.workflowId);
@@ -161,15 +163,15 @@ class _RunViewState extends ConsumerState<RunView> {
     // 数据已就绪且归属匹配当前工作流 → 无需拉取
     if (state.hasDataFor(_dataOwnerId)) return;
 
-    // 本地工作流：从本地库加载，重启后依然可用
-    if (widget.workflowId.startsWith('local_')) {
-      final entry =
-          ref.read(localWorkflowProvider.notifier).byId(widget.workflowId);
-      if (entry == null) return;
-      ref.read(workflowProvider.notifier).setLocalWorkflowData(
-            entry.workflowJson,
-            workflowId: widget.workflowId,
-          );
+    // 本地资产与解析缓存都持久化在本地，重启后依然可用。
+    // 解析缓存若已被清除这里会取不到 —— 入口来自服务器列表，清除后条目随即变灰，
+    // 正常走不到这一步；真走到了也不能拿去按文件名请求服务器（那是 UI 格式）。
+    final persisted = persistedWorkflowJson(ref, widget.workflowId);
+    if (persisted != null) {
+      // 从 initState 进来时不允许直接改 provider，让出当前帧再写
+      await scheduleProviderWrite(() => ref
+          .read(workflowProvider.notifier)
+          .setWorkflowData(persisted, workflowId: widget.workflowId));
       return;
     }
 
@@ -380,7 +382,7 @@ class _RunViewState extends ConsumerState<RunView> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = resolveWorkflowName(ref.read(localWorkflowProvider), widget.workflowId);
+    final displayName = resolveWorkflowName(ref.read(knownWorkflowEntriesProvider), widget.workflowId);
 
     return Scaffold(
       appBar: AppBar(

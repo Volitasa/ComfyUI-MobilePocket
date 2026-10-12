@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'workflow_entry.dart';
+
 /// 本地工作流的来源方式。
 ///
 /// 注意区分「来源」与「归属」：无论哪种来源，落到本地库后都是
@@ -23,12 +25,14 @@ extension LocalWorkflowSourceLabel on LocalWorkflowSource {
 ///
 /// 与「解析缓存」是两回事：解析缓存能从服务器重新得到，
 /// 本地资产删了就没有了，所以它拥有完整的增删改能力。
-class LocalWorkflow {
+class LocalWorkflow implements WorkflowEntry {
   /// 唯一键。导入时为 `local_<内容哈希>`（沿用旧规则，便于复用已有配置），
   /// 另存时系统生成。
+  @override
   final String id;
 
   /// 展示名，用户可改
+  @override
   String name;
 
   /// 保存时间（毫秒）

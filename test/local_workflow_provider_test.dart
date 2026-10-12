@@ -9,6 +9,7 @@ import 'package:comfyui_mobilepocket/models/workflow_node.dart';
 import 'package:comfyui_mobilepocket/providers/connection_provider.dart';
 import 'package:comfyui_mobilepocket/providers/local_workflow_provider.dart';
 import 'package:comfyui_mobilepocket/providers/workflow_provider.dart';
+import 'package:comfyui_mobilepocket/utils.dart';
 
 Map<String, dynamic> _workflow([String text = 'a cat']) => {
       '1': {
