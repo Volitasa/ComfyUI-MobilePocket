@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 

@@ -65,7 +65,8 @@ Map<String, dynamic> _task({
     'images': images,
     'timestamp': 1791579799776,
     'serverId': 'srv_test',
-    'snapshotId': snapshotId,
+    // null-aware element：snapshotId 为 null 时整个键不出现在 map 里
+    'snapshotId': ?snapshotId,
   };
 }
 

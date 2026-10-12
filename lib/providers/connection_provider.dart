@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 import 'locale_provider.dart';
+// export 不会把符号引入本文件作用域，本文件自己也要用到
+import 'shared_preferences_provider.dart';
 
 // 原有引用点（main.dart、各 provider）仍可从本文件拿到 SharedPreferences provider
 export 'shared_preferences_provider.dart';
