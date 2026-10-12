@@ -32,6 +32,8 @@ class ParsedWorkflowNotifier extends Notifier<List<ParsedWorkflow>> {
       return decoded
           .whereType<Map>()
           .map((e) => ParsedWorkflow.fromJson(Map<String, dynamic>.from(e)))
+          // 形态不对的坏缓存（历史版本取错过字段）直接丢弃，重新解析即恢复
+          .where((e) => e.isApiShaped)
           .toList();
     } catch (_) {
       return [];

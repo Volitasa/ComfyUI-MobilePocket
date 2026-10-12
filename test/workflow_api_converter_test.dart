@@ -61,10 +61,13 @@ void main() {
           contains('loadGraphData(g,false,true)'));
     });
 
-    test('结果取 workflow 字段回传', () {
-      // graphToPrompt 返回 {workflow, output}，我们要的是前者
+    test('结果取 output 字段回传（output 才是 API prompt）', () {
+      // 前端实现：a[id]={inputs,class_type,_meta}，return {workflow:r, output:a}
+      // r 是 UI 图，a 才是 API 结构。取错会"解析成功"却提取不出任何参数。
       expect(WorkflowApiConverter.conversionScript(uiJson),
-          contains('workflow:r.workflow'));
+          contains('workflow:r.output'));
+      expect(WorkflowApiConverter.conversionScript(uiJson),
+          isNot(contains('r.workflow')));
     });
 
     test('单引号会被转义，否则整个脚本语法错误', () {
@@ -136,10 +139,97 @@ void main() {
       expect(result.error, 'no-app');
     });
 
+    test('返回 UI 图时明确拒绝，不放行到配置页', () {
+      // 真机踩过的坑：取错 graphToPrompt 字段会拿到这种结构
+      final result = WorkflowApiConverter.parsePayload(
+        jsonEncode({
+          'ok': true,
+          'workflow': {
+            'nodes': [
+              {'id': 3, 'type': 'KSampler'}
+            ],
+            'links': [],
+            'version': 0.4,
+          },
+        }),
+      );
+
+      expect(result.ok, isFalse);
+      expect(result.error, '前端返回了 UI 结构而非 API 结构');
+    });
+
+    test('空结果不算成功', () {
+      final result = WorkflowApiConverter.parsePayload(
+        jsonEncode({'ok': true, 'workflow': {}}),
+      );
+
+      expect(result.ok, isFalse);
+      expect(result.error, contains('转换结果为空'));
+    });
+
+    test('节点缺少 class_type 时拒绝', () {
+      final result = WorkflowApiConverter.parsePayload(
+        jsonEncode({
+          'ok': true,
+          'workflow': {
+            '3': {'inputs': {}},
+          },
+        }),
+      );
+
+      expect(result.ok, isFalse);
+      expect(result.error, contains('不是有效的 API 节点'));
+    });
+
+    test('合法 API prompt 形态通过校验', () {
+      final result = WorkflowApiConverter.parsePayload(
+        jsonEncode({
+          'ok': true,
+          'workflow': {
+            '3': {
+              'inputs': {'seed': 1},
+              'class_type': 'KSampler',
+              '_meta': {'title': 'KSampler'},
+            },
+          },
+        }),
+      );
+
+      expect(result.ok, isTrue);
+    });
+
     test('脏数据不会抛异常', () {
       expect(WorkflowApiConverter.parsePayload('not json').ok, isFalse);
       expect(WorkflowApiConverter.parsePayload('[]').ok, isFalse);
       expect(WorkflowApiConverter.parsePayload('').ok, isFalse);
+    });
+  });
+
+  group('API 形态校验', () {
+    test('空结构不合法', () {
+      expect(WorkflowApiConverter.apiShapeProblem({}), isNotNull);
+    });
+
+    test('含 nodes 数组的是 UI 图', () {
+      expect(
+        WorkflowApiConverter.apiShapeProblem({
+          'nodes': <Object>[],
+          'links': <Object>[],
+        }),
+        contains('UI 结构'),
+      );
+    });
+
+    test('标准节点结构合法', () {
+      expect(
+        WorkflowApiConverter.apiShapeProblem({
+          '3': {
+            'inputs': {'text': 'x'},
+            'class_type': 'CLIPTextEncode',
+          },
+        }),
+        isNull,
+      );
     });
   });
 

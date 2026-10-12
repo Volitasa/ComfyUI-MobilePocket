@@ -93,6 +93,42 @@ void main() {
     expect(restarted.read(parsedWorkflowProvider).first.name, 'a');
   });
 
+  test('载入时丢弃形态不对的坏缓存（历史版本取错过字段），不污染列表', () async {
+    // 模拟旧版本把 UI 图存进了缓存
+    final badEntry = {
+      'id': 'parsed_bad',
+      'serverId': 'srv1',
+      'filename': 'bad.json',
+      'name': 'bad',
+      'sourceHash': 'h',
+      'parsedAt': 0,
+      'workflowJson': {
+        'nodes': [
+          {'id': 3, 'type': 'KSampler'}
+        ],
+        'links': <Object>[],
+      },
+    };
+    final goodEntry = {
+      'id': 'parsed_good',
+      'serverId': 'srv1',
+      'filename': 'good.json',
+      'name': 'good',
+      'sourceHash': 'h',
+      'parsedAt': 0,
+      'workflowJson': _parsedJson(),
+    };
+    final prefs = await _prefsWith({
+      parsedWorkflowsPrefsKey: jsonEncode([badEntry, goodEntry]),
+    });
+    final container = _container(prefs);
+    addTearDown(container.dispose);
+
+    final list = container.read(parsedWorkflowProvider);
+    expect(list.length, 1);
+    expect(list.first.id, 'parsed_good');
+  });
+
   test('重复解析同一来源覆盖而不是堆积', () async {
     final prefs = await _prefsWith();
     final container = _container(prefs);
