@@ -1,4 +1,4 @@
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../models/task_history.dart';
 import '../models/task_status.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/parsed_workflow_provider.dart';
 

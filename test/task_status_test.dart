@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import 'package:comfyui_mobilepocket/models/task_history.dart';
 import 'package:comfyui_mobilepocket/models/task_status.dart';
