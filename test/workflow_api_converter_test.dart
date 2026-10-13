@@ -2,7 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations_zh.dart';
 import 'package:comfyui_mobilepocket/services/workflow_api_converter.dart';
+
+final AppLocalizations _l10n = AppLocalizationsZh();
 
 void main() {
   group('就绪探测', () {
@@ -15,26 +19,40 @@ void main() {
     });
 
     test('识别前端返回的三种状态', () {
-      expect(WorkflowApiConverter.parseReadiness('ready'),
-          FrontendReadiness.ready);
-      expect(WorkflowApiConverter.parseReadiness('loading'),
-          FrontendReadiness.loading);
-      expect(WorkflowApiConverter.parseReadiness('no-app'),
-          FrontendReadiness.missing);
+      expect(
+        WorkflowApiConverter.parseReadiness('ready'),
+        FrontendReadiness.ready,
+      );
+      expect(
+        WorkflowApiConverter.parseReadiness('loading'),
+        FrontendReadiness.loading,
+      );
+      expect(
+        WorkflowApiConverter.parseReadiness('no-app'),
+        FrontendReadiness.missing,
+      );
     });
 
     test('不同平台回传的字符串可能带多余引号，也能识别', () {
-      expect(WorkflowApiConverter.parseReadiness('"ready"'),
-          FrontendReadiness.ready);
-      expect(WorkflowApiConverter.parseReadiness(' ready '),
-          FrontendReadiness.ready);
+      expect(
+        WorkflowApiConverter.parseReadiness('"ready"'),
+        FrontendReadiness.ready,
+      );
+      expect(
+        WorkflowApiConverter.parseReadiness(' ready '),
+        FrontendReadiness.ready,
+      );
     });
 
     test('无法识别的值不猜', () {
-      expect(WorkflowApiConverter.parseReadiness(''),
-          FrontendReadiness.unknown);
-      expect(WorkflowApiConverter.parseReadiness(null),
-          FrontendReadiness.unknown);
+      expect(
+        WorkflowApiConverter.parseReadiness(''),
+        FrontendReadiness.unknown,
+      );
+      expect(
+        WorkflowApiConverter.parseReadiness(null),
+        FrontendReadiness.unknown,
+      );
     });
   });
 
@@ -42,7 +60,7 @@ void main() {
     final uiJson = jsonEncode({
       'version': 0.4,
       'nodes': [
-        {'id': 3, 'type': 'KSampler'}
+        {'id': 3, 'type': 'KSampler'},
       ],
       'links': [],
     });
@@ -57,17 +75,23 @@ void main() {
 
     test('restore 传 false，避免去重绘画布', () {
       // loadGraphData(g, false, true)：第二个参数非 false 会重设画布并 clean()
-      expect(WorkflowApiConverter.conversionScript(uiJson),
-          contains('loadGraphData(g,false,true)'));
+      expect(
+        WorkflowApiConverter.conversionScript(uiJson),
+        contains('loadGraphData(g,false,true)'),
+      );
     });
 
     test('结果取 output 字段回传（output 才是 API prompt）', () {
       // 前端实现：a[id]={inputs,class_type,_meta}，return {workflow:r, output:a}
       // r 是 UI 图，a 才是 API 结构。取错会"解析成功"却提取不出任何参数。
-      expect(WorkflowApiConverter.conversionScript(uiJson),
-          contains('workflow:r.output'));
-      expect(WorkflowApiConverter.conversionScript(uiJson),
-          isNot(contains('r.workflow')));
+      expect(
+        WorkflowApiConverter.conversionScript(uiJson),
+        contains('workflow:r.output'),
+      );
+      expect(
+        WorkflowApiConverter.conversionScript(uiJson),
+        isNot(contains('r.workflow')),
+      );
     });
 
     test('单引号会被转义，否则整个脚本语法错误', () {
@@ -107,6 +131,7 @@ void main() {
             '3': {'class_type': 'KSampler', 'inputs': {}},
           },
         }),
+        _l10n,
       );
 
       expect(result.ok, isTrue);
@@ -116,6 +141,7 @@ void main() {
     test('前端报错时透出原因', () {
       final result = WorkflowApiConverter.parsePayload(
         jsonEncode({'ok': false, 'error': 'Unknown node type'}),
+        _l10n,
       );
 
       expect(result.ok, isFalse);
@@ -123,8 +149,10 @@ void main() {
     });
 
     test('成功但没有 workflow 时不算成功', () {
-      final result =
-          WorkflowApiConverter.parsePayload(jsonEncode({'ok': true}));
+      final result = WorkflowApiConverter.parsePayload(
+        jsonEncode({'ok': true}),
+        _l10n,
+      );
 
       expect(result.ok, isFalse);
       expect(result.error, '前端未返回工作流结构');
@@ -133,6 +161,7 @@ void main() {
     test('拿不到句柄时提示清楚，而不是笼统的「解析失败」', () {
       final result = WorkflowApiConverter.parsePayload(
         jsonEncode({'ok': false, 'error': 'no-app'}),
+        _l10n,
       );
 
       expect(result.ok, isFalse);
@@ -146,12 +175,13 @@ void main() {
           'ok': true,
           'workflow': {
             'nodes': [
-              {'id': 3, 'type': 'KSampler'}
+              {'id': 3, 'type': 'KSampler'},
             ],
             'links': [],
             'version': 0.4,
           },
         }),
+        _l10n,
       );
 
       expect(result.ok, isFalse);
@@ -161,6 +191,7 @@ void main() {
     test('空结果不算成功', () {
       final result = WorkflowApiConverter.parsePayload(
         jsonEncode({'ok': true, 'workflow': {}}),
+        _l10n,
       );
 
       expect(result.ok, isFalse);
@@ -175,6 +206,7 @@ void main() {
             '3': {'inputs': {}},
           },
         }),
+        _l10n,
       );
 
       expect(result.ok, isFalse);
@@ -193,21 +225,22 @@ void main() {
             },
           },
         }),
+        _l10n,
       );
 
       expect(result.ok, isTrue);
     });
 
     test('脏数据不会抛异常', () {
-      expect(WorkflowApiConverter.parsePayload('not json').ok, isFalse);
-      expect(WorkflowApiConverter.parsePayload('[]').ok, isFalse);
-      expect(WorkflowApiConverter.parsePayload('').ok, isFalse);
+      expect(WorkflowApiConverter.parsePayload('not json', _l10n).ok, isFalse);
+      expect(WorkflowApiConverter.parsePayload('[]', _l10n).ok, isFalse);
+      expect(WorkflowApiConverter.parsePayload('', _l10n).ok, isFalse);
     });
   });
 
   group('API 形态校验', () {
     test('空结构不合法', () {
-      expect(WorkflowApiConverter.apiShapeProblem({}), isNotNull);
+      expect(WorkflowApiConverter.apiShapeProblem({}, _l10n), isNotNull);
     });
 
     test('含 nodes 数组的是 UI 图', () {
@@ -215,7 +248,7 @@ void main() {
         WorkflowApiConverter.apiShapeProblem({
           'nodes': <Object>[],
           'links': <Object>[],
-        }),
+        }, _l10n),
         contains('UI 结构'),
       );
     });
@@ -227,7 +260,7 @@ void main() {
             'inputs': {'text': 'x'},
             'class_type': 'CLIPTextEncode',
           },
-        }),
+        }, _l10n),
         isNull,
       );
     });
@@ -237,13 +270,17 @@ void main() {
     test('内容不变则哈希不变', () {
       const text = '{"nodes":[]}';
 
-      expect(WorkflowApiConverter.sourceHashOf(text),
-          WorkflowApiConverter.sourceHashOf(text));
+      expect(
+        WorkflowApiConverter.sourceHashOf(text),
+        WorkflowApiConverter.sourceHashOf(text),
+      );
     });
 
     test('内容变了哈希跟着变', () {
-      expect(WorkflowApiConverter.sourceHashOf('{"nodes":[]}'),
-          isNot(WorkflowApiConverter.sourceHashOf('{"nodes":[1]}')));
+      expect(
+        WorkflowApiConverter.sourceHashOf('{"nodes":[]}'),
+        isNot(WorkflowApiConverter.sourceHashOf('{"nodes":[1]}')),
+      );
     });
   });
 }

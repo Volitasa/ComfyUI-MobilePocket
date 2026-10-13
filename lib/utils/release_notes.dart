@@ -15,8 +15,10 @@ class ParsedReleaseNotes {
 }
 
 /// `**Full Changelog**: https://github.com/o/r/compare/v1...v2`
-final RegExp _fullChangelogRe =
-    RegExp(r'^\s*[*_\s]*Full Changelog[*_\s]*:?\s*(\S+)?', caseSensitive: false);
+final RegExp _fullChangelogRe = RegExp(
+  r'^\s*[*_\s]*Full Changelog[*_\s]*:?\s*(\S+)?',
+  caseSensitive: false,
+);
 
 /// commit 行尾的 ` by @someone in https://github.com/...`
 final RegExp _byUserInRe = RegExp(

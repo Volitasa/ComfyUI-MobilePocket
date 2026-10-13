@@ -35,7 +35,11 @@ Future<SharedPreferences> _prefsWithOneWorkflow() async {
   return prefs;
 }
 
-Future<void> _pump(WidgetTester tester, Widget child, SharedPreferences prefs) async {
+Future<void> _pump(
+  WidgetTester tester,
+  Widget child,
+  SharedPreferences prefs,
+) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],

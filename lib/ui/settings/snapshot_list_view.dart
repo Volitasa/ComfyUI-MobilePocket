@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../models/workflow_snapshot.dart';
 import '../../providers/connection_provider.dart';
@@ -34,19 +35,19 @@ class SnapshotListView extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除快照'),
+        title: Text(AppLocalizations.of(ctx).snapshotDeleteTitle),
         content: Text(
-          '确定删除「${snapshot.displayName}」吗？\n\n'
-          '删除后，引用它的 $refCount 条生成记录将无法再次运行。',
+          AppLocalizations.of(ctx)
+              .snapshotDeleteBody(snapshot.displayName, refCount),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(ctx).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删除'),
+            child: Text(AppLocalizations.of(ctx).delete),
           ),
         ],
       ),
@@ -54,8 +55,9 @@ class SnapshotListView extends ConsumerWidget {
     if (confirmed == true) {
       ref.read(snapshotProvider.notifier).remove(snapshot.id);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('快照已删除')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).snapshotDeleted)),
+        );
       }
     }
   }
@@ -70,21 +72,27 @@ class SnapshotListView extends ConsumerWidget {
         history.where((t) => t.snapshotId == id).length;
 
     String serverNameOf(String? id) {
-      if (id == null) return '未记录';
+      if (id == null) return AppLocalizations.of(context).snapshotNotRecorded;
       for (final s in servers) {
         if (s.id == id) return s.name;
       }
-      return '未记录';
+      return AppLocalizations.of(context).snapshotNotRecorded;
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('工作流快照', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          AppLocalizations.of(context).snapshotTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: false,
       ),
       body: snapshots.isEmpty
-          ? const Center(
-              child: Text('暂无工作流快照', style: TextStyle(color: Colors.grey)),
+          ? Center(
+              child: Text(
+                AppLocalizations.of(context).snapshotEmpty,
+                style: const TextStyle(color: Colors.grey),
+              ),
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
@@ -114,17 +122,26 @@ class SnapshotListView extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '固化时间 ${_formatTime(s.createdAt)} · ${_formatSize(s.sizeBytes)}',
+                            AppLocalizations.of(context).snapshotFrozenAt(
+                              _formatTime(s.createdAt),
+                              _formatSize(s.sizeBytes),
+                            ),
                           ),
                           const SizedBox(height: 2),
-                          Text('来源服务器 ${serverNameOf(s.serverId)}'),
+                          Text(
+                            AppLocalizations.of(context)
+                                .snapshotSourceServer(serverNameOf(s.serverId)),
+                          ),
                           const SizedBox(height: 2),
                           Text(
                             refCount > 0
-                                ? '被 $refCount 条生成记录引用'
-                                : '未被任何生成记录引用',
+                                ? AppLocalizations.of(context)
+                                      .snapshotRefCount(refCount)
+                                : AppLocalizations.of(context).snapshotNoRef,
                             style: TextStyle(
-                              color: refCount > 0 ? Colors.black54 : Colors.grey,
+                              color: refCount > 0
+                                  ? Colors.black54
+                                  : Colors.grey,
                             ),
                           ),
                         ],
@@ -132,7 +149,7 @@ class SnapshotListView extends ConsumerWidget {
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline),
-                      tooltip: '删除快照',
+                      tooltip: AppLocalizations.of(context).snapshotDeleteTitle,
                       onPressed: () =>
                           _confirmDelete(context, ref, s, refCount),
                     ),

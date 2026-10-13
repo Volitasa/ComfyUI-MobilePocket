@@ -44,14 +44,14 @@ class ParsedWorkflow implements WorkflowEntry {
   int? _sizeCache;
 
   /// 占用字节数（按 UTF-8 编码后的实际长度，首次调用后缓存）
-  int get sizeBytes => _sizeCache ??= utf8.encode(jsonEncode(workflowJson)).length;
+  int get sizeBytes =>
+      _sizeCache ??= utf8.encode(jsonEncode(workflowJson)).length;
 
   /// 是否为合法的 API prompt 形态。
   ///
   /// 早期版本取错过 `graphToPrompt` 的字段（把 UI 图当结果存了），
   /// 载入时据此把坏数据过滤掉——重新解析一次即可恢复，无需迁移。
-  bool get isApiShaped =>
-      WorkflowApiConverter.apiShapeProblem(workflowJson) == null;
+  bool get isApiShaped => WorkflowApiConverter.isApiShape(workflowJson);
 
   factory ParsedWorkflow.fromJson(Map<String, dynamic> json) {
     return ParsedWorkflow(
@@ -61,17 +61,19 @@ class ParsedWorkflow implements WorkflowEntry {
       name: json['name'] as String? ?? '',
       sourceHash: json['sourceHash'] as String? ?? '',
       parsedAt: json['parsedAt'] as int? ?? 0,
-      workflowJson: Map<String, dynamic>.from(json['workflowJson'] as Map? ?? {}),
+      workflowJson: Map<String, dynamic>.from(
+        json['workflowJson'] as Map? ?? {},
+      ),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'serverId': serverId,
-        'filename': filename,
-        'name': name,
-        'sourceHash': sourceHash,
-        'parsedAt': parsedAt,
-        'workflowJson': workflowJson,
-      };
+    'id': id,
+    'serverId': serverId,
+    'filename': filename,
+    'name': name,
+    'sourceHash': sourceHash,
+    'parsedAt': parsedAt,
+    'workflowJson': workflowJson,
+  };
 }

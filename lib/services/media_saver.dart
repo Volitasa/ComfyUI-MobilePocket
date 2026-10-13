@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -24,16 +25,21 @@ class MediaSaver {
   }) async {
     final hasAccess = await Gal.requestAccess();
     if (!hasAccess) {
-      if (context.mounted) _toast(context, '需要相册权限');
+      if (context.mounted) {
+        _toast(context, AppLocalizations.of(context).saveAlbumPermission);
+      }
       return false;
     }
 
-    final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : 'png';
+    final ext = filename.contains('.')
+        ? filename.split('.').last.toLowerCase()
+        : 'png';
 
     if (videoExts.contains(ext)) {
       final tmpDir = await getTemporaryDirectory();
       final tmp = File(
-          '${tmpDir.path}/tmp_save_${DateTime.now().millisecondsSinceEpoch}.$ext');
+        '${tmpDir.path}/tmp_save_${DateTime.now().millisecondsSinceEpoch}.$ext',
+      );
       await tmp.writeAsBytes(bytes);
       try {
         await Gal.putVideo(tmp.path);
@@ -68,18 +74,21 @@ class MediaSaver {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('保存到相册'),
-        content: const Text('这张 PNG 内嵌了工作流信息。选择保存方式：'),
+        title: Text(AppLocalizations.of(ctx).saveAlbumTitle),
+        content: Text(AppLocalizations.of(ctx).saveAlbumBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocalizations.of(ctx).cancel),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'plain'),
-            child: const Text('普通图片（剔除信息）'),
+            child: Text(AppLocalizations.of(ctx).saveAlbumPlain),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.green),
             onPressed: () => Navigator.pop(ctx, 'with_workflow'),
-            child: const Text('带工作流原图'),
+            child: Text(AppLocalizations.of(ctx).saveAlbumWithWorkflow),
           ),
         ],
       ),

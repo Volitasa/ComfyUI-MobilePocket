@@ -25,7 +25,11 @@ String _types(Uint8List png) {
   final types = <String>[];
   var pos = 8;
   while (pos + 8 <= png.length) {
-    final len = (png[pos] << 24) | (png[pos + 1] << 16) | (png[pos + 2] << 8) | png[pos + 3];
+    final len =
+        (png[pos] << 24) |
+        (png[pos + 1] << 16) |
+        (png[pos + 2] << 8) |
+        png[pos + 3];
     types.add(String.fromCharCodes(png.sublist(pos + 4, pos + 8)));
     pos += 12 + len;
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
 import '../../providers/snapshot_provider.dart';
@@ -10,6 +11,7 @@ import 'run_view.dart'; // 下一步我们将创建运行页面
 
 class WorkflowView extends ConsumerStatefulWidget {
   final String workflowId;
+
   /// 非空时进入「快照模式」：解析快照里的工作流 JSON，
   /// 保存配置只写回快照，不碰线上工作流的 mapping 配置。
   final String? snapshotId;
@@ -57,38 +59,58 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     final notifier = ref.read(workflowProvider.notifier);
 
     if (_isSnapshotMode) {
-      final snapshot = ref.read(snapshotProvider.notifier).byId(widget.snapshotId!);
+      final snapshot = ref
+          .read(snapshotProvider.notifier)
+          .byId(widget.snapshotId!);
       if (snapshot == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('工作流快照已被删除')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).workflowSnapshotDeleted),
+          ),
+        );
         Navigator.pop(context);
         return;
       }
       // 用快照里保存的配置作为「已保存配置」，不读线上的 mapping_
-      _parseWorkflow(snapshot.workflowJson, savedConfig: snapshot.mappingConfig);
+      _parseWorkflow(
+        snapshot.workflowJson,
+        savedConfig: snapshot.mappingConfig,
+      );
     } else if (_isLocal || _isParsed) {
       // 本地资产与解析缓存都持久化在本地，重启后依然可用
       final entry = _persisted;
       if (entry == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isLocal ? '本地工作流已不存在，可能已被删除' : '解析结果已被清除，请重新解析'),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isLocal
+                  ? AppLocalizations.of(context).workflowLocalMissing
+                  : AppLocalizations.of(context).workflowParsedCleared,
+            ),
+          ),
+        );
         Navigator.pop(context);
         return;
       }
       // 顺带写进缓存，供运行页直接从缓存取，不必再回各自的库里读一次。
       // 首屏是从 initState 进来的，写 provider 必须让出当前帧。
-      await scheduleProviderWrite(() => ref
-          .read(workflowProvider.notifier)
-          .setWorkflowData(entry, workflowId: widget.workflowId));
+      await scheduleProviderWrite(
+        () => ref
+            .read(workflowProvider.notifier)
+            .setWorkflowData(entry, workflowId: widget.workflowId),
+      );
       _parseWorkflow(entry);
     } else {
       final success = await notifier.fetchWorkflowContent(widget.workflowId);
       if (!success) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('拉取线上工作流内容失败，请检查服务器连接')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).workflowFetchFailed),
+          ),
+        );
         Navigator.pop(context);
         return;
       }
@@ -104,6 +126,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   void _parseWorkflow(
     Map<String, dynamic> jsonMap, {
     bool useSavedConfig = true,
+
     /// 直接指定「已保存配置」（快照模式用），优先级高于从 prefs 读
     List<WorkflowNode>? savedConfig,
   }) {
@@ -145,7 +168,8 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
       // 兜底规则：任何节点的 text/value 参数若为字符串，都识别为文本节点。
       // 第三方文本节点类名五花八门，靠类名白名单会漏，靠参数名兜底可全兼容。
-      final isTextNodeFallback = !inWhitelist &&
+      final isTextNodeFallback =
+          !inWhitelist &&
           ((inputs['text'] is String) || (inputs['value'] is String));
 
       if (!inWhitelist && !isTextNodeFallback) return;
@@ -158,31 +182,45 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
         // seed 是整数，需特殊识别为 seed 类型（带随机按钮）
         if ((key == 'seed' || key == 'noise_seed') && rawValue is! List) {
-          nodes.add(WorkflowNode(
-            id: nodeId,
-            classType: classType,
-            key: key,
-            alias: _defaultAlias(key, title, classType),
-            title: title,
-            exposed: true,
-            paramType: ParamType.seed,
-            value: rawValue is num ? rawValue.toInt() : rawValue,
-          ));
+          nodes.add(
+            WorkflowNode(
+              id: nodeId,
+              classType: classType,
+              key: key,
+              alias: _defaultAlias(
+                key,
+                title,
+                classType,
+                AppLocalizations.of(context),
+              ),
+              title: title,
+              exposed: true,
+              paramType: ParamType.seed,
+              value: rawValue is num ? rawValue.toInt() : rawValue,
+            ),
+          );
           return;
         }
 
         // image 图片参数
         if (key == 'image' && rawValue is String) {
-          nodes.add(WorkflowNode(
-            id: nodeId,
-            classType: classType,
-            key: key,
-            alias: _defaultAlias(key, title, classType),
-            title: title,
-            exposed: true,
-            paramType: ParamType.image,
-            value: rawValue,
-          ));
+          nodes.add(
+            WorkflowNode(
+              id: nodeId,
+              classType: classType,
+              key: key,
+              alias: _defaultAlias(
+                key,
+                title,
+                classType,
+                AppLocalizations.of(context),
+              ),
+              title: title,
+              exposed: true,
+              paramType: ParamType.image,
+              value: rawValue,
+            ),
+          );
           return;
         }
 
@@ -197,7 +235,8 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         }
 
         // 文本类型：优先显示为文本控件
-        final effectiveType = (key == 'text' || key == 'value') && rawValue is String
+        final effectiveType =
+            (key == 'text' || key == 'value') && rawValue is String
             ? ParamType.text
             : type;
 
@@ -205,17 +244,24 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
             ? _enumOptions(rawValue)
             : const [];
 
-        nodes.add(WorkflowNode(
-          id: nodeId,
-          classType: classType,
-          key: key,
-          alias: _defaultAlias(key, title, classType),
-          title: title,
-          exposed: isDefaultExposed(key, classType),
-          paramType: effectiveType,
-          options: options,
-          value: _normalizeValue(effectiveType, rawValue),
-        ));
+        nodes.add(
+          WorkflowNode(
+            id: nodeId,
+            classType: classType,
+            key: key,
+            alias: _defaultAlias(
+              key,
+              title,
+              classType,
+              AppLocalizations.of(context),
+            ),
+            title: title,
+            exposed: isDefaultExposed(key, classType),
+            paramType: effectiveType,
+            options: options,
+            value: _normalizeValue(effectiveType, rawValue),
+          ),
+        );
       });
     });
 
@@ -223,8 +269,11 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     // 参数集合/类型/当前值取新解析（保证旧配置自动补齐新参数、类型不回退），
     // 仅保留用户在旧配置里的勾选状态与别名
     if (useSavedConfig) {
-      final config = savedConfig ??
-          ref.read(workflowProvider.notifier).getMappingConfig(widget.workflowId);
+      final config =
+          savedConfig ??
+          ref
+              .read(workflowProvider.notifier)
+              .getMappingConfig(widget.workflowId);
       if (config != null && config.isNotEmpty) {
         final savedConfig = config;
         if (nodes.isEmpty) {
@@ -266,12 +315,17 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
     // 快照用快照里的 JSON；本地从本地库读；线上则重新拉取最新内容
     if (_isSnapshotMode) {
-      final snapshot = ref.read(snapshotProvider.notifier).byId(widget.snapshotId!);
+      final snapshot = ref
+          .read(snapshotProvider.notifier)
+          .byId(widget.snapshotId!);
       if (snapshot == null) {
         if (!mounted) return;
         setState(() => _isReady = true);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('工作流快照已被删除')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).workflowSnapshotDeleted),
+          ),
+        );
         return;
       }
       _parseWorkflow(snapshot.workflowJson, useSavedConfig: false);
@@ -280,24 +334,41 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       if (entry == null) {
         if (!mounted) return;
         setState(() => _isReady = true);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isLocal ? '本地工作流已不存在，可能已被删除' : '解析结果已被清除，请重新解析'),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isLocal
+                  ? AppLocalizations.of(context).workflowLocalMissing
+                  : AppLocalizations.of(context).workflowParsedCleared,
+            ),
+          ),
+        );
         return;
       }
-      await scheduleProviderWrite(() => ref
-          .read(workflowProvider.notifier)
-          .setWorkflowData(entry, workflowId: widget.workflowId));
+      await scheduleProviderWrite(
+        () => ref
+            .read(workflowProvider.notifier)
+            .setWorkflowData(entry, workflowId: widget.workflowId),
+      );
       _parseWorkflow(entry, useSavedConfig: false);
     } else {
-      final ok = await ref.read(workflowProvider.notifier).fetchWorkflowContent(widget.workflowId);
+      final ok = await ref
+          .read(workflowProvider.notifier)
+          .fetchWorkflowContent(widget.workflowId);
       if (!ok) {
         if (!mounted) return;
         setState(() => _isReady = true);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('重新拉取工作流失败，请检查服务器连接')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).workflowRefetchFailed),
+          ),
+        );
         return;
       }
-      _parseWorkflow(ref.read(workflowProvider).currentWorkflowData!, useSavedConfig: false);
+      _parseWorkflow(
+        ref.read(workflowProvider).currentWorkflowData!,
+        useSavedConfig: false,
+      );
     }
 
     if (!mounted) return;
@@ -307,7 +378,9 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     }
     _aliasControllers.clear();
     setState(() => _isReady = true);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已重新解析，请确认参数后保存')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context).workflowReparsed)),
+    );
   }
 
   // 分组卡片的头部标签：优先展示节点标题（有辨识度），无有效标题回退类名
@@ -331,12 +404,9 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
             visualDensity: VisualDensity.compact,
-            title: Text(
-              node.alias,
-              style: const TextStyle(fontSize: 14),
-            ),
+            title: Text(node.alias, style: const TextStyle(fontSize: 14)),
             subtitle: Text(
-              _describeParam(node),
+              _describeParam(node, AppLocalizations.of(context)),
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
             value: node.exposed,
@@ -353,13 +423,18 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
               padding: const EdgeInsets.only(left: 40.0),
               child: TextField(
                 controller: _aliasControllers.putIfAbsent(
-                    controllerKey, () => TextEditingController(text: node.alias)),
+                  controllerKey,
+                  () => TextEditingController(text: node.alias),
+                ),
                 onChanged: (val) => node.alias = val,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   isDense: true,
-                  hintText: '例如: 画面主体描述',
+                  hintText: AppLocalizations.of(context).paramAliasHint,
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                 ),
                 style: const TextStyle(fontSize: 14),
               ),
@@ -370,15 +445,18 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   }
 
   // 配置面板里参数卡片的一行摘要：类型 + 当前值
-  String _describeParam(WorkflowNode node) {    final typeName = {
-      ParamType.text: '文本',
-      ParamType.seed: '种子',
-      ParamType.image: '图片',
-      ParamType.intType: '整数',
-      ParamType.float: '小数',
-      ParamType.boolType: '开关',
-      ParamType.enumType: '选项',
-    }[node.paramType] ?? '参数';
+  String _describeParam(WorkflowNode node, AppLocalizations l) {
+    final typeName =
+        {
+          ParamType.text: l.paramTypeText,
+          ParamType.seed: l.paramTypeSeed,
+          ParamType.image: l.paramTypeImage,
+          ParamType.intType: l.paramTypeInt,
+          ParamType.float: l.paramTypeFloat,
+          ParamType.boolType: l.paramTypeBool,
+          ParamType.enumType: l.paramTypeEnum,
+        }[node.paramType] ??
+        l.paramTypeDefault;
 
     final v = node.value;
     String valueStr = '';
@@ -386,41 +464,48 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       valueStr = v.toString();
       if (valueStr.length > 20) valueStr = '${valueStr.substring(0, 20)}…';
     }
-    return valueStr.isEmpty ? '类型: $typeName' : '类型: $typeName · 当前值: $valueStr';
+    return valueStr.isEmpty
+        ? l.paramSummaryType(typeName)
+        : l.paramSummaryTypeValue(typeName, valueStr);
   }
 
   // 给参数起一个可读的默认别名。
   // 优先级：文本类参数优先用工作流里用户给节点起的标题（如“基础设定”），
   // 无自定义标题才用内置描述名；结构化参数（steps/cfg 等）用参数级描述名。
-  String _defaultAlias(String key, String title, String classType) {
+  String _defaultAlias(
+    String key,
+    String title,
+    String classType,
+    AppLocalizations l,
+  ) {
     final t = title.trim();
     final isDefaultTitle = !isMeaningfulTitle(title, classType);
 
     if (key == 'text' || key == 'value') {
-      return isDefaultTitle ? '提示词' : t;
+      return isDefaultTitle ? l.aliasPrompt : t;
     }
 
-    const map = {
-      'seed': '随机种子',
-      'noise_seed': '随机种子',
-      'image': '参考图片',
-      'steps': '采样步数',
-      'cfg': 'CFG 强度',
-      'sampler_name': '采样器',
-      'scheduler': '调度器',
-      'denoise': '重绘幅度',
-      'width': '宽度',
-      'height': '高度',
-      'batch_size': '生成数量',
-      'positive': '正向提示词',
-      'negative': '负向提示词',
-      'ckpt_name': 'Checkpoint 模型',
-      'unet_name': 'UNet 模型',
-      'clip_name': 'CLIP 模型',
-      'vae_name': 'VAE 模型',
-      'lora_name': 'LoRA 模型',
-      'control_net_name': 'ControlNet',
-      'upscale_model': '放大模型',
+    final map = {
+      'seed': l.aliasSeed,
+      'noise_seed': l.aliasSeed,
+      'image': l.aliasImage,
+      'steps': l.aliasSteps,
+      'cfg': l.aliasCfg,
+      'sampler_name': l.aliasSampler,
+      'scheduler': l.aliasScheduler,
+      'denoise': l.aliasDenoise,
+      'width': l.aliasWidth,
+      'height': l.aliasHeight,
+      'batch_size': l.aliasBatchSize,
+      'positive': l.aliasPositive,
+      'negative': l.aliasNegative,
+      'ckpt_name': l.aliasCkpt,
+      'unet_name': l.aliasUnet,
+      'clip_name': l.aliasClip,
+      'vae_name': l.aliasVae,
+      'lora_name': l.aliasLora,
+      'control_net_name': l.aliasControlNet,
+      'upscale_model': l.aliasUpscaleModel,
     };
     return map[key] ?? (isDefaultTitle ? t : t);
   }
@@ -439,7 +524,9 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   dynamic _normalizeValue(ParamType type, dynamic rawValue) {
     switch (type) {
       case ParamType.enumType:
-        return rawValue is List ? (rawValue.isNotEmpty ? rawValue.first : null) : rawValue;
+        return rawValue is List
+            ? (rawValue.isNotEmpty ? rawValue.first : null)
+            : rawValue;
       default:
         return rawValue;
     }
@@ -448,10 +535,12 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   void _handleSaveMapping() {
     if (_isSnapshotMode) {
       // 只写回快照：此刻原工作流未必还在，不能去改线上的 mapping 配置
-      ref.read(snapshotProvider.notifier)
+      ref
+          .read(snapshotProvider.notifier)
           .updateMappingConfig(widget.snapshotId!, _extractableNodes);
     } else {
-      ref.read(workflowProvider.notifier)
+      ref
+          .read(workflowProvider.notifier)
           .saveMappingConfig(widget.workflowId, _extractableNodes);
     }
     Navigator.pushReplacement(
@@ -463,14 +552,18 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         ),
       ),
     );
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('配置已保存')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context).configSaved)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_isReady) {
       return Scaffold(
-        appBar: AppBar(title: const Text('解析中...')),
+        appBar: AppBar(
+          title: Text(AppLocalizations.of(context).configParsingTitle),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -483,119 +576,165 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('配置面板: $displayName', style: const TextStyle(fontSize: 16)),
+        title: Text(
+          AppLocalizations.of(context).configPanelTitle(displayName),
+          style: const TextStyle(fontSize: 16),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: '重新解析参数',
+            tooltip: AppLocalizations.of(context).configReparseTooltip,
             onPressed: _reparse,
           ),
         ],
       ),
       body: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Text(
-              '请勾选需要暴露到手机 App 表单的参数，并为它们起一个易懂的名字。',
-              style: TextStyle(color: Colors.black54, fontSize: 14),
+              AppLocalizations.of(context).configPanelHint,
+              style: const TextStyle(color: Colors.black54, fontSize: 14),
             ),
           ),
           Expanded(
             child: _extractableNodes.isEmpty
-                ? const Center(
+                ? Center(
                     child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Text('此工作流没有找到可动态修改的参数。', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text(
+                        AppLocalizations.of(context).configNoParams,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
                     ),
                   )
-                : Builder(builder: (context) {
-                    // 按节点分组展示：同一节点的多个参数合并为一张卡片
-                    final groups = <String, List<WorkflowNode>>{};
-                    for (final n in _extractableNodes) {
-                      groups.putIfAbsent(n.id, () => []).add(n);
-                    }
-                    final groupIds = groups.keys.toList();
-                    return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: groupIds.length,
-                      itemBuilder: (context, index) {
-                        final nodeId = groupIds[index];
-                        final params = groups[nodeId]!;
-                        final exposedCount = params.where((p) => p.exposed).length;
+                : Builder(
+                    builder: (context) {
+                      // 按节点分组展示：同一节点的多个参数合并为一张卡片
+                      final groups = <String, List<WorkflowNode>>{};
+                      for (final n in _extractableNodes) {
+                        groups.putIfAbsent(n.id, () => []).add(n);
+                      }
+                      final groupIds = groups.keys.toList();
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        itemCount: groupIds.length,
+                        itemBuilder: (context, index) {
+                          final nodeId = groupIds[index];
+                          final params = groups[nodeId]!;
+                          final exposedCount = params
+                              .where((p) => p.exposed)
+                              .length;
 
-                        // 默认展开含已勾选参数的节点，其余收起；用户可手动切换
-                        final expanded = _expandedNodeIds.contains(nodeId)
-                            ? true
-                            : _collapsedNodeIds.contains(nodeId)
-                                ? false
-                                : exposedCount > 0;
+                          // 默认展开含已勾选参数的节点，其余收起；用户可手动切换
+                          final expanded = _expandedNodeIds.contains(nodeId)
+                              ? true
+                              : _collapsedNodeIds.contains(nodeId)
+                              ? false
+                              : exposedCount > 0;
 
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          child: Column(
-                            children: [
-                              // 节点分组头部：类名 + 参数统计 + 展开/收起
-                              InkWell(
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                                onTap: () => setState(() {
-                                  if (expanded) {
-                                    _collapsedNodeIds.add(nodeId);
-                                    _expandedNodeIds.remove(nodeId);
-                                  } else {
-                                    _expandedNodeIds.add(nodeId);
-                                    _collapsedNodeIds.remove(nodeId);
-                                  }
-                                }),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  child: Row(
-                                    children: [
-                                      AnimatedRotation(
-                                        turns: expanded ? 0 : -0.25,
-                                        duration: const Duration(milliseconds: 150),
-                                        child: const Icon(Icons.expand_more, size: 20, color: Colors.grey),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          _groupLabel(params),
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                          overflow: TextOverflow.ellipsis,
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            child: Column(
+                              children: [
+                                // 节点分组头部：类名 + 参数统计 + 展开/收起
+                                InkWell(
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(8),
+                                  ),
+                                  onTap: () => setState(() {
+                                    if (expanded) {
+                                      _collapsedNodeIds.add(nodeId);
+                                      _expandedNodeIds.remove(nodeId);
+                                    } else {
+                                      _expandedNodeIds.add(nodeId);
+                                      _collapsedNodeIds.remove(nodeId);
+                                    }
+                                  }),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 10,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        AnimatedRotation(
+                                          turns: expanded ? 0 : -0.25,
+                                          duration: const Duration(
+                                            milliseconds: 150,
+                                          ),
+                                          child: const Icon(
+                                            Icons.expand_more,
+                                            size: 20,
+                                            color: Colors.grey,
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                        exposedCount > 0 ? '$exposedCount/${params.length} 项已选' : '${params.length} 项参数',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: exposedCount > 0 ? Colors.green.shade700 : Colors.grey,
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _groupLabel(params),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                        Text(
+                                          exposedCount > 0
+                                              ? AppLocalizations.of(context)
+                                                    .configSelectedCount(
+                                                      exposedCount,
+                                                      params.length,
+                                                    )
+                                              : AppLocalizations.of(context)
+                                                    .configParamCount(
+                                                      params.length,
+                                                    ),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: exposedCount > 0
+                                                ? Colors.green.shade700
+                                                : Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                              if (expanded)
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                                  child: Column(
-                                    children: [
-                                      const Divider(height: 1),
-                                      ...params.map((node) => _buildParamRow(node)),
-                                    ],
+                                if (expanded)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      12,
+                                      0,
+                                      12,
+                                      12,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        const Divider(height: 1),
+                                        ...params.map(
+                                          (node) => _buildParamRow(node),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  }),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
           SafeArea(
             child: Padding(
@@ -606,10 +745,18 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   onPressed: _handleSaveMapping,
-                  child: const Text('保存表单配置', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    AppLocalizations.of(context).configSaveButton,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ),

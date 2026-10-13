@@ -85,7 +85,8 @@ class SnapshotNotifier extends Notifier<List<WorkflowSnapshot>> {
       // 复用：保留原 createdAt，只更新配置与来源服务器
       final updated = WorkflowSnapshot(
         id: id,
-        displayName: '${existing.sourceName} · ${_formatStamp(existing.createdAt)}',
+        displayName:
+            '${existing.sourceName} · ${_formatStamp(existing.createdAt)}',
         sourceName: existing.sourceName,
         createdAt: existing.createdAt,
         serverId: serverId ?? existing.serverId,
@@ -132,5 +133,5 @@ class SnapshotNotifier extends Notifier<List<WorkflowSnapshot>> {
 
 final snapshotProvider =
     NotifierProvider<SnapshotNotifier, List<WorkflowSnapshot>>(() {
-  return SnapshotNotifier();
-});
+      return SnapshotNotifier();
+    });

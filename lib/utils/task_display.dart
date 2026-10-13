@@ -5,7 +5,8 @@ import '../models/task_status.dart';
 
 /// 状态与阶段的展示文案统一在这里生成：持久化层只存枚举与原始值，
 /// 界面语言切换后，同一条记录会按新语言重新渲染。
-String taskStatusLabel(AppLocalizations l, TaskStatus status) => switch (status) {
+String taskStatusLabel(AppLocalizations l, TaskStatus status) =>
+    switch (status) {
       TaskStatus.queued => l.taskStatusQueued,
       TaskStatus.running => l.taskStatusRunning,
       TaskStatus.completed => l.taskStatusCompleted,

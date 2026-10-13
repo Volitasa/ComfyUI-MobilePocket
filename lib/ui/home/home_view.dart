@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../providers/connection_provider.dart';
 import '../../providers/workflow_provider.dart';
@@ -45,7 +46,8 @@ class _HomeViewState extends ConsumerState<HomeView> {
     // 断开（true→false）时关闭 WS，统一在此维护连接生命周期
     ref.listen(connectionProvider, (prev, next) {
       // 切换了服务器连接：清空旧服务器的工作流列表与缓存（本地历史/画廊不受影响）
-      if (prev?.activeServerId != null && prev?.activeServerId != next.activeServerId) {
+      if (prev?.activeServerId != null &&
+          prev?.activeServerId != next.activeServerId) {
         ref.read(workflowProvider.notifier).clearList();
       }
 
@@ -61,14 +63,18 @@ class _HomeViewState extends ConsumerState<HomeView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('工作流', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          AppLocalizations.of(context).navWorkflow,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           // 刷新只对服务器段有意义
           if (currentTab == 0 && configState.isConnected)
             IconButton(
               icon: const Icon(Icons.refresh),
-              tooltip: '刷新工作流列表',
-              onPressed: () => ref.read(workflowProvider.notifier).fetchRemoteList(),
+              tooltip: AppLocalizations.of(context).homeRefreshTooltip,
+              onPressed: () =>
+                  ref.read(workflowProvider.notifier).fetchRemoteList(),
             ),
           ConnectionStatusBadge(
             // 直接进服务器连接页，而不是只切到「设置」Tab
@@ -102,8 +108,8 @@ class _HomeViewState extends ConsumerState<HomeView> {
       ),
       child: Row(
         children: [
-          _buildTab('服务器', 0, currentTab),
-          _buildTab('本地', 1, currentTab),
+          _buildTab(AppLocalizations.of(context).homeTabServer, 0, currentTab),
+          _buildTab(AppLocalizations.of(context).homeTabLocal, 1, currentTab),
         ],
       ),
     );

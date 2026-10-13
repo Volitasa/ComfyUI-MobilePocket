@@ -23,7 +23,9 @@ class PngMetadataStripper {
       // 4 字节长度 + 4 字节类型 + 数据 + 4 字节 CRC
       final length = _readUint32(bytes, pos);
       final typeStart = pos + 4;
-      final type = String.fromCharCodes(bytes.sublist(typeStart, typeStart + 4));
+      final type = String.fromCharCodes(
+        bytes.sublist(typeStart, typeStart + 4),
+      );
       final dataStart = pos + 8;
       final dataEnd = dataStart + length;
       final chunkEnd = dataEnd + 4; // 含 CRC

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
@@ -41,17 +42,19 @@ class UpdateService {
       'https://api.github.com/repos/$repoOwner/$repoName/releases/latest';
   static const String releasesUrl =
       'https://api.github.com/repos/$repoOwner/$repoName/releases';
-  static const String repoHomeUrl =
-      'https://github.com/$repoOwner/$repoName';
+  static const String repoHomeUrl = 'https://github.com/$repoOwner/$repoName';
 
   static const Duration _timeout = Duration(seconds: 20);
 
   /// 查询最新 Release。
   /// [token] 用于访问私有仓库；为空则按匿名请求处理（仅公开仓库可用）。
   /// 没有可用安装包时抛 UpdateException。
-  Future<ReleaseInfo> fetchLatestRelease({String? token}) async {
+  Future<ReleaseInfo> fetchLatestRelease({
+    String? token,
+    required AppLocalizations l10n,
+  }) async {
     final hasToken = token != null && token.trim().isNotEmpty;
-    final latest = await _request(latestReleaseUrl, token: token);
+    final latest = await _request(latestReleaseUrl, token: token, l10n: l10n);
 
     Map<String, dynamic>? data;
     if (latest.statusCode == 200 && latest.json is Map<String, dynamic>) {
@@ -61,7 +64,7 @@ class UpdateService {
       //           ② 仓库是私有的（GitHub 对无权限访问一律回 404，
       //              不会回 403，以免泄露仓库是否存在）。
       // 退回列表接口再找一次，用它的结果区分这两种情况。
-      final list = await _request(releasesUrl, token: token);
+      final list = await _request(releasesUrl, token: token, l10n: l10n);
       if (list.statusCode == 200 && list.json is List) {
         final items = (list.json as List)
             .whereType<Map<String, dynamic>>()
@@ -72,32 +75,24 @@ class UpdateService {
         // 列表也 404 —— 基本可以断定是无权访问，而不是「没有发布」
         throw UpdateException(
           hasToken
-              ? '仓库不可访问：请确认令牌对该仓库有 Contents 读取权限，且未过期'
-              : '仓库不可访问。若该仓库是私有的，请在「设置 → GitHub 访问令牌」'
-                  '中填入只读令牌后重试',
+              ? l10n.updateRepoForbiddenWithToken
+              : l10n.updateRepoForbidden,
         );
       }
     } else if (latest.statusCode == 401) {
       // 仓库若已转为公开，清除令牌即可恢复匿名访问，不必重新生成
-      throw UpdateException(
-        'GitHub 令牌无效或已过期。可在「设置 → GitHub 访问令牌」中更新；'
-        '若仓库已公开，直接清除令牌即可',
-      );
+      throw UpdateException(l10n.updateTokenInvalid);
     } else if (latest.statusCode == 403) {
       throw UpdateException(
-        hasToken
-            ? 'GitHub 拒绝了请求（令牌权限不足或触发限流），请稍后再试'
-            : 'GitHub 接口访问受限（匿名请求每小时 60 次），配置访问令牌可放宽限额',
+        hasToken ? l10n.updateRateLimitedWithToken : l10n.updateRateLimited,
       );
     } else if (latest.statusCode != 200) {
-      throw UpdateException('查询更新失败（HTTP ${latest.statusCode}）');
+      throw UpdateException(l10n.updateHttpFailed('${latest.statusCode}'));
     }
 
     if (data == null) {
       // 注意：git tag 不等于 GitHub Release，只有 Release 才带安装包
-      throw UpdateException(
-        '该仓库还没有发布带安装包的版本（仅有 git tag 不会被识别）',
-      );
+      throw UpdateException(l10n.updateNoRelease);
     }
 
     final decoded = data;
@@ -105,17 +100,19 @@ class UpdateService {
     final tag = (decoded['tag_name'] ?? '').toString();
     final version = normalizeVersion(tag);
     if (version.isEmpty) {
-      throw UpdateException('发布版本号无法识别（$tag）');
+      throw UpdateException(l10n.updateBadTag(tag));
     }
 
-    final asset = _pickApkAsset(decoded['assets']);
+    final asset = _pickApkAsset(decoded['assets'], l10n);
 
     return ReleaseInfo(
       version: version,
       tagName: tag,
       name: (decoded['name'] ?? tag).toString(),
       notes: (decoded['body'] ?? '').toString().trim(),
-      publishedAt: DateTime.tryParse((decoded['published_at'] ?? '').toString()),
+      publishedAt: DateTime.tryParse(
+        (decoded['published_at'] ?? '').toString(),
+      ),
       assetName: (asset['name'] ?? '').toString(),
       sizeBytes: (asset['size'] is num) ? (asset['size'] as num).toInt() : 0,
       downloadUrl: (asset['browser_download_url'] ?? '').toString(),
@@ -125,7 +122,11 @@ class UpdateService {
 
   /// 统一 GET：网络类异常直接转成可读的 UpdateException。
   /// 404 / 401 / 403 不抛异常，交由调用方按场景给出准确原因。
-  Future<_ApiResp> _request(String url, {String? token}) async {
+  Future<_ApiResp> _request(
+    String url, {
+    String? token,
+    required AppLocalizations l10n,
+  }) async {
     try {
       final headers = <String, String>{
         'Accept': 'application/vnd.github+json',
@@ -137,8 +138,9 @@ class UpdateService {
         headers['Authorization'] = 'Bearer $t';
       }
 
-      final resp =
-          await client.get(Uri.parse(url), headers: headers).timeout(_timeout);
+      final resp = await client
+          .get(Uri.parse(url), headers: headers)
+          .timeout(_timeout);
 
       dynamic json;
       if (resp.body.isNotEmpty) {
@@ -150,26 +152,28 @@ class UpdateService {
       }
       return _ApiResp(resp.statusCode, json);
     } on TimeoutException {
-      throw UpdateException('连接 GitHub 超时，请检查网络后重试');
+      throw UpdateException(l10n.updateTimeout);
     } on SocketException {
-      throw UpdateException('无法连接 GitHub，请检查网络后重试');
+      throw UpdateException(l10n.updateUnreachable);
     } catch (_) {
-      throw UpdateException('查询更新失败，请检查网络后重试');
+      throw UpdateException(l10n.updateQueryFailed);
     }
   }
 
   /// 选择安装包：只有一个 APK 就直接用；多个时优先 arm64（绝大多数现代机型）。
-  Map<String, dynamic> _pickApkAsset(dynamic assets) {
+  Map<String, dynamic> _pickApkAsset(dynamic assets, AppLocalizations l10n) {
     if (assets is! List) {
-      throw UpdateException('该版本没有附带安装包');
+      throw UpdateException(l10n.updateNoAsset);
     }
     final apks = assets
         .whereType<Map<String, dynamic>>()
-        .where((a) => (a['name'] ?? '').toString().toLowerCase().endsWith('.apk'))
+        .where(
+          (a) => (a['name'] ?? '').toString().toLowerCase().endsWith('.apk'),
+        )
         .toList();
 
     if (apks.isEmpty) {
-      throw UpdateException('该版本没有可安装的 APK');
+      throw UpdateException(l10n.updateNoApk);
     }
     if (apks.length == 1) return apks.first;
 
@@ -189,6 +193,7 @@ class UpdateService {
     ReleaseInfo release, {
     required void Function(double progress) onProgress,
     String? token,
+    required AppLocalizations l10n,
   }) async {
     final t = token?.trim();
     final useApi = t != null && t.isNotEmpty && release.assetApiUrl.isNotEmpty;
@@ -196,7 +201,7 @@ class UpdateService {
 
     // 先校验地址再碰文件系统：配置缺失应该立刻报错，不必先建临时目录
     if (url.isEmpty) {
-      throw UpdateException('安装包地址缺失，请稍后重试');
+      throw UpdateException(l10n.updateAssetMissing);
     }
 
     final dir = await getTemporaryDirectory();
@@ -226,20 +231,20 @@ class UpdateService {
         response = await client.send(redirect).timeout(_timeout);
       }
     } on TimeoutException {
-      throw UpdateException('下载超时，请检查网络后重试');
+      throw UpdateException(l10n.updateDownloadTimeout);
     } on SocketException {
-      throw UpdateException('下载失败，网络连接已中断');
+      throw UpdateException(l10n.updateDownloadInterrupted);
     } catch (_) {
-      throw UpdateException('下载失败，请检查网络后重试');
+      throw UpdateException(l10n.updateDownloadFailed);
     }
 
     if (response.statusCode == 404) {
       throw UpdateException(
-        useApi ? '安装包下载失败（404），请确认令牌仍有该仓库的读取权限' : '安装包下载失败（404）',
+        useApi ? l10n.updateDownload404Token : l10n.updateDownload404,
       );
     }
     if (response.statusCode != 200) {
-      throw UpdateException('下载失败（HTTP ${response.statusCode}）');
+      throw UpdateException(l10n.updateDownloadHttp('${response.statusCode}'));
     }
 
     final total = response.contentLength ?? 0;
@@ -255,14 +260,14 @@ class UpdateService {
         }
       }
     } catch (_) {
-      throw UpdateException('下载中断，请重试');
+      throw UpdateException(l10n.updateDownloadAborted);
     } finally {
       await sink.flush();
       await sink.close();
     }
 
     if (!await file.exists()) {
-      throw UpdateException('安装包写入失败');
+      throw UpdateException(l10n.updateWriteFailed);
     }
     return savePath;
   }
@@ -292,9 +297,6 @@ class UpdateService {
   static List<int> _parts(String v) {
     final s = normalizeVersion(v);
     if (s.isEmpty) return const [0];
-    return s
-        .split(RegExp(r'[.-]'))
-        .map((e) => int.tryParse(e) ?? 0)
-        .toList();
+    return s.split(RegExp(r'[.-]')).map((e) => int.tryParse(e) ?? 0).toList();
   }
 }

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+
 import '../../providers/connection_provider.dart';
 import '../../services/workflow_api_converter.dart';
 
@@ -33,11 +35,12 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
   Timer? _convertTimer;
   bool _done = false;
   bool _converting = false;
-  String _status = '正在连接服务器…';
+  late String _status;
 
   @override
   void initState() {
     super.initState();
+    _status = AppLocalizations.of(context).parseStatusConnecting;
     final url = ref.read(connectionProvider).comfyUrl;
 
     _controller = WebViewController()
@@ -47,12 +50,17 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
         WorkflowApiConverter.bridgeName,
         onMessageReceived: (msg) {
           _convertTimer?.cancel();
-          _finish(WorkflowApiConverter.parsePayload(msg.message));
+          _finish(
+            WorkflowApiConverter.parsePayload(
+              msg.message,
+              AppLocalizations.of(context),
+            ),
+          );
         },
       )
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageFinished: (_) => _startPolling(),
-      ))
+      ..setNavigationDelegate(
+        NavigationDelegate(onPageFinished: (_) => _startPolling()),
+      )
       ..loadRequest(Uri.parse(url));
   }
 
@@ -68,25 +76,29 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
   /// 那时节点定义还没注册，转换会产出错的结果。
   void _startPolling() {
     if (_done) return;
-    final deadline =
-        DateTime.now().add(WorkflowApiConverter.bootTimeout);
+    final deadline = DateTime.now().add(WorkflowApiConverter.bootTimeout);
     var lastStatus = '';
 
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(milliseconds: 400), (timer) async {
+    _pollTimer = Timer.periodic(const Duration(milliseconds: 400), (
+      timer,
+    ) async {
       if (_done) {
         timer.cancel();
         return;
       }
       if (DateTime.now().isAfter(deadline)) {
         timer.cancel();
-        _finish(const ParsedApiResult.fail('加载 ComfyUI 前端超时，请检查服务器连接'));
+        _finish(
+          ParsedApiResult.fail(AppLocalizations.of(context).parseLoadTimeout),
+        );
         return;
       }
 
       try {
-        final raw =
-            await _controller.runJavaScriptReturningResult(WorkflowApiConverter.readinessProbeScript());
+        final raw = await _controller.runJavaScriptReturningResult(
+          WorkflowApiConverter.readinessProbeScript(),
+        );
         final readiness = WorkflowApiConverter.parseReadiness(raw);
         if (readiness == FrontendReadiness.ready) {
           timer.cancel();
@@ -94,8 +106,8 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
           return;
         }
         final next = readiness == FrontendReadiness.missing
-            ? '正在加载 ComfyUI 前端…'
-            : '正在等待前端就绪…';
+            ? AppLocalizations.of(context).parseStatusLoadingFrontend
+            : AppLocalizations.of(context).parseStatusWaitingReady;
         if (next != lastStatus) {
           lastStatus = next;
           if (mounted) setState(() => _status = next);
@@ -109,11 +121,17 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
   Future<void> _runConversion() async {
     if (_done || _converting) return;
     _converting = true;
-    if (mounted) setState(() => _status = '正在转换工作流…');
+    if (mounted) {
+      setState(
+        () => _status = AppLocalizations.of(context).parseStatusConverting,
+      );
+    }
 
     _convertTimer?.cancel();
     _convertTimer = Timer(WorkflowApiConverter.convertTimeout, () {
-      _finish(const ParsedApiResult.fail('转换超时，工作流可能包含不支持的节点'));
+      _finish(
+        ParsedApiResult.fail(AppLocalizations.of(context).parseConvertTimeout),
+      );
     });
 
     try {
@@ -121,7 +139,11 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
         WorkflowApiConverter.conversionScript(jsonEncode(widget.uiWorkflow)),
       );
     } catch (e) {
-      _finish(ParsedApiResult.fail('调用前端转换失败：${e.toString()}'));
+      _finish(
+        ParsedApiResult.fail(
+          AppLocalizations.of(context).parseConvertFailed(e.toString()),
+        ),
+      );
     }
   }
 
@@ -138,7 +160,10 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('解析: ${widget.displayName}', style: const TextStyle(fontSize: 16)),
+        title: Text(
+          AppLocalizations.of(context).parseTitle(widget.displayName),
+          style: const TextStyle(fontSize: 16),
+        ),
       ),
       body: Stack(
         children: [
@@ -158,7 +183,10 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
                       Text(
                         _status,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 14, color: Colors.black54),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                        ),
                       ),
                     ],
                   ),
@@ -181,10 +209,8 @@ Future<ParsedApiResult?> startWorkflowParse(
   return Navigator.push<ParsedApiResult>(
     context,
     MaterialPageRoute(
-      builder: (_) => WorkflowParseView(
-        displayName: displayName,
-        uiWorkflow: uiWorkflow,
-      ),
+      builder: (_) =>
+          WorkflowParseView(displayName: displayName, uiWorkflow: uiWorkflow),
     ),
   );
 }

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+
 import 'workflow_entry.dart';
 
 /// 本地工作流的来源方式。
@@ -15,10 +17,10 @@ enum LocalWorkflowSource {
 }
 
 extension LocalWorkflowSourceLabel on LocalWorkflowSource {
-  String get label => switch (this) {
-        LocalWorkflowSource.importFile => '导入',
-        LocalWorkflowSource.savedFromRemote => '另存',
-      };
+  String label(AppLocalizations l10n) => switch (this) {
+    LocalWorkflowSource.importFile => l10n.localSourceImport,
+    LocalWorkflowSource.savedFromRemote => l10n.localSourceSaved,
+  };
 }
 
 /// 本地工作流资产：保存在本机、与服务器无关的完整工作流。
@@ -58,7 +60,8 @@ class LocalWorkflow implements WorkflowEntry {
   int? _sizeCache;
 
   /// 占用字节数（按 UTF-8 编码后的实际长度计算，首次调用后缓存）
-  int get sizeBytes => _sizeCache ??= utf8.encode(jsonEncode(workflowJson)).length;
+  int get sizeBytes =>
+      _sizeCache ??= utf8.encode(jsonEncode(workflowJson)).length;
 
   factory LocalWorkflow.fromJson(Map<String, dynamic> json) {
     return LocalWorkflow(
@@ -67,7 +70,9 @@ class LocalWorkflow implements WorkflowEntry {
       createdAt: json['createdAt'] as int? ?? 0,
       sourceKind: _sourceFromName(json['sourceKind']),
       originName: json['originName'] as String?,
-      workflowJson: Map<String, dynamic>.from(json['workflowJson'] as Map? ?? {}),
+      workflowJson: Map<String, dynamic>.from(
+        json['workflowJson'] as Map? ?? {},
+      ),
     );
   }
 
@@ -79,11 +84,11 @@ class LocalWorkflow implements WorkflowEntry {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'createdAt': createdAt,
-        'sourceKind': sourceKind.name,
-        'originName': originName,
-        'workflowJson': workflowJson,
-      };
+    'id': id,
+    'name': name,
+    'createdAt': createdAt,
+    'sourceKind': sourceKind.name,
+    'originName': originName,
+    'workflowJson': workflowJson,
+  };
 }

@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
+
 import '../models/task_history.dart';
 import '../models/task_status.dart';
 import '../services/gallery_store.dart';
@@ -39,7 +41,10 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   }
 
   void _saveHistory(List<TaskHistory> newHistory) {
-    _prefs.setString('comfy_task_history', jsonEncode(newHistory.map((e) => e.toJson()).toList()));
+    _prefs.setString(
+      'comfy_task_history',
+      jsonEncode(newHistory.map((e) => e.toJson()).toList()),
+    );
     state = TaskState(history: newHistory);
   }
 
@@ -99,8 +104,9 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       );
 
       request.files.add(multipartFile);
-      final response =
-          await request.send().timeout(const Duration(seconds: 60));
+      final response = await request.send().timeout(
+        const Duration(seconds: 60),
+      );
 
       if (response.statusCode == 200) {
         final respStr = await response.stream.bytesToString();
@@ -117,20 +123,21 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   // 返回值约定：200 → 服务端原始响应（含 prompt_id）；
   // 非 200 → {'_http_error': 状态码, '_body': 服务端错误详情}，供 UI 透出；
   // 网络异常/超时 → null。
-  Future<Map<String, dynamic>?> executeWorkflow(Map<String, dynamic> promptNodes) async {
+  Future<Map<String, dynamic>?> executeWorkflow(
+    Map<String, dynamic> promptNodes,
+  ) async {
     final config = ref.read(connectionProvider);
-    final payload = {
-      'client_id': config.clientId,
-      'prompt': promptNodes,
-    };
+    final payload = {'client_id': config.clientId, 'prompt': promptNodes};
 
     try {
       final uri = Uri.parse('${config.comfyUrl}/prompt');
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -174,10 +181,16 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       for (final nodeOut in outputs.values) {
         if (nodeOut is! Map) continue;
         if (nodeOut['images'] is List) {
-          media.addAll((nodeOut['images'] as List).map((e) => Map<String, dynamic>.from(e)));
+          media.addAll(
+            (nodeOut['images'] as List).map(
+              (e) => Map<String, dynamic>.from(e),
+            ),
+          );
         }
         if (nodeOut['gifs'] is List) {
-          media.addAll((nodeOut['gifs'] as List).map((e) => Map<String, dynamic>.from(e)));
+          media.addAll(
+            (nodeOut['gifs'] as List).map((e) => Map<String, dynamic>.from(e)),
+          );
         }
       }
     }
@@ -224,7 +237,8 @@ class TaskManagerNotifier extends Notifier<TaskState> {
         final data = jsonDecode(q.body);
         if (data is Map) {
           for (final item in (data['queue_running'] as List? ?? [])) {
-            if (item is List && item.length > 1) running.add(item[1].toString());
+            if (item is List && item.length > 1)
+              running.add(item[1].toString());
           }
           for (final item in (data['queue_pending'] as List? ?? [])) {
             if (item is List && item.length > 1) queued.add(item[1].toString());
@@ -243,10 +257,18 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       if (entry is Map) {
         // 服务端已有该任务的终态记录
         final status = entry['status'];
-        final statusStr = status is Map ? status['status_str']?.toString() : null;
+        final statusStr = status is Map
+            ? status['status_str']?.toString()
+            : null;
         final messages = status is Map ? status['messages'] : null;
-        final interrupted = messages is List &&
-            messages.any((m) => m is List && m.isNotEmpty && m.first == 'execution_interrupted');
+        final interrupted =
+            messages is List &&
+            messages.any(
+              (m) =>
+                  m is List &&
+                  m.isNotEmpty &&
+                  m.first == 'execution_interrupted',
+            );
 
         if (interrupted) {
           task.status = TaskStatus.interrupted;
@@ -256,7 +278,9 @@ class TaskManagerNotifier extends Notifier<TaskState> {
           final media = _extractOutputs(entry['outputs']);
           if (media.isNotEmpty) {
             final existing = task.images.map((m) => m['filename']).toSet();
-            final fresh = media.where((m) => !existing.contains(m['filename'])).toList();
+            final fresh = media
+                .where((m) => !existing.contains(m['filename']))
+                .toList();
             if (fresh.isNotEmpty) {
               task.images = [...task.images, ...fresh];
               toLocalize[task.promptId] = fresh;
@@ -299,12 +323,17 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   }
 
   // 节点 ID → 可读名称：优先用工作流映射里保存的节点标题，无则回退"类名(ID)"
-  String _nodeLabel(String workflowId, dynamic nodeId) {    final idStr = nodeId?.toString() ?? '';
-    final config = ref.read(workflowProvider.notifier).getMappingConfig(workflowId);
+  String _nodeLabel(String workflowId, dynamic nodeId) {
+    final idStr = nodeId?.toString() ?? '';
+    final config = ref
+        .read(workflowProvider.notifier)
+        .getMappingConfig(workflowId);
     if (config != null) {
       for (final n in config) {
         if (n.id == idStr) {
-          return isMeaningfulTitle(n.title, n.classType) ? n.title : '${n.classType}($idStr)';
+          return isMeaningfulTitle(n.title, n.classType)
+              ? n.title
+              : '${n.classType}($idStr)';
         }
       }
     }
@@ -321,15 +350,23 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   }
 
   // 异步下载新生成的媒体到本地画廊，成功后回填 localPath 并持久化
-  Future<void> _localizeMedia(String promptId, List<Map<String, dynamic>> newMedia) async {
+  Future<void> _localizeMedia(
+    String promptId,
+    List<Map<String, dynamic>> newMedia,
+  ) async {
     final downloaded = <Map<String, dynamic>>[];
     for (final media in newMedia) {
       try {
         final url = _mediaUrl(media);
-        final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 60));
+        final resp = await http
+            .get(Uri.parse(url))
+            .timeout(const Duration(seconds: 60));
         if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
           final name = media['filename']?.toString() ?? 'image.png';
-          final localPath = await GalleryStore.instance.saveBytes(resp.bodyBytes, name);
+          final localPath = await GalleryStore.instance.saveBytes(
+            resp.bodyBytes,
+            name,
+          );
           downloaded.add({...media, 'localPath': localPath});
         } else {
           downloaded.add(media);
@@ -408,7 +445,8 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       task.nodePhase = TaskNodePhase.error;
       // 详情留空时展示层只说“执行出错”，不编造内容
       task.nodeDetail =
-          (data['exception_message'] ?? data['exception_type'])?.toString() ?? '';
+          (data['exception_message'] ?? data['exception_type'])?.toString() ??
+          '';
     } else if (type == 'execution_interrupted') {
       task.status = TaskStatus.interrupted;
       task.nodePhase = TaskNodePhase.interrupted;
@@ -421,10 +459,16 @@ class TaskManagerNotifier extends Notifier<TaskState> {
         // 1. 安全提取新生成的媒体数据
         if (output != null) {
           if (output['images'] != null) {
-            newMedia.addAll((output['images'] as List).map((e) => Map<String, dynamic>.from(e)));
+            newMedia.addAll(
+              (output['images'] as List).map(
+                (e) => Map<String, dynamic>.from(e),
+              ),
+            );
           }
           if (output['gifs'] != null) {
-            newMedia.addAll((output['gifs'] as List).map((e) => Map<String, dynamic>.from(e)));
+            newMedia.addAll(
+              (output['gifs'] as List).map((e) => Map<String, dynamic>.from(e)),
+            );
           }
         }
 
@@ -453,6 +497,9 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     _saveHistory(updatedList);
   }
 }
-final taskManagerProvider = NotifierProvider<TaskManagerNotifier, TaskState>(() {
-  return TaskManagerNotifier();
-});
+
+final taskManagerProvider = NotifierProvider<TaskManagerNotifier, TaskState>(
+  () {
+    return TaskManagerNotifier();
+  },
+);

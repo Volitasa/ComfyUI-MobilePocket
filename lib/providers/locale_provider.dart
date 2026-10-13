@@ -13,7 +13,9 @@ const uiLocalePrefsKey = 'comfy_ui_locale';
 const Locale fallbackLocale = Locale('zh');
 
 /// 界面语言偏好。null = 跟随系统。
-final localeProvider = NotifierProvider<LocaleNotifier, Locale?>(LocaleNotifier.new);
+final localeProvider = NotifierProvider<LocaleNotifier, Locale?>(
+  LocaleNotifier.new,
+);
 
 class LocaleNotifier extends Notifier<Locale?> {
   late SharedPreferences _prefs;

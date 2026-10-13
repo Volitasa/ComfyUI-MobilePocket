@@ -36,41 +36,39 @@ class RemoteWorkflowSection extends ConsumerWidget {
         child: Center(child: CircularProgressIndicator()),
       );
     }
-    if (workflowState.isEmpty) return _buildEmpty();
+    if (workflowState.isEmpty) return _buildEmpty(context);
 
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
         // 分组按格式而非状态：条目解析后不会在两组之间跳来跳去
         if (workflowState.workflowList.isNotEmpty) ...[
-          _buildGroupTitle('API 工作流 · 可直接运行'),
+          _buildGroupTitle(AppLocalizations.of(context).homeGroupApi),
           ...workflowState.workflowList.map(
             (file) => _buildWorkflowCard(context, ref, file, workflowState),
           ),
           const SizedBox(height: 18),
         ],
         if (workflowState.uiWorkflowList.isNotEmpty) ...[
-          _buildGroupTitle('UI 工作流 · 需解析'),
+          _buildGroupTitle(AppLocalizations.of(context).homeGroupUi),
           ...workflowState.uiWorkflowList.map(
             (file) => _buildUiWorkflowCard(context, ref, file, workflowState),
           ),
           const SizedBox(height: 12),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              'UI 格式是 ComfyUI 界面保存的原始结构，需转换为 API 结构后才能运行。',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              AppLocalizations.of(context).homeUiFormatNote,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
           const SizedBox(height: 18),
         ],
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
-            '提示：工作流来自 ComfyUI 的 userdata/workflows 目录。'
-            '其中 API JSON 由 ComfyUI-AutoSaveAPI 插件自动生成'
-            '（https://github.com/Volitasa/ComfyUI-AutoSaveAPI.git）。',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            AppLocalizations.of(context).homeWorkflowSourceNote,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ),
       ],
@@ -99,27 +97,33 @@ class RemoteWorkflowSection extends ConsumerWidget {
   ) {
     final title = uiWorkflowTitle(filename);
     final serverId = ref.read(connectionProvider).activeServerId;
-    final cached =
-        ref.read(parsedWorkflowProvider.notifier).byServerFile(serverId, filename);
+    final cached = ref
+        .read(parsedWorkflowProvider.notifier)
+        .byServerFile(serverId, filename);
     final status = state.uiStatusOf(filename);
     final stale = status == UiWorkflowStatus.stale;
 
     final exposedCount = cached == null
         ? 0
-        : ref.read(workflowProvider.notifier).getMappingConfig(cached.id)
-                ?.where((n) => n.exposed)
-                .length ??
-            0;
+        : ref
+                  .read(workflowProvider.notifier)
+                  .getMappingConfig(cached.id)
+                  ?.where((n) => n.exposed)
+                  .length ??
+              0;
 
+    final l = AppLocalizations.of(context);
     final String subtitle;
     if (cached == null) {
-      subtitle = '尚未解析 · 点击解析';
+      subtitle = l.uiStatusNotParsed;
     } else if (stale) {
-      subtitle = '服务器有更新，可重新解析';
+      subtitle = l.uiStatusStale;
     } else if (status == UiWorkflowStatus.parsed) {
-      subtitle = '已解析${exposedCount == 0 ? '' : ' · $exposedCount 项参数'}';
+      subtitle = exposedCount == 0
+          ? l.uiStatusParsed
+          : l.uiStatusParsedWithCount(exposedCount);
     } else {
-      subtitle = state.isChecking ? '检查中…' : '已解析';
+      subtitle = state.isChecking ? l.statusChecking : l.uiStatusParsed;
     }
 
     // 未解析用虚线：与「能用但还没配」的实线卡片区分开
@@ -168,14 +172,29 @@ class RemoteWorkflowSection extends ConsumerWidget {
               ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: Colors.grey),
-                tooltip: '更多操作',
+                tooltip: AppLocalizations.of(context).menuMore,
                 onSelected: (v) =>
                     _onUiMenuSelected(context, ref, filename, cached?.id, v),
                 itemBuilder: (_) => cached == null
-                    ? const [PopupMenuItem(value: 'parse', child: Text('解析'))]
-                    : const [
-                        PopupMenuItem(value: 'parse', child: Text('重新解析')),
-                        PopupMenuItem(value: 'clear', child: Text('清除解析缓存')),
+                    ? [
+                        PopupMenuItem(
+                          value: 'parse',
+                          child: Text(AppLocalizations.of(context).uiMenuParse),
+                        ),
+                      ]
+                    : [
+                        PopupMenuItem(
+                          value: 'parse',
+                          child: Text(
+                            AppLocalizations.of(context).uiMenuReparse,
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'clear',
+                          child: Text(
+                            AppLocalizations.of(context).uiMenuClearParse,
+                          ),
+                        ),
                       ],
               ),
             ],
@@ -221,8 +240,9 @@ class RemoteWorkflowSection extends ConsumerWidget {
     WidgetRef ref,
     String parsedId,
   ) async {
-    final hasConfig =
-        ref.read(workflowProvider.notifier).hasMappingConfig(parsedId);
+    final hasConfig = ref
+        .read(workflowProvider.notifier)
+        .hasMappingConfig(parsedId);
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -239,12 +259,14 @@ class RemoteWorkflowSection extends ConsumerWidget {
     WidgetRef ref,
     String filename,
   ) async {
-    final text =
-        await ref.read(workflowProvider.notifier).fetchWorkflowRawText(filename);
+    final text = await ref
+        .read(workflowProvider.notifier)
+        .fetchWorkflowRawText(filename);
     if (text == null) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('拉取工作流失败，请检查服务器连接')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).homeFetchFailed)),
+        );
       }
       return;
     }
@@ -254,8 +276,9 @@ class RemoteWorkflowSection extends ConsumerWidget {
       uiJson = jsonDecode(text) as Map<String, dynamic>;
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('工作流文件不是有效的 JSON')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).homeInvalidJson)),
+        );
       }
       return;
     }
@@ -270,8 +293,13 @@ class RemoteWorkflowSection extends ConsumerWidget {
 
     if (!result.ok) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(result.error ?? '解析失败')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.error ?? AppLocalizations.of(context).homeParseFailed,
+            ),
+          ),
+        );
       }
       return;
     }
@@ -279,7 +307,9 @@ class RemoteWorkflowSection extends ConsumerWidget {
     final serverId = ref.read(connectionProvider).activeServerId;
     if (serverId == null) return;
 
-    final id = ref.read(parsedWorkflowProvider.notifier).upsert(
+    final id = ref
+        .read(parsedWorkflowProvider.notifier)
+        .upsert(
           serverId: serverId,
           filename: filename,
           name: uiWorkflowTitle(filename),
@@ -301,19 +331,16 @@ class RemoteWorkflowSection extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('清除解析缓存'),
-        content: const Text(
-          '清除后会回到未解析状态，可随时从服务器重新解析。\n\n'
-          '已保存的节点配置不受影响。',
-        ),
+        title: Text(AppLocalizations.of(ctx).uiMenuClearParse),
+        content: Text(AppLocalizations.of(ctx).clearParseBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(ctx).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('清除'),
+            child: Text(AppLocalizations.of(ctx).clear),
           ),
         ],
       ),
@@ -321,8 +348,9 @@ class RemoteWorkflowSection extends ConsumerWidget {
     if (confirmed == true) {
       ref.read(parsedWorkflowProvider.notifier).remove(cachedId);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('已清除解析结果')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).clearParseDone)),
+        );
       }
     }
   }
@@ -334,11 +362,15 @@ class RemoteWorkflowSection extends ConsumerWidget {
         children: [
           Icon(Icons.cloud_off, size: 48, color: Colors.grey.shade400),
           const SizedBox(height: 12),
-          const Text('尚未连接到服务器',
-              style: TextStyle(color: Colors.black54, fontSize: 16)),
+          Text(
+            AppLocalizations.of(context).homeDisconnectedTitle,
+            style: const TextStyle(color: Colors.black54, fontSize: 16),
+          ),
           const SizedBox(height: 4),
-          const Text('请先配置并启用一个服务器连接',
-              style: TextStyle(color: Colors.grey, fontSize: 12)),
+          Text(
+            AppLocalizations.of(context).homeDisconnectedBody,
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          ),
           const SizedBox(height: 20),
           FilledButton.icon(
             icon: const Icon(Icons.settings),
@@ -346,14 +378,14 @@ class RemoteWorkflowSection extends ConsumerWidget {
               context,
               MaterialPageRoute(builder: (_) => const ServerConfigView()),
             ),
-            label: const Text('前往配置'),
+            label: Text(AppLocalizations.of(context).homeGoToConfig),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildEmpty() {
+  Widget _buildEmpty(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(40),
       child: Column(
@@ -361,16 +393,16 @@ class RemoteWorkflowSection extends ConsumerWidget {
         children: [
           Icon(Icons.inbox_outlined, size: 48, color: Colors.grey.shade400),
           const SizedBox(height: 12),
-          const Text(
-            '未找到工作流',
+          Text(
+            AppLocalizations.of(context).homeEmptyTitle,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.black54, fontSize: 16),
+            style: const TextStyle(color: Colors.black54, fontSize: 16),
           ),
           const SizedBox(height: 4),
-          const Text(
-            '服务器上没有找到工作流 JSON 文件',
+          Text(
+            AppLocalizations.of(context).homeEmptyBody,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey, fontSize: 12),
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
         ],
       ),
@@ -388,23 +420,25 @@ class RemoteWorkflowSection extends ConsumerWidget {
       localLabel: AppLocalizations.of(context).workflowLocalImport,
     );
     final status = state.statusOf(filename);
-    final exposedCount = ref
+    final exposedCount =
+        ref
             .read(workflowProvider.notifier)
             .getMappingConfig(filename)
             ?.where((n) => n.exposed)
             .length ??
         0;
 
+    final l = AppLocalizations.of(context);
     final bool stale = status == WorkflowMappingStatus.stale;
     final String subtitle;
     if (status == WorkflowMappingStatus.unknown) {
-      subtitle = state.isChecking ? '检查中…' : '未配置';
+      subtitle = state.isChecking ? l.statusChecking : l.wfStatusUnconfigured;
     } else if (status == WorkflowMappingStatus.unconfigured) {
-      subtitle = '未配置';
+      subtitle = l.wfStatusUnconfigured;
     } else if (stale) {
-      subtitle = '内容已更新，需重新确认配置';
+      subtitle = l.wfStatusStale;
     } else {
-      subtitle = '$exposedCount 项参数已配置';
+      subtitle = l.wfStatusConfigured(exposedCount);
     }
 
     final borderColor = stale ? const Color(0xFF854F0B) : Colors.grey.shade300;
@@ -459,12 +493,21 @@ class RemoteWorkflowSection extends ConsumerWidget {
   Widget _buildMenu(BuildContext context, WidgetRef ref, String filename) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.grey),
-      tooltip: '更多操作',
+      tooltip: AppLocalizations.of(context).menuMore,
       onSelected: (value) => _onMenuSelected(context, ref, filename, value),
-      itemBuilder: (_) => const [
-        PopupMenuItem(value: 'save', child: Text('存入本地库')),
-        PopupMenuItem(value: 'config', child: Text('重新配置节点')),
-        PopupMenuItem(value: 'refresh', child: Text('刷新内容')),
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: 'save',
+          child: Text(AppLocalizations.of(context).wfMenuSaveLocal),
+        ),
+        PopupMenuItem(
+          value: 'config',
+          child: Text(AppLocalizations.of(context).wfMenuReconfig),
+        ),
+        PopupMenuItem(
+          value: 'refresh',
+          child: Text(AppLocalizations.of(context).wfMenuRefresh),
+        ),
       ],
     );
   }
@@ -482,9 +525,7 @@ class RemoteWorkflowSection extends ConsumerWidget {
       case 'config':
         await Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => WorkflowView(workflowId: filename),
-          ),
+          MaterialPageRoute(builder: (_) => WorkflowView(workflowId: filename)),
         );
         // 配置可能刚被保存，回来后重新判定该条目状态
         if (context.mounted) {
@@ -494,8 +535,9 @@ class RemoteWorkflowSection extends ConsumerWidget {
       case 'refresh':
         await ref.read(workflowProvider.notifier).refreshStatuses([filename]);
         if (context.mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('已重新检查')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context).homeRechecked)),
+          );
         }
         break;
     }
@@ -507,12 +549,16 @@ class RemoteWorkflowSection extends ConsumerWidget {
     WidgetRef ref,
     String filename,
   ) async {
-    final data =
-        await ref.read(workflowProvider.notifier).fetchWorkflowContentOnly(filename);
+    final data = await ref
+        .read(workflowProvider.notifier)
+        .fetchWorkflowContentOnly(filename);
     if (data == null) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('拉取工作流内容失败，请检查服务器连接')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).homeFetchContentFailed),
+          ),
+        );
       }
       return;
     }
@@ -530,7 +576,9 @@ class RemoteWorkflowSection extends ConsumerWidget {
     );
     if (name == null || name.trim().isEmpty) return;
 
-    ref.read(localWorkflowProvider.notifier).save(
+    ref
+        .read(localWorkflowProvider.notifier)
+        .save(
           name: name.trim(),
           workflowJson: data,
           sourceKind: LocalWorkflowSource.savedFromRemote,
@@ -538,15 +586,22 @@ class RemoteWorkflowSection extends ConsumerWidget {
         );
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('已存入本地库')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).homeSavedToLocal)),
+      );
     }
   }
 
   /// 已配置且内容没变 → 直接进运行页；未配置或内容已变 → 先进配置面板
-  Future<void> _open(BuildContext context, WidgetRef ref, String filename) async {
+  Future<void> _open(
+    BuildContext context,
+    WidgetRef ref,
+    String filename,
+  ) async {
     final state = ref.read(workflowProvider);
-    final hasConfig = ref.read(workflowProvider.notifier).hasMappingConfig(filename);
+    final hasConfig = ref
+        .read(workflowProvider.notifier)
+        .hasMappingConfig(filename);
     final stale = state.statusOf(filename) == WorkflowMappingStatus.stale;
 
     final Widget page = (hasConfig && !stale)
@@ -589,24 +644,24 @@ class _SaveToLocalDialogState extends State<_SaveToLocalDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('存入本地库'),
+      title: Text(AppLocalizations.of(context).wfMenuSaveLocal),
       content: TextField(
         controller: _controller,
         autofocus: true,
-        decoration: const InputDecoration(
-          labelText: '名称',
-          border: OutlineInputBorder(),
+        decoration: InputDecoration(
+          labelText: AppLocalizations.of(context).nameLabel,
+          border: const OutlineInputBorder(),
         ),
         onSubmitted: (v) => Navigator.pop(context, v),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
+          child: Text(AppLocalizations.of(context).cancel),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, _controller.text),
-          child: const Text('保存'),
+          child: Text(AppLocalizations.of(context).save),
         ),
       ],
     );

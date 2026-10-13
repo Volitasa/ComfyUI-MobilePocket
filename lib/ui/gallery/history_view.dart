@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
+
 import 'dart:io';
 import 'dart:typed_data';
+
 import '../../theme.dart';
 import '../../services/media_saver.dart';
 import '../../providers/task_manager.dart';
@@ -35,10 +37,14 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
 
   /// 卡片底部的操作区：左右各占一半，仅用图标颜色做轻度区分，不加重装饰
   Widget _buildActionBar(
-      TaskHistory task, List<WorkflowSnapshot> snapshots, AppLocalizations l) {
+    TaskHistory task,
+    List<WorkflowSnapshot> snapshots,
+    AppLocalizations l,
+  ) {
     // 记录里有 snapshotId 还不够，必须快照当前真的存在——
     // 用户可能已经在设置页把它删掉了
-    final canRerun = task.snapshotId != null &&
+    final canRerun =
+        task.snapshotId != null &&
         snapshots.any((s) => s.id == task.snapshotId);
 
     return Row(
@@ -69,17 +75,15 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     final snapshotId = task.snapshotId;
 
     if (snapshotId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.historyNoSnapshot)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.historyNoSnapshot)));
       return;
     }
 
     final snapshot = ref.read(snapshotProvider.notifier).byId(snapshotId);
     if (snapshot == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.historySnapshotDeleted)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.historySnapshotDeleted)));
       return;
     }
 
@@ -94,14 +98,17 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
         }
         return l.historyUnknownServer;
       }
+
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(l.historyServerMismatchTitle),
-          content: Text(l.historyServerMismatchBody(
-            nameOf(task.serverId),
-            nameOf(currentId),
-          )),
+          content: Text(
+            l.historyServerMismatchBody(
+              nameOf(task.serverId),
+              nameOf(currentId),
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -132,28 +139,39 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
 
   // 任务状态 → 展示色（成功绿 / 失败红 / 中断灰 / 进行中橙）
   Color _statusColor(TaskStatus status) => switch (status) {
-        TaskStatus.completed => AppColors.success,
-        TaskStatus.failed => AppColors.danger,
-        TaskStatus.interrupted => AppColors.neutral,
-        TaskStatus.queued || TaskStatus.running => AppColors.warning,
-      };
+    TaskStatus.completed => AppColors.success,
+    TaskStatus.failed => AppColors.danger,
+    TaskStatus.interrupted => AppColors.neutral,
+    TaskStatus.queued || TaskStatus.running => AppColors.warning,
+  };
 
   // 无输出时的缩略图占位：终结态给出明确结果，只有进行中才转圈
   Widget _noOutputPlaceholder(
-      TaskHistory task, Color statusColor, AppLocalizations l) {
+    TaskHistory task,
+    Color statusColor,
+    AppLocalizations l,
+  ) {
     return switch (task.status) {
-      TaskStatus.completed => Text(l.historyNoImage,
-          style: const TextStyle(fontSize: 12, color: Colors.grey)),
-      TaskStatus.failed =>
-        Icon(Icons.error_outline, size: 22, color: statusColor),
-      TaskStatus.interrupted =>
-        Icon(Icons.remove_circle_outline, size: 22, color: statusColor),
+      TaskStatus.completed => Text(
+        l.historyNoImage,
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      ),
+      TaskStatus.failed => Icon(
+        Icons.error_outline,
+        size: 22,
+        color: statusColor,
+      ),
+      TaskStatus.interrupted => Icon(
+        Icons.remove_circle_outline,
+        size: 22,
+        color: statusColor,
+      ),
       // 排队中 / 生成中：确实还在等输出
       TaskStatus.queued || TaskStatus.running => const SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
     };
   }
 
@@ -191,7 +209,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, null), child: Text(l.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: Text(l.cancel),
+          ),
           if (hasLocal)
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -235,7 +256,9 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) => Container(
         color: Colors.grey.shade200,
-        child: const Center(child: Icon(Icons.broken_image, size: 20, color: Colors.grey)),
+        child: const Center(
+          child: Icon(Icons.broken_image, size: 20, color: Colors.grey),
+        ),
       ),
     );
   }
@@ -270,7 +293,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.historyTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          l.historyTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           if (configState.isConnected)
             IconButton(
@@ -279,9 +305,8 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
               onPressed: () {
                 // 与工作流页刷新按钮一致：向服务器对账未终结任务的状态
                 ref.read(taskManagerProvider.notifier).reconcilePendingTasks();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l.historySynced)),
-                );
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(l.historySynced)));
               },
             ),
           ConnectionStatusBadge(
@@ -296,14 +321,20 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
       ),
       body: tasks.isEmpty
           ? Center(
-              child: Text(l.historyEmpty, style: const TextStyle(color: Colors.grey)))
+              child: Text(
+                l.historyEmpty,
+                style: const TextStyle(color: Colors.grey),
+              ),
+            )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: tasks.length,
               itemBuilder: (context, index) {
                 final task = tasks[index];
                 final statusColor = _statusColor(task.status);
-                final progress = task.progressMax > 0 ? (task.progressValue / task.progressMax) : 0.0;
+                final progress = task.progressMax > 0
+                    ? (task.progressValue / task.progressMax)
+                    : 0.0;
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -329,86 +360,141 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        task.title,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            task.title,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            '${taskStatusLabel(l, task.status)} · ${taskNodeText(l, task)}',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: statusColor,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          // 终结态不再显示进度条（失败/中断时它是条永远不动的空槽）
+                                          if (task.status.isPending) ...[
+                                            const SizedBox(height: 8),
+                                            LinearProgressIndicator(
+                                              value: progress,
+                                              backgroundColor:
+                                                  Colors.grey.shade200,
+                                              color: statusColor,
+                                              minHeight: 4,
+                                            ),
+                                          ],
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            _formatTime(task.timestamp),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        '${taskStatusLabel(l, task.status)} · ${taskNodeText(l, task)}',
-                                        style: TextStyle(fontSize: 13, color: statusColor),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      // 终结态不再显示进度条（失败/中断时它是条永远不动的空槽）
-                                      if (task.status.isPending) ...[
-                                        const SizedBox(height: 8),
-                                        LinearProgressIndicator(
-                                          value: progress,
-                                          backgroundColor: Colors.grey.shade200,
-                                          color: statusColor,
-                                          minHeight: 4,
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () =>
+                                              _openViewer(task.images, 0),
+                                          child: Container(
+                                            width: 72,
+                                            height: 72,
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey.shade100,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: Colors.grey.shade300,
+                                              ),
+                                            ),
+                                            clipBehavior: Clip.hardEdge,
+                                            child: task.images.isNotEmpty
+                                                ? Stack(
+                                                    fit: StackFit.expand,
+                                                    children: [
+                                                      _isVideo(
+                                                            task.images[0]['filename'],
+                                                          )
+                                                          ? const Center(
+                                                              child: Icon(
+                                                                Icons.videocam,
+                                                                color:
+                                                                    Colors.grey,
+                                                              ),
+                                                            )
+                                                          : _thumbnail(
+                                                              task.images[0],
+                                                            ),
+                                                      if (task.images.length >
+                                                          1)
+                                                        Positioned(
+                                                          right: 4,
+                                                          bottom: 4,
+                                                          child: Container(
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal: 6,
+                                                                  vertical: 2,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              color: Colors
+                                                                  .black
+                                                                  .withValues(
+                                                                    alpha: 0.6,
+                                                                  ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    10,
+                                                                  ),
+                                                            ),
+                                                            child: Text(
+                                                              '${task.images.length}',
+                                                              style: const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 10,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  )
+                                                : Center(
+                                                    child: _noOutputPlaceholder(
+                                                      task,
+                                                      statusColor,
+                                                      l,
+                                                    ),
+                                                  ),
+                                          ),
                                         ),
                                       ],
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        _formatTime(task.timestamp),
-                                        style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () => _openViewer(task.images, 0),
-                                      child: Container(
-                                        width: 72,
-                                        height: 72,
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade100,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.grey.shade300),
-                                        ),
-                                        clipBehavior: Clip.hardEdge,
-                                        child: task.images.isNotEmpty
-                                            ? Stack(
-                                                fit: StackFit.expand,
-                                                children: [
-                                                  _isVideo(task.images[0]['filename'])
-                                                      ? const Center(child: Icon(Icons.videocam, color: Colors.grey))
-                                                      : _thumbnail(task.images[0]),
-                                                  if (task.images.length > 1)
-                                                    Positioned(
-                                                      right: 4,
-                                                      bottom: 4,
-                                                      child: Container(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                        decoration: BoxDecoration(
-                                                          color: Colors.black.withValues(alpha: 0.6),
-                                                          borderRadius: BorderRadius.circular(10),
-                                                        ),
-                                                        child: Text('${task.images.length}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                                      ),
-                                                    )
-                                                ],
-                                              )
-                                            : Center(child: _noOutputPlaceholder(task, statusColor, l)),
-                                      ),
                                     ),
                                   ],
                                 ),
-                              ],
-                              ),
                               ),
                               const Divider(height: 1),
                               // 操作区放在卡片底部左右排开，不再挤在缩略图下方：
@@ -517,15 +603,23 @@ class _MediaViewerState extends State<MediaViewer> {
       // 没有本地文件（未下载过或已被删除）时才回退网络
       final localPath = currentMedia['localPath'];
       Uint8List bytes;
-      if (localPath is String && localPath.isNotEmpty && File(localPath).existsSync()) {
+      if (localPath is String &&
+          localPath.isNotEmpty &&
+          File(localPath).existsSync()) {
         bytes = await File(localPath).readAsBytes();
       } else {
-        bytes = await http.readBytes(Uri.parse(widget.urlBuilder(currentMedia)));
+        bytes = await http.readBytes(
+          Uri.parse(widget.urlBuilder(currentMedia)),
+        );
       }
       if (!mounted) return;
 
       // 与画廊页共用保存逻辑：PNG 可选「带工作流原图」或「剔除信息」
-      final saved = await MediaSaver.save(context, bytes: bytes, filename: filename);
+      final saved = await MediaSaver.save(
+        context,
+        bytes: bytes,
+        filename: filename,
+      );
       if (saved && mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(l.historySavedToAlbum)));
@@ -558,14 +652,12 @@ class _MediaViewerState extends State<MediaViewer> {
         itemBuilder: (context, index) {
           final media = widget.mediaList[index];
           final url = widget.urlBuilder(media);
-          
+
           if (widget.isVideoChecker(media['filename'])) {
             return _VideoItem(url: url);
           }
           return InteractiveViewer(
-            child: Center(
-              child: Image.network(url, fit: BoxFit.contain),
-            ),
+            child: Center(child: Image.network(url, fit: BoxFit.contain)),
           );
         },
       ),
@@ -576,11 +668,20 @@ class _MediaViewerState extends State<MediaViewer> {
             style: FilledButton.styleFrom(
               backgroundColor: Colors.green,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
             ),
             onPressed: _saving ? null : _saveToLocal,
             icon: _saving
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
                 : const Icon(Icons.save_alt),
             label: Text(
               _saving ? l.historySaving : l.historySaveToLocal,
@@ -614,7 +715,9 @@ class _VideoItemState extends State<_VideoItem> {
 
   Future<void> _init() async {
     try {
-      final controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.url),
+      );
       await controller.initialize();
       await controller.setLooping(true);
       if (!mounted) {
@@ -646,7 +749,9 @@ class _VideoItemState extends State<_VideoItem> {
     }
     final controller = _controller;
     if (controller == null) {
-      return const Center(child: CircularProgressIndicator(color: Colors.white));
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
     }
     return Center(
       child: AspectRatio(
@@ -659,12 +764,18 @@ class _VideoItemState extends State<_VideoItem> {
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => setState(() {
-                controller.value.isPlaying ? controller.pause() : controller.play();
+                controller.value.isPlaying
+                    ? controller.pause()
+                    : controller.play();
               }),
               child: AnimatedOpacity(
                 opacity: controller.value.isPlaying ? 0.0 : 1.0,
                 duration: const Duration(milliseconds: 200),
-                child: const Icon(Icons.play_circle_fill, size: 64, color: Colors.white70),
+                child: const Icon(
+                  Icons.play_circle_fill,
+                  size: 64,
+                  color: Colors.white70,
+                ),
               ),
             ),
           ],

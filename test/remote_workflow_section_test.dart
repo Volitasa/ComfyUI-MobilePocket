@@ -52,19 +52,19 @@ Future<SharedPreferences> _prefs([Map<String, Object> seed = const {}]) async {
 
 /// 一份落在 srv1 上的解析缓存，id 与 provider 的推导规则保持一致
 ParsedWorkflow _cached(String filename) => ParsedWorkflow(
-      id: ParsedWorkflowNotifier.buildId('srv1', filename),
-      serverId: 'srv1',
-      filename: filename,
-      name: uiWorkflowTitle(filename),
-      sourceHash: 'h',
-      parsedAt: 0,
-      workflowJson: const {
-        '3': {
-          'inputs': {'seed': 1, 'steps': 20},
-          'class_type': 'KSampler',
-        },
-      },
-    );
+  id: ParsedWorkflowNotifier.buildId('srv1', filename),
+  serverId: 'srv1',
+  filename: filename,
+  name: uiWorkflowTitle(filename),
+  sourceHash: 'h',
+  parsedAt: 0,
+  workflowJson: const {
+    '3': {
+      'inputs': {'seed': 1, 'steps': 20},
+      'class_type': 'KSampler',
+    },
+  },
+);
 
 Future<void> _pump(
   WidgetTester tester, {
@@ -76,7 +76,9 @@ Future<void> _pump(
 }) async {
   final prefs = await _prefs({
     if (cached.isNotEmpty)
-      parsedWorkflowsPrefsKey: jsonEncode(cached.map((e) => e.toJson()).toList()),
+      parsedWorkflowsPrefsKey: jsonEncode(
+        cached.map((e) => e.toJson()).toList(),
+      ),
   });
   await tester.pumpWidget(
     ProviderScope(

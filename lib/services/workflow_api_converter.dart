@@ -1,3 +1,5 @@
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+
 import 'dart:convert';
 
 import '../utils.dart';
@@ -127,23 +129,25 @@ class WorkflowApiConverter {
   /// 同时校验结果的**结构形态**：必须是 API prompt（节点 id → {class_type, inputs}）。
   /// 前端若返回 UI 图（顶层 nodes/links 数组）会在这里被拦下，
   /// 而不是流到配置页变成"没有可动态修改的参数"。
-  static ParsedApiResult parsePayload(String raw) {
+  static ParsedApiResult parsePayload(String raw, AppLocalizations l10n) {
     try {
       final decoded = jsonDecode(raw);
-      if (decoded is! Map) return const ParsedApiResult.fail('前端返回了无法识别的数据');
+      if (decoded is! Map) {
+        return ParsedApiResult.fail(l10n.parseBadPayload);
+      }
 
       if (decoded['ok'] == true) {
         final wf = decoded['workflow'];
-        if (wf is! Map) return const ParsedApiResult.fail('前端未返回工作流结构');
+        if (wf is! Map) return ParsedApiResult.fail(l10n.parseNoWorkflow);
         final prompt = Map<String, dynamic>.from(wf);
-        final problem = apiShapeProblem(prompt);
+        final problem = apiShapeProblem(prompt, l10n);
         if (problem != null) return ParsedApiResult.fail(problem);
         return ParsedApiResult.ok(prompt);
       }
       final err = decoded['error']?.toString() ?? '';
-      return ParsedApiResult.fail(err.isEmpty ? '解析失败' : err);
+      return ParsedApiResult.fail(err.isEmpty ? l10n.homeParseFailed : err);
     } catch (_) {
-      return const ParsedApiResult.fail('解析结果无法读取');
+      return ParsedApiResult.fail(l10n.parseUnreadable);
     }
   }
 
@@ -151,15 +155,29 @@ class WorkflowApiConverter {
   ///
   /// API prompt：每项都是含 class_type 的 Map；UI 图特征是顶层 nodes/links 数组。
   /// 严格按形态判断而不是按字段名猜，前端未来改字段名时宁可误报也不静默放行。
-  static String? apiShapeProblem(Map<String, dynamic> prompt) {
-    if (prompt.isEmpty) return '转换结果为空（工作流可能没有可运行的节点）';
+  /// 只做形态判断，不产出文案：模型层无法拿到 l10n 时用这个。
+  static bool isApiShape(Map<String, dynamic> prompt) {
+    if (prompt.isEmpty) return false;
+    if (prompt['nodes'] is List || prompt['links'] is List) return false;
+    for (final entry in prompt.entries) {
+      final v = entry.value;
+      if (v is! Map || v['class_type'] is! String) return false;
+    }
+    return true;
+  }
+
+  static String? apiShapeProblem(
+    Map<String, dynamic> prompt,
+    AppLocalizations l10n,
+  ) {
+    if (prompt.isEmpty) return l10n.convertEmpty;
     if (prompt['nodes'] is List || prompt['links'] is List) {
-      return '前端返回了 UI 结构而非 API 结构';
+      return l10n.convertUiNotApi;
     }
     for (final entry in prompt.entries) {
       final v = entry.value;
       if (v is! Map || v['class_type'] is! String) {
-        return '转换结果第 ${entry.key} 项不是有效的 API 节点';
+        return l10n.convertBadNode(entry.key.toString());
       }
     }
     return null;
@@ -169,5 +187,6 @@ class WorkflowApiConverter {
   ///
   /// 刻意不做归一化——UI 结构与 API 结构的顶层形态不同，
   /// 归一化函数对它不起作用，直接对文本取哈希最稳妥。
-  static String sourceHashOf(String jsonText) => stableHash(jsonText).toRadixString(36);
+  static String sourceHashOf(String jsonText) =>
+      stableHash(jsonText).toRadixString(36);
 }

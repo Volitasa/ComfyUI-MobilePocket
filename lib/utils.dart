@@ -119,7 +119,8 @@ String nodeParamKey(String nodeId, String key) => '$nodeId:$key';
 /// `Future.microtask` 仍可能落在同一帧里，必须走事件队列（普通 `Future`）。
 ///
 /// 可以 await：await 后续阶段就能保证缓存已写入。
-Future<void> scheduleProviderWrite(void Function() action) => Future<void>(action);
+Future<void> scheduleProviderWrite(void Function() action) =>
+    Future<void>(action);
 
 /// 工作流展示名：本地资产与解析缓存取库里保存的名称（后者跟随服务器文件名），
 /// 其余沿用「文件名去掉 _api.json」的旧规则。

@@ -12,55 +12,6 @@ import 'app_localizations_zh.dart';
 
 /// Callers can lookup localized strings with an instance of AppLocalizations
 /// returned by `AppLocalizations.of(context)`.
-///
-/// Applications need to include `AppLocalizations.delegate()` in their app's
-/// `localizationDelegates` list, and the locales they support in the app's
-/// `supportedLocales` list. For example:
-///
-/// ```dart
-/// import 'l10n/app_localizations.dart';
-///
-/// return MaterialApp(
-///   localizationsDelegates: AppLocalizations.localizationsDelegates,
-///   supportedLocales: AppLocalizations.supportedLocales,
-///   home: MyApplicationHome(),
-/// );
-/// ```
-///
-/// ## Update pubspec.yaml
-///
-/// Please make sure to update your pubspec.yaml to include the following
-/// packages:
-///
-/// ```yaml
-/// dependencies:
-///   # Internationalization support.
-///   flutter_localizations:
-///     sdk: flutter
-///   intl: any # Use the pinned version from flutter_localizations
-///
-///   # Rest of dependencies
-/// ```
-///
-/// ## iOS Applications
-///
-/// iOS applications define key application metadata, including supported
-/// locales, in an Info.plist file that is built into the application bundle.
-/// To configure the locales supported by your app, you’ll need to edit this
-/// file.
-///
-/// First, open your project’s ios/Runner.xcworkspace Xcode workspace file.
-/// Then, in the Project Navigator, open the Info.plist file under the Runner
-/// project’s Runner folder.
-///
-/// Next, select the Information Property List item, select Add Item from the
-/// Editor menu, then select Localizations from the pop-up menu.
-///
-/// Select and expand the newly-created Localizations item then, for each
-/// locale your application supports, add a new item and select the locale
-/// you wish to add from the pop-up menu in the Value field. This list should
-/// be consistent with the languages listed in the AppLocalizations.supportedLocales
-/// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
     : localeName = intl.Intl.canonicalizedLocale(locale.toString());
@@ -74,16 +25,6 @@ abstract class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
-  /// A list of this localizations delegate along with the default localizations
-  /// delegates.
-  ///
-  /// Returns a list of localizations delegates containing this delegate along with
-  /// GlobalMaterialLocalizations.delegate, GlobalCupertinoLocalizations.delegate,
-  /// and GlobalWidgetsLocalizations.delegate.
-  ///
-  /// Additional delegates can be added by appending to this list in
-  /// MaterialApp. This list does not have to be used at all if a custom list
-  /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
         delegate,
@@ -92,7 +33,6 @@ abstract class AppLocalizations {
         GlobalWidgetsLocalizations.delegate,
       ];
 
-  /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
     Locale('zh'),
@@ -299,7 +239,7 @@ abstract class AppLocalizations {
   /// 跨服务器再次运行的确认正文
   ///
   /// In zh, this message translates to:
-  /// **'这条记录当时运行在「{old}」，当前连接的是「{current}」。\n\n两台服务器的模型、插件节点可能不同，继续运行可能出现「模型不存在／节点类型不存在」之类的报错。是否继续？'**
+  /// **'这条记录当时运行在「{old}」，当前连接的是「{current}」。  两台服务器的模型、插件节点可能不同，继续运行可能出现「模型不存在／节点类型不存在」之类的报错。是否继续？'**
   String historyServerMismatchBody(String old, String current);
 
   /// 跨服务器仍要运行
@@ -703,6 +643,1326 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'本地导入'**
   String get workflowLocalImport;
+
+  /// 配置页：快照已不存在
+  ///
+  /// In zh, this message translates to:
+  /// **'工作流快照已被删除'**
+  String get workflowSnapshotDeleted;
+
+  /// 配置页：本地工作流已删除
+  ///
+  /// In zh, this message translates to:
+  /// **'本地工作流已不存在，可能已被删除'**
+  String get workflowLocalMissing;
+
+  /// 配置页：解析缓存已清除
+  ///
+  /// In zh, this message translates to:
+  /// **'解析结果已被清除，请重新解析'**
+  String get workflowParsedCleared;
+
+  /// 配置页：首次拉取线上工作流失败
+  ///
+  /// In zh, this message translates to:
+  /// **'拉取线上工作流内容失败，请检查服务器连接'**
+  String get workflowFetchFailed;
+
+  /// 配置页：重新拉取线上工作流失败
+  ///
+  /// In zh, this message translates to:
+  /// **'重新拉取工作流失败，请检查服务器连接'**
+  String get workflowRefetchFailed;
+
+  /// 配置页：重新解析完成
+  ///
+  /// In zh, this message translates to:
+  /// **'已重新解析，请确认参数后保存'**
+  String get workflowReparsed;
+
+  /// 配置页：保存成功提示
+  ///
+  /// In zh, this message translates to:
+  /// **'配置已保存'**
+  String get configSaved;
+
+  /// 配置页：解析中的页面标题
+  ///
+  /// In zh, this message translates to:
+  /// **'解析中...'**
+  String get configParsingTitle;
+
+  /// 配置页标题
+  ///
+  /// In zh, this message translates to:
+  /// **'配置面板: {name}'**
+  String configPanelTitle(String name);
+
+  /// 配置页：重新解析按钮提示
+  ///
+  /// In zh, this message translates to:
+  /// **'重新解析参数'**
+  String get configReparseTooltip;
+
+  /// 配置页顶部说明
+  ///
+  /// In zh, this message translates to:
+  /// **'请勾选需要暴露到手机 App 表单的参数，并为它们起一个易懂的名字。'**
+  String get configPanelHint;
+
+  /// 配置页：无可配置参数
+  ///
+  /// In zh, this message translates to:
+  /// **'此工作流没有找到可动态修改的参数。'**
+  String get configNoParams;
+
+  /// 配置页：分组头部已选数量
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}/{total} 项已选'**
+  String configSelectedCount(int count, int total);
+
+  /// 配置页：分组头部参数总数
+  ///
+  /// In zh, this message translates to:
+  /// **'{total} 项参数'**
+  String configParamCount(int total);
+
+  /// 配置页底部保存按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'保存表单配置'**
+  String get configSaveButton;
+
+  /// 配置页：别名输入框占位提示
+  ///
+  /// In zh, this message translates to:
+  /// **'例如: 画面主体描述'**
+  String get paramAliasHint;
+
+  /// 参数类型：文本
+  ///
+  /// In zh, this message translates to:
+  /// **'文本'**
+  String get paramTypeText;
+
+  /// 参数类型：种子
+  ///
+  /// In zh, this message translates to:
+  /// **'种子'**
+  String get paramTypeSeed;
+
+  /// 参数类型：图片
+  ///
+  /// In zh, this message translates to:
+  /// **'图片'**
+  String get paramTypeImage;
+
+  /// 参数类型：整数
+  ///
+  /// In zh, this message translates to:
+  /// **'整数'**
+  String get paramTypeInt;
+
+  /// 参数类型：小数
+  ///
+  /// In zh, this message translates to:
+  /// **'小数'**
+  String get paramTypeFloat;
+
+  /// 参数类型：开关
+  ///
+  /// In zh, this message translates to:
+  /// **'开关'**
+  String get paramTypeBool;
+
+  /// 参数类型：选项
+  ///
+  /// In zh, this message translates to:
+  /// **'选项'**
+  String get paramTypeEnum;
+
+  /// 参数类型：未知类型兜底
+  ///
+  /// In zh, this message translates to:
+  /// **'参数'**
+  String get paramTypeDefault;
+
+  /// 参数摘要：只有类型
+  ///
+  /// In zh, this message translates to:
+  /// **'类型: {type}'**
+  String paramSummaryType(String type);
+
+  /// 参数摘要：类型 + 当前值
+  ///
+  /// In zh, this message translates to:
+  /// **'类型: {type} · 当前值: {value}'**
+  String paramSummaryTypeValue(String type, String value);
+
+  /// 默认别名：提示词
+  ///
+  /// In zh, this message translates to:
+  /// **'提示词'**
+  String get aliasPrompt;
+
+  /// 默认别名：种子
+  ///
+  /// In zh, this message translates to:
+  /// **'随机种子'**
+  String get aliasSeed;
+
+  /// 默认别名：参考图
+  ///
+  /// In zh, this message translates to:
+  /// **'参考图片'**
+  String get aliasImage;
+
+  /// 默认别名：steps
+  ///
+  /// In zh, this message translates to:
+  /// **'采样步数'**
+  String get aliasSteps;
+
+  /// 默认别名：cfg
+  ///
+  /// In zh, this message translates to:
+  /// **'CFG 强度'**
+  String get aliasCfg;
+
+  /// 默认别名：sampler_name
+  ///
+  /// In zh, this message translates to:
+  /// **'采样器'**
+  String get aliasSampler;
+
+  /// 默认别名：scheduler
+  ///
+  /// In zh, this message translates to:
+  /// **'调度器'**
+  String get aliasScheduler;
+
+  /// 默认别名：denoise
+  ///
+  /// In zh, this message translates to:
+  /// **'重绘幅度'**
+  String get aliasDenoise;
+
+  /// 默认别名：width
+  ///
+  /// In zh, this message translates to:
+  /// **'宽度'**
+  String get aliasWidth;
+
+  /// 默认别名：height
+  ///
+  /// In zh, this message translates to:
+  /// **'高度'**
+  String get aliasHeight;
+
+  /// 默认别名：batch_size
+  ///
+  /// In zh, this message translates to:
+  /// **'生成数量'**
+  String get aliasBatchSize;
+
+  /// 默认别名：positive
+  ///
+  /// In zh, this message translates to:
+  /// **'正向提示词'**
+  String get aliasPositive;
+
+  /// 默认别名：negative
+  ///
+  /// In zh, this message translates to:
+  /// **'负向提示词'**
+  String get aliasNegative;
+
+  /// 默认别名：ckpt_name
+  ///
+  /// In zh, this message translates to:
+  /// **'Checkpoint 模型'**
+  String get aliasCkpt;
+
+  /// 默认别名：unet_name
+  ///
+  /// In zh, this message translates to:
+  /// **'UNet 模型'**
+  String get aliasUnet;
+
+  /// 默认别名：clip_name
+  ///
+  /// In zh, this message translates to:
+  /// **'CLIP 模型'**
+  String get aliasClip;
+
+  /// 默认别名：vae_name
+  ///
+  /// In zh, this message translates to:
+  /// **'VAE 模型'**
+  String get aliasVae;
+
+  /// 默认别名：lora_name
+  ///
+  /// In zh, this message translates to:
+  /// **'LoRA 模型'**
+  String get aliasLora;
+
+  /// 默认别名：control_net_name
+  ///
+  /// In zh, this message translates to:
+  /// **'ControlNet'**
+  String get aliasControlNet;
+
+  /// 默认别名：upscale_model
+  ///
+  /// In zh, this message translates to:
+  /// **'放大模型'**
+  String get aliasUpscaleModel;
+
+  /// 运行页：快照已删除
+  ///
+  /// In zh, this message translates to:
+  /// **'对应的工作流快照已被删除，无法再次运行'**
+  String get runSnapshotDeleted;
+
+  /// 运行页：无表单配置
+  ///
+  /// In zh, this message translates to:
+  /// **'未找到有效的表单配置'**
+  String get runNoFormConfig;
+
+  /// 运行页：再次运行时部分参数未能套用
+  ///
+  /// In zh, this message translates to:
+  /// **'已套用当时的参数（{count} 项因配置变更未能套用）'**
+  String runParamsRestored(int count);
+
+  /// 运行页：再次运行时参数全部套用
+  ///
+  /// In zh, this message translates to:
+  /// **'已套用当时的参数'**
+  String get runParamsRestoredAll;
+
+  /// 运行页：数据未就绪
+  ///
+  /// In zh, this message translates to:
+  /// **'工作流数据未就绪，请返回重试'**
+  String get runDataNotReady;
+
+  /// 运行页：上传图片失败
+  ///
+  /// In zh, this message translates to:
+  /// **'图片上传失败'**
+  String get runImageUploadFailed;
+
+  /// 运行页：提交失败（无响应）
+  ///
+  /// In zh, this message translates to:
+  /// **'提交失败：无法连接服务器或请求超时'**
+  String get runSubmitFailed;
+
+  /// 运行页：任务下发成功
+  ///
+  /// In zh, this message translates to:
+  /// **'任务下发成功！'**
+  String get runTaskSubmitted;
+
+  /// 运行页：服务端返回的错误节点
+  ///
+  /// In zh, this message translates to:
+  /// **'，错误节点: {nodes}'**
+  String runErrorNodes(String nodes);
+
+  /// 运行页：提交失败（HTTP 错误码）
+  ///
+  /// In zh, this message translates to:
+  /// **'提交失败 (HTTP {code}){detail}，请检查 ComfyUI 日志'**
+  String runSubmitFailedHttp(String code, String detail);
+
+  /// 运行页标题
+  ///
+  /// In zh, this message translates to:
+  /// **'运行: {name}'**
+  String runTitle(String name);
+
+  /// 运行页：前往配置页按钮提示
+  ///
+  /// In zh, this message translates to:
+  /// **'节点配置'**
+  String get runNodeConfigTooltip;
+
+  /// 运行页：提交中的按钮文案
+  ///
+  /// In zh, this message translates to:
+  /// **'下发任务中...'**
+  String get runSubmitting;
+
+  /// 运行页：生成按钮文案
+  ///
+  /// In zh, this message translates to:
+  /// **'立即生成'**
+  String get runGenerateNow;
+
+  /// 运行页：文本输入占位提示
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入描述...'**
+  String get runTextHint;
+
+  /// 运行页：随机种子按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'随机'**
+  String get runRandom;
+
+  /// 运行页：整数输入占位提示
+  ///
+  /// In zh, this message translates to:
+  /// **'整数'**
+  String get runIntHint;
+
+  /// 运行页：小数输入占位提示
+  ///
+  /// In zh, this message translates to:
+  /// **'数值（可小数）'**
+  String get runFloatHint;
+
+  /// 运行页：开关打开
+  ///
+  /// In zh, this message translates to:
+  /// **'开启'**
+  String get runBoolOn;
+
+  /// 运行页：开关关闭
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get runBoolOff;
+
+  /// 运行页：沿用服务器上的原图
+  ///
+  /// In zh, this message translates to:
+  /// **'已用图: {name}'**
+  String runUsingServerImage(String name);
+
+  /// 运行页：更换图片按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'更换图片'**
+  String get runChangeImage;
+
+  /// 运行页：选择图片按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'选择图片'**
+  String get runPickImage;
+
+  /// 解析页：初始状态
+  ///
+  /// In zh, this message translates to:
+  /// **'正在连接服务器…'**
+  String get parseStatusConnecting;
+
+  /// 解析页：加载前端超时
+  ///
+  /// In zh, this message translates to:
+  /// **'加载 ComfyUI 前端超时，请检查服务器连接'**
+  String get parseLoadTimeout;
+
+  /// 解析页：加载前端中
+  ///
+  /// In zh, this message translates to:
+  /// **'正在加载 ComfyUI 前端…'**
+  String get parseStatusLoadingFrontend;
+
+  /// 解析页：等待前端就绪
+  ///
+  /// In zh, this message translates to:
+  /// **'正在等待前端就绪…'**
+  String get parseStatusWaitingReady;
+
+  /// 解析页：转换中
+  ///
+  /// In zh, this message translates to:
+  /// **'正在转换工作流…'**
+  String get parseStatusConverting;
+
+  /// 解析页：转换超时
+  ///
+  /// In zh, this message translates to:
+  /// **'转换超时，工作流可能包含不支持的节点'**
+  String get parseConvertTimeout;
+
+  /// 解析页：转换异常
+  ///
+  /// In zh, this message translates to:
+  /// **'调用前端转换失败：{error}'**
+  String parseConvertFailed(String error);
+
+  /// 解析页标题
+  ///
+  /// In zh, this message translates to:
+  /// **'解析: {name}'**
+  String parseTitle(String name);
+
+  /// 首页分组：API 工作流
+  ///
+  /// In zh, this message translates to:
+  /// **'API 工作流 · 可直接运行'**
+  String get homeGroupApi;
+
+  /// 首页分组：UI 工作流
+  ///
+  /// In zh, this message translates to:
+  /// **'UI 工作流 · 需解析'**
+  String get homeGroupUi;
+
+  /// 首页：UI 格式说明
+  ///
+  /// In zh, this message translates to:
+  /// **'UI 格式是 ComfyUI 界面保存的原始结构，需转换为 API 结构后才能运行。'**
+  String get homeUiFormatNote;
+
+  /// 首页：工作流来源说明
+  ///
+  /// In zh, this message translates to:
+  /// **'提示：工作流来自 ComfyUI 的 userdata/workflows 目录。其中 API JSON 由 ComfyUI-AutoSaveAPI 插件自动生成（https://github.com/Volitasa/ComfyUI-AutoSaveAPI.git）。'**
+  String get homeWorkflowSourceNote;
+
+  /// UI 工作流状态：未解析
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未解析 · 点击解析'**
+  String get uiStatusNotParsed;
+
+  /// UI 工作流状态：服务器有更新
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器有更新，可重新解析'**
+  String get uiStatusStale;
+
+  /// UI 工作流状态：已解析
+  ///
+  /// In zh, this message translates to:
+  /// **'已解析'**
+  String get uiStatusParsed;
+
+  /// UI 工作流状态：已解析（带参数数）
+  ///
+  /// In zh, this message translates to:
+  /// **'已解析 · {count} 项参数'**
+  String uiStatusParsedWithCount(int count);
+
+  /// 通用：检查中
+  ///
+  /// In zh, this message translates to:
+  /// **'检查中…'**
+  String get statusChecking;
+
+  /// 通用：更多操作菜单
+  ///
+  /// In zh, this message translates to:
+  /// **'更多操作'**
+  String get menuMore;
+
+  /// UI 工作流菜单：解析
+  ///
+  /// In zh, this message translates to:
+  /// **'解析'**
+  String get uiMenuParse;
+
+  /// UI 工作流菜单：重新解析
+  ///
+  /// In zh, this message translates to:
+  /// **'重新解析'**
+  String get uiMenuReparse;
+
+  /// UI 工作流菜单：清除解析缓存
+  ///
+  /// In zh, this message translates to:
+  /// **'清除解析缓存'**
+  String get uiMenuClearParse;
+
+  /// 首页：拉取工作流失败
+  ///
+  /// In zh, this message translates to:
+  /// **'拉取工作流失败，请检查服务器连接'**
+  String get homeFetchFailed;
+
+  /// 首页：工作流文件不是合法 JSON
+  ///
+  /// In zh, this message translates to:
+  /// **'工作流文件不是有效的 JSON'**
+  String get homeInvalidJson;
+
+  /// 首页：解析失败
+  ///
+  /// In zh, this message translates to:
+  /// **'解析失败'**
+  String get homeParseFailed;
+
+  /// 清除解析缓存对话框正文
+  ///
+  /// In zh, this message translates to:
+  /// **'清除后会回到未解析状态，可随时从服务器重新解析。  已保存的节点配置不受影响。'**
+  String get clearParseBody;
+
+  /// 首页：已清除解析结果
+  ///
+  /// In zh, this message translates to:
+  /// **'已清除解析结果'**
+  String get clearParseDone;
+
+  /// 首页空态：未连接服务器
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未连接到服务器'**
+  String get homeDisconnectedTitle;
+
+  /// 首页空态：未连接服务器说明
+  ///
+  /// In zh, this message translates to:
+  /// **'请先配置并启用一个服务器连接'**
+  String get homeDisconnectedBody;
+
+  /// 首页空态：前往配置按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'前往配置'**
+  String get homeGoToConfig;
+
+  /// 首页空态：无工作流
+  ///
+  /// In zh, this message translates to:
+  /// **'未找到工作流'**
+  String get homeEmptyTitle;
+
+  /// 首页空态：服务器上无工作流
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器上没有找到工作流 JSON 文件'**
+  String get homeEmptyBody;
+
+  /// 工作流状态：未配置
+  ///
+  /// In zh, this message translates to:
+  /// **'未配置'**
+  String get wfStatusUnconfigured;
+
+  /// 工作流状态：内容有更新
+  ///
+  /// In zh, this message translates to:
+  /// **'内容已更新，需重新确认配置'**
+  String get wfStatusStale;
+
+  /// 工作流状态：已配置参数数
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 项参数已配置'**
+  String wfStatusConfigured(int count);
+
+  /// 工作流菜单：存入本地库
+  ///
+  /// In zh, this message translates to:
+  /// **'存入本地库'**
+  String get wfMenuSaveLocal;
+
+  /// 工作流菜单：重新配置节点
+  ///
+  /// In zh, this message translates to:
+  /// **'重新配置节点'**
+  String get wfMenuReconfig;
+
+  /// 工作流菜单：刷新内容
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新内容'**
+  String get wfMenuRefresh;
+
+  /// 首页：重新检查完成
+  ///
+  /// In zh, this message translates to:
+  /// **'已重新检查'**
+  String get homeRechecked;
+
+  /// 首页：拉取工作流内容失败
+  ///
+  /// In zh, this message translates to:
+  /// **'拉取工作流内容失败，请检查服务器连接'**
+  String get homeFetchContentFailed;
+
+  /// 首页：已存入本地库
+  ///
+  /// In zh, this message translates to:
+  /// **'已存入本地库'**
+  String get homeSavedToLocal;
+
+  /// 通用：名称输入框标签
+  ///
+  /// In zh, this message translates to:
+  /// **'名称'**
+  String get nameLabel;
+
+  /// 通用：清除
+  ///
+  /// In zh, this message translates to:
+  /// **'清除'**
+  String get clear;
+
+  /// 本地库：空态标题
+  ///
+  /// In zh, this message translates to:
+  /// **'本地库为空'**
+  String get localEmpty;
+
+  /// 本地库：条目数与体积
+  ///
+  /// In zh, this message translates to:
+  /// **'本地库 {count} 项 · {size}'**
+  String localSummary(int count, String size);
+
+  /// 本地库：导入按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'导入工作流 JSON'**
+  String get localImportButton;
+
+  /// 本地库：导入格式说明
+  ///
+  /// In zh, this message translates to:
+  /// **'提示：这里导入的是 ComfyUI 的 API 格式 JSON（_api.json），即以节点 ID 为键、含 class_type 与 inputs 的结构；普通 UI 界面保存的 workflow JSON 不适用。'**
+  String get localImportNote;
+
+  /// 本地库：空态
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有本地工作流'**
+  String get localNoWorkflows;
+
+  /// 本地库：空态说明
+  ///
+  /// In zh, this message translates to:
+  /// **'导入或另存的工作流会保存在这里'**
+  String get localNoWorkflowsHint;
+
+  /// 本地库：底部说明
+  ///
+  /// In zh, this message translates to:
+  /// **'来自你自己的文件，与服务器无关，可重命名或删除。删除后无法恢复。'**
+  String get localFooterNote;
+
+  /// 通用：重命名
+  ///
+  /// In zh, this message translates to:
+  /// **'重命名'**
+  String get menuRename;
+
+  /// 本地库：删除确认标题
+  ///
+  /// In zh, this message translates to:
+  /// **'删除本地工作流'**
+  String get localDeleteTitle;
+
+  /// 本地库：删除确认正文
+  ///
+  /// In zh, this message translates to:
+  /// **'确定删除「{name}」吗？  它的节点配置会一并清除，删除后无法恢复。已生成的记录不受影响。'**
+  String localDeleteBody(String name);
+
+  /// 本地库：删除完成
+  ///
+  /// In zh, this message translates to:
+  /// **'已删除'**
+  String get localDeleted;
+
+  /// 本地库：JSON 解析失败
+  ///
+  /// In zh, this message translates to:
+  /// **'JSON 文件解析失败'**
+  String get localJsonParseFailed;
+
+  /// 首页：刷新按钮提示
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新工作流列表'**
+  String get homeRefreshTooltip;
+
+  /// 首页页签：服务器
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器'**
+  String get homeTabServer;
+
+  /// 首页页签：本地
+  ///
+  /// In zh, this message translates to:
+  /// **'本地'**
+  String get homeTabLocal;
+
+  /// 连接状态：未连接
+  ///
+  /// In zh, this message translates to:
+  /// **'未连接'**
+  String get notConnected;
+
+  /// 画廊：刷新按钮提示
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新'**
+  String get galleryRefreshTooltip;
+
+  /// 画廊空态标题
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有生成图片'**
+  String get galleryEmptyTitle;
+
+  /// 画廊空态说明
+  ///
+  /// In zh, this message translates to:
+  /// **'生成成功后图片会自动保存到这里'**
+  String get galleryEmptyHint;
+
+  /// 画廊：图片已不存在
+  ///
+  /// In zh, this message translates to:
+  /// **'图片已不存在，请刷新画廊'**
+  String get galleryImageMissing;
+
+  /// 画廊：保存成功
+  ///
+  /// In zh, this message translates to:
+  /// **'✅ 已保存到手机相册'**
+  String get gallerySaved;
+
+  /// 画廊：保存失败
+  ///
+  /// In zh, this message translates to:
+  /// **'保存失败'**
+  String get gallerySaveFailed;
+
+  /// 画廊：删除确认标题
+  ///
+  /// In zh, this message translates to:
+  /// **'删除图片'**
+  String get galleryDeleteTitle;
+
+  /// 画廊：删除确认正文
+  ///
+  /// In zh, this message translates to:
+  /// **'确定从画廊删除这张图片吗？'**
+  String get galleryDeleteBody;
+
+  /// 画廊：分享按钮提示
+  ///
+  /// In zh, this message translates to:
+  /// **'分享'**
+  String get galleryShareTooltip;
+
+  /// 画廊：保存中
+  ///
+  /// In zh, this message translates to:
+  /// **'保存中...'**
+  String get gallerySaving;
+
+  /// 画廊：保存到相册按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'保存到相册'**
+  String get gallerySaveToAlbum;
+
+  /// 画廊：分享功能提示
+  ///
+  /// In zh, this message translates to:
+  /// **'分享功能即将上线'**
+  String get galleryShareSoon;
+
+  /// storageTitle
+  ///
+  /// In zh, this message translates to:
+  /// **'工作流存储'**
+  String get storageTitle;
+
+  /// storageEmpty
+  ///
+  /// In zh, this message translates to:
+  /// **'本机还没有保存任何工作流'**
+  String get storageEmpty;
+
+  /// storageSummary
+  ///
+  /// In zh, this message translates to:
+  /// **'共 {total} 项 · 合计 {size}'**
+  String storageSummary(int total, String size);
+
+  /// storageGroupLocal
+  ///
+  /// In zh, this message translates to:
+  /// **'本地资产 · {count} 项'**
+  String storageGroupLocal(int count);
+
+  /// storageGroupParsed
+  ///
+  /// In zh, this message translates to:
+  /// **'解析缓存 · {count} 项'**
+  String storageGroupParsed(int count);
+
+  /// storageParsedNote
+  ///
+  /// In zh, this message translates to:
+  /// **'解析缓存由服务器上的 UI 工作流转换而来，清除后回到未解析状态，可随时重新解析。'**
+  String get storageParsedNote;
+
+  /// storageOrigin
+  ///
+  /// In zh, this message translates to:
+  /// **'来源 {name}'**
+  String storageOrigin(String name);
+
+  /// storageParsedAt
+  ///
+  /// In zh, this message translates to:
+  /// **'UI 工作流解析 · {time} · {size}'**
+  String storageParsedAt(String time, String size);
+
+  /// unknownConnection
+  ///
+  /// In zh, this message translates to:
+  /// **'未知连接'**
+  String get unknownConnection;
+
+  /// storageClearCacheBody
+  ///
+  /// In zh, this message translates to:
+  /// **'确定清除「{name}」的解析结果吗？  清除后回到未解析状态，在服务器列表里可以重新解析。已保存的节点配置不受影响。'**
+  String storageClearCacheBody(String name);
+
+  /// snapshotDeleteTitle
+  ///
+  /// In zh, this message translates to:
+  /// **'删除快照'**
+  String get snapshotDeleteTitle;
+
+  /// snapshotDeleteBody
+  ///
+  /// In zh, this message translates to:
+  /// **'确定删除「{name}」吗？  删除后，引用它的 {count} 条生成记录将无法再次运行。'**
+  String snapshotDeleteBody(String name, int count);
+
+  /// snapshotDeleted
+  ///
+  /// In zh, this message translates to:
+  /// **'快照已删除'**
+  String get snapshotDeleted;
+
+  /// snapshotNotRecorded
+  ///
+  /// In zh, this message translates to:
+  /// **'未记录'**
+  String get snapshotNotRecorded;
+
+  /// snapshotTitle
+  ///
+  /// In zh, this message translates to:
+  /// **'工作流快照'**
+  String get snapshotTitle;
+
+  /// snapshotEmpty
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无工作流快照'**
+  String get snapshotEmpty;
+
+  /// snapshotFrozenAt
+  ///
+  /// In zh, this message translates to:
+  /// **'固化时间 {time} · {size}'**
+  String snapshotFrozenAt(String time, String size);
+
+  /// snapshotSourceServer
+  ///
+  /// In zh, this message translates to:
+  /// **'来源服务器 {name}'**
+  String snapshotSourceServer(String name);
+
+  /// snapshotRefCount
+  ///
+  /// In zh, this message translates to:
+  /// **'被 {count} 条生成记录引用'**
+  String snapshotRefCount(int count);
+
+  /// snapshotNoRef
+  ///
+  /// In zh, this message translates to:
+  /// **'未被任何生成记录引用'**
+  String get snapshotNoRef;
+
+  /// tokenTitle
+  ///
+  /// In zh, this message translates to:
+  /// **'GitHub 访问令牌'**
+  String get tokenTitle;
+
+  /// tokenSaved
+  ///
+  /// In zh, this message translates to:
+  /// **'令牌已保存'**
+  String get tokenSaved;
+
+  /// tokenCleared
+  ///
+  /// In zh, this message translates to:
+  /// **'令牌已清除'**
+  String get tokenCleared;
+
+  /// tokenConfigured
+  ///
+  /// In zh, this message translates to:
+  /// **'已配置'**
+  String get tokenConfigured;
+
+  /// tokenClearButton
+  ///
+  /// In zh, this message translates to:
+  /// **'清除令牌'**
+  String get tokenClearButton;
+
+  /// tokenLocalOnlyNote
+  ///
+  /// In zh, this message translates to:
+  /// **'令牌仅保存在本机，不会上传。'**
+  String get tokenLocalOnlyNote;
+
+  /// updateCheckButton
+  ///
+  /// In zh, this message translates to:
+  /// **'检查更新'**
+  String get updateCheckButton;
+
+  /// updateSourceNote
+  ///
+  /// In zh, this message translates to:
+  /// **'更新来源：GitHub Releases'**
+  String get updateSourceNote;
+
+  /// aboutVersionBuild
+  ///
+  /// In zh, this message translates to:
+  /// **'版本 {version}（构建 {build}）'**
+  String aboutVersionBuild(String version, String build);
+
+  /// updateChecking
+  ///
+  /// In zh, this message translates to:
+  /// **'正在检查更新…'**
+  String get updateChecking;
+
+  /// updateUpToDate
+  ///
+  /// In zh, this message translates to:
+  /// **'当前已是最新版本 {version}'**
+  String updateUpToDate(String version);
+
+  /// updateCheckFailed
+  ///
+  /// In zh, this message translates to:
+  /// **'检查更新失败'**
+  String get updateCheckFailed;
+
+  /// retry
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get retry;
+
+  /// configureToken
+  ///
+  /// In zh, this message translates to:
+  /// **'配置令牌'**
+  String get configureToken;
+
+  /// updateAvailableTitle
+  ///
+  /// In zh, this message translates to:
+  /// **'发现新版本 {version}'**
+  String updateAvailableTitle(String version);
+
+  /// updateAvailableOtherPlatform
+  ///
+  /// In zh, this message translates to:
+  /// **'发现新版本 {version}，当前平台不支持应用内安装，请到 Release 页面手动下载'**
+  String updateAvailableOtherPlatform(String version);
+
+  /// releaseNotesTitle
+  ///
+  /// In zh, this message translates to:
+  /// **'更新说明'**
+  String get releaseNotesTitle;
+
+  /// changelogTitle
+  ///
+  /// In zh, this message translates to:
+  /// **'完整变更记录'**
+  String get changelogTitle;
+
+  /// updateDownloadingPercent
+  ///
+  /// In zh, this message translates to:
+  /// **'下载中 {percent}%'**
+  String updateDownloadingPercent(String percent);
+
+  /// updateDownloading
+  ///
+  /// In zh, this message translates to:
+  /// **'正在下载…'**
+  String get updateDownloading;
+
+  /// updateDownloadInstall
+  ///
+  /// In zh, this message translates to:
+  /// **'下载并安装'**
+  String get updateDownloadInstall;
+
+  /// installLaunchFailed
+  ///
+  /// In zh, this message translates to:
+  /// **'无法唤起安装界面：{message}'**
+  String installLaunchFailed(String message);
+
+  /// saveAlbumPermission
+  ///
+  /// In zh, this message translates to:
+  /// **'需要相册权限'**
+  String get saveAlbumPermission;
+
+  /// saveAlbumTitle
+  ///
+  /// In zh, this message translates to:
+  /// **'保存到相册'**
+  String get saveAlbumTitle;
+
+  /// saveAlbumBody
+  ///
+  /// In zh, this message translates to:
+  /// **'这张 PNG 内嵌了工作流信息。选择保存方式：'**
+  String get saveAlbumBody;
+
+  /// saveAlbumPlain
+  ///
+  /// In zh, this message translates to:
+  /// **'普通图片（剔除信息）'**
+  String get saveAlbumPlain;
+
+  /// saveAlbumWithWorkflow
+  ///
+  /// In zh, this message translates to:
+  /// **'带工作流原图'**
+  String get saveAlbumWithWorkflow;
+
+  /// parseBadPayload
+  ///
+  /// In zh, this message translates to:
+  /// **'前端返回了无法识别的数据'**
+  String get parseBadPayload;
+
+  /// parseNoWorkflow
+  ///
+  /// In zh, this message translates to:
+  /// **'前端未返回工作流结构'**
+  String get parseNoWorkflow;
+
+  /// parseUnreadable
+  ///
+  /// In zh, this message translates to:
+  /// **'解析结果无法读取'**
+  String get parseUnreadable;
+
+  /// convertEmpty
+  ///
+  /// In zh, this message translates to:
+  /// **'转换结果为空（工作流可能没有可运行的节点）'**
+  String get convertEmpty;
+
+  /// convertUiNotApi
+  ///
+  /// In zh, this message translates to:
+  /// **'前端返回了 UI 结构而非 API 结构'**
+  String get convertUiNotApi;
+
+  /// convertBadNode
+  ///
+  /// In zh, this message translates to:
+  /// **'转换结果第 {index} 项不是有效的 API 节点'**
+  String convertBadNode(String index);
+
+  /// updateRepoForbiddenWithToken
+  ///
+  /// In zh, this message translates to:
+  /// **'仓库不可访问：请确认令牌对该仓库有 Contents 读取权限，且未过期'**
+  String get updateRepoForbiddenWithToken;
+
+  /// updateRepoForbidden
+  ///
+  /// In zh, this message translates to:
+  /// **'仓库不可访问。若该仓库是私有的，请在「设置 → GitHub 访问令牌」中填入只读令牌后重试'**
+  String get updateRepoForbidden;
+
+  /// updateTokenInvalid
+  ///
+  /// In zh, this message translates to:
+  /// **'GitHub 令牌无效或已过期。可在「设置 → GitHub 访问令牌」中更新；若仓库已公开，直接清除令牌即可'**
+  String get updateTokenInvalid;
+
+  /// updateRateLimitedWithToken
+  ///
+  /// In zh, this message translates to:
+  /// **'GitHub 拒绝了请求（令牌权限不足或触发限流），请稍后再试'**
+  String get updateRateLimitedWithToken;
+
+  /// updateRateLimited
+  ///
+  /// In zh, this message translates to:
+  /// **'GitHub 接口访问受限（匿名请求每小时 60 次），配置访问令牌可放宽限额'**
+  String get updateRateLimited;
+
+  /// updateHttpFailed
+  ///
+  /// In zh, this message translates to:
+  /// **'查询更新失败（HTTP {code}）'**
+  String updateHttpFailed(String code);
+
+  /// updateNoRelease
+  ///
+  /// In zh, this message translates to:
+  /// **'该仓库还没有发布带安装包的版本（仅有 git tag 不会被识别）'**
+  String get updateNoRelease;
+
+  /// updateBadTag
+  ///
+  /// In zh, this message translates to:
+  /// **'发布版本号无法识别（{tag}）'**
+  String updateBadTag(String tag);
+
+  /// updateTimeout
+  ///
+  /// In zh, this message translates to:
+  /// **'连接 GitHub 超时，请检查网络后重试'**
+  String get updateTimeout;
+
+  /// updateUnreachable
+  ///
+  /// In zh, this message translates to:
+  /// **'无法连接 GitHub，请检查网络后重试'**
+  String get updateUnreachable;
+
+  /// updateQueryFailed
+  ///
+  /// In zh, this message translates to:
+  /// **'查询更新失败，请检查网络后重试'**
+  String get updateQueryFailed;
+
+  /// updateNoAsset
+  ///
+  /// In zh, this message translates to:
+  /// **'该版本没有附带安装包'**
+  String get updateNoAsset;
+
+  /// updateNoApk
+  ///
+  /// In zh, this message translates to:
+  /// **'该版本没有可安装的 APK'**
+  String get updateNoApk;
+
+  /// updateAssetMissing
+  ///
+  /// In zh, this message translates to:
+  /// **'安装包地址缺失，请稍后重试'**
+  String get updateAssetMissing;
+
+  /// updateDownloadTimeout
+  ///
+  /// In zh, this message translates to:
+  /// **'下载超时，请检查网络后重试'**
+  String get updateDownloadTimeout;
+
+  /// updateDownloadInterrupted
+  ///
+  /// In zh, this message translates to:
+  /// **'下载失败，网络连接已中断'**
+  String get updateDownloadInterrupted;
+
+  /// updateDownloadFailed
+  ///
+  /// In zh, this message translates to:
+  /// **'下载失败，请检查网络后重试'**
+  String get updateDownloadFailed;
+
+  /// updateDownload404Token
+  ///
+  /// In zh, this message translates to:
+  /// **'安装包下载失败（404），请确认令牌仍有该仓库的读取权限'**
+  String get updateDownload404Token;
+
+  /// updateDownload404
+  ///
+  /// In zh, this message translates to:
+  /// **'安装包下载失败（404）'**
+  String get updateDownload404;
+
+  /// updateDownloadHttp
+  ///
+  /// In zh, this message translates to:
+  /// **'下载失败（HTTP {code}）'**
+  String updateDownloadHttp(String code);
+
+  /// updateDownloadAborted
+  ///
+  /// In zh, this message translates to:
+  /// **'下载中断，请重试'**
+  String get updateDownloadAborted;
+
+  /// updateWriteFailed
+  ///
+  /// In zh, this message translates to:
+  /// **'安装包写入失败'**
+  String get updateWriteFailed;
+
+  /// updateCheckFailedRetry
+  ///
+  /// In zh, this message translates to:
+  /// **'检查更新失败，请稍后重试'**
+  String get updateCheckFailedRetry;
+
+  /// updateNoPending
+  ///
+  /// In zh, this message translates to:
+  /// **'没有待下载的版本'**
+  String get updateNoPending;
+
+  /// updateDownloadFailedRetry
+  ///
+  /// In zh, this message translates to:
+  /// **'下载失败，请稍后重试'**
+  String get updateDownloadFailedRetry;
+
+  /// 本地工作流来源：导入
+  ///
+  /// In zh, this message translates to:
+  /// **'导入'**
+  String get localSourceImport;
+
+  /// 本地工作流来源：从服务器另存
+  ///
+  /// In zh, this message translates to:
+  /// **'另存'**
+  String get localSourceSaved;
+
+  /// 通用：大小未知
+  ///
+  /// In zh, this message translates to:
+  /// **'未知大小'**
+  String get unknownSize;
 }
 
 class _AppLocalizationsDelegate

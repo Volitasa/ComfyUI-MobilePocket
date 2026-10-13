@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import 'package:file_picker/file_picker.dart';
+
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
 import '../../providers/locale_provider.dart';
@@ -18,8 +20,10 @@ import 'workflow_view.dart';
 
 class RunView extends ConsumerStatefulWidget {
   final String workflowId;
+
   /// 非空时进入「快照模式」：表单结构与工作流数据都取自快照，不请求服务端。
   final String? snapshotId;
+
   /// 预填的表单值（键为 nodeParamKey），用于「再次运行」。
   final Map<String, dynamic>? initialParams;
 
@@ -63,12 +67,17 @@ class _RunViewState extends ConsumerState<RunView> {
     final List<WorkflowNode>? savedConfig;
 
     if (_isSnapshotMode) {
-      final snapshot = ref.read(snapshotProvider.notifier).byId(widget.snapshotId!);
+      final snapshot = ref
+          .read(snapshotProvider.notifier)
+          .byId(widget.snapshotId!);
       if (snapshot == null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('对应的工作流快照已被删除，无法再次运行')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).runSnapshotDeleted),
+            ),
+          );
           Navigator.pop(context);
         });
         return;
@@ -76,18 +85,23 @@ class _RunViewState extends ConsumerState<RunView> {
       savedConfig = snapshot.mappingConfig;
       // 快照自带工作流数据，直接写入缓存，不请求服务端。
       // 这里还在 initState 里，写 provider 得让出当前帧
-      scheduleProviderWrite(() => ref
-          .read(workflowProvider.notifier)
-          .setWorkflowData(snapshot.workflowJson, workflowId: _dataOwnerId));
+      scheduleProviderWrite(
+        () => ref
+            .read(workflowProvider.notifier)
+            .setWorkflowData(snapshot.workflowJson, workflowId: _dataOwnerId),
+      );
     } else {
-      savedConfig =
-          ref.read(workflowProvider.notifier).getMappingConfig(widget.workflowId);
+      savedConfig = ref
+          .read(workflowProvider.notifier)
+          .getMappingConfig(widget.workflowId);
     }
 
     if (savedConfig == null || savedConfig.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('未找到有效的表单配置')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).runNoFormConfig)),
+        );
         Navigator.pop(context);
       });
       return;
@@ -98,8 +112,12 @@ class _RunViewState extends ConsumerState<RunView> {
     final params = widget.initialParams;
     if (params != null) {
       // 配置被改过 → 部分参数在当前表单里已不存在，统计出来提示用户
-      final exposedKeys = _formConfig.map((n) => nodeParamKey(n.id, n.key)).toSet();
-      _unappliedCount = params.keys.where((k) => !exposedKeys.contains(k)).length;
+      final exposedKeys = _formConfig
+          .map((n) => nodeParamKey(n.id, n.key))
+          .toSet();
+      _unappliedCount = params.keys
+          .where((k) => !exposedKeys.contains(k))
+          .length;
     }
 
     for (var node in _formConfig) {
@@ -124,7 +142,9 @@ class _RunViewState extends ConsumerState<RunView> {
           }
           break;
         case ParamType.text:
-          _controllers[k] = TextEditingController(text: initial?.toString() ?? '');
+          _controllers[k] = TextEditingController(
+            text: initial?.toString() ?? '',
+          );
           break;
         case ParamType.intType:
           _controllers[k] = TextEditingController(text: _numToString(initial));
@@ -171,13 +191,17 @@ class _RunViewState extends ConsumerState<RunView> {
     final persisted = persistedWorkflowJson(ref, widget.workflowId);
     if (persisted != null) {
       // 从 initState 进来时不允许直接改 provider，让出当前帧再写
-      await scheduleProviderWrite(() => ref
-          .read(workflowProvider.notifier)
-          .setWorkflowData(persisted, workflowId: widget.workflowId));
+      await scheduleProviderWrite(
+        () => ref
+            .read(workflowProvider.notifier)
+            .setWorkflowData(persisted, workflowId: widget.workflowId),
+      );
       return;
     }
 
-    await ref.read(workflowProvider.notifier).fetchWorkflowContent(widget.workflowId);
+    await ref
+        .read(workflowProvider.notifier)
+        .fetchWorkflowContent(widget.workflowId);
   }
 
   /// 收集当前表单值，供「再次运行」预填
@@ -200,9 +224,10 @@ class _RunViewState extends ConsumerState<RunView> {
 
   /// 「再次运行」时顶部的提示条：说明参数来源与未能套用的条数
   Widget _buildRestoreBanner() {
+    final l = AppLocalizations.of(context);
     final text = _unappliedCount > 0
-        ? '已套用当时的参数（$_unappliedCount 项因配置变更未能套用）'
-        : '已套用当时的参数';
+        ? l.runParamsRestored(_unappliedCount)
+        : l.runParamsRestoredAll;
     return Container(
       width: double.infinity,
       color: Colors.amber.shade50,
@@ -230,7 +255,10 @@ class _RunViewState extends ConsumerState<RunView> {
   void _setSeedValue(String nodeId, int seed) {
     setState(() {
       _formData[nodeId] = seed;
-      final controller = _controllers.putIfAbsent(nodeId, () => TextEditingController());
+      final controller = _controllers.putIfAbsent(
+        nodeId,
+        () => TextEditingController(),
+      );
       controller.text = seed.toString();
     });
   }
@@ -291,7 +319,9 @@ class _RunViewState extends ConsumerState<RunView> {
     // 提交前再次校验：数据必须存在且归属匹配，避免提交错误的工作流
     if (!wfState.hasDataFor(_dataOwnerId)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('工作流数据未就绪，请返回重试')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).runDataNotReady)),
+        );
       }
       return;
     }
@@ -317,8 +347,14 @@ class _RunViewState extends ConsumerState<RunView> {
           // 图片：只有用户重新选择了本地图片才上传；否则沿用工作流里的原值
           final picked = _formData[paramKey];
           if (picked != null) {
-            final uploadedName = await taskManager.uploadImage(picked['bytes'], picked['filename']);
-            if (uploadedName == null) throw Exception('图片上传失败');
+            final uploadedName = await taskManager.uploadImage(
+              picked['bytes'],
+              picked['filename'],
+            );
+            if (uploadedName == null)
+              throw Exception(
+                AppLocalizations.of(context).runImageUploadFailed,
+              );
             value = uploadedName;
             // 记进快照参数，否则再次运行时会丢掉本次上传的图
             _widgetValues[paramKey] = uploadedName;
@@ -332,7 +368,8 @@ class _RunViewState extends ConsumerState<RunView> {
 
         if (value == null || value == '') continue;
 
-        if (promptNodes[node.id] != null && promptNodes[node.id]['inputs'] != null) {
+        if (promptNodes[node.id] != null &&
+            promptNodes[node.id]['inputs'] != null) {
           promptNodes[node.id]['inputs'][node.key] = value;
         }
       }
@@ -340,17 +377,20 @@ class _RunViewState extends ConsumerState<RunView> {
       final result = await taskManager.executeWorkflow(promptNodes);
 
       if (result == null) {
-        throw Exception('提交失败：无法连接服务器或请求超时');
+        throw Exception(AppLocalizations.of(context).runSubmitFailed);
       }
       if (result.containsKey('prompt_id')) {
         // 固化快照：内容没变则复用同一份，供后续「再次运行」还原表单
-        final snapshotId = ref.read(snapshotProvider.notifier).upsert(
+        final snapshotId = ref
+            .read(snapshotProvider.notifier)
+            .upsert(
               workflowJson: workflowData,
               mappingConfig: _formConfig,
               sourceName: resolveWorkflowName(
                 ref.read(localWorkflowProvider),
                 widget.workflowId,
-                localLabel: l10nFor(ref.read(localeProvider)).workflowLocalImport,
+                localLabel: l10nFor(ref.read(localeProvider))
+                    .workflowLocalImport,
               ),
               serverId: ref.read(connectionProvider).activeServerId,
             );
@@ -362,7 +402,11 @@ class _RunViewState extends ConsumerState<RunView> {
         );
 
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('任务下发成功！')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).runTaskSubmitted),
+          ),
+        );
         Navigator.pop(context);
         ref.read(mainTabIndexProvider.notifier).state = MainTabs.history;
       } else {
@@ -373,14 +417,19 @@ class _RunViewState extends ConsumerState<RunView> {
         if (body is Map && body['node_errors'] != null) {
           final errors = body['node_errors'];
           detail = errors is Map && errors.isNotEmpty
-              ? '，错误节点: ${errors.keys.join(', ')}'
+              ? AppLocalizations.of(context)
+                    .runErrorNodes(errors.keys.join(', '))
               : '';
         }
-        throw Exception('提交失败 (HTTP $code)$detail，请检查 ComfyUI 日志');
+        throw Exception(
+          AppLocalizations.of(context).runSubmitFailedHttp('$code', detail),
+        );
       }
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(msg)));
     } finally {
       if (mounted) setState(() => _isExecuting = false);
     }
@@ -396,11 +445,14 @@ class _RunViewState extends ConsumerState<RunView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('运行: $displayName', style: const TextStyle(fontSize: 16)),
+        title: Text(
+          AppLocalizations.of(context).runTitle(displayName),
+          style: const TextStyle(fontSize: 16),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            tooltip: '节点配置',
+            tooltip: AppLocalizations.of(context).runNodeConfigTooltip,
             // 跳转到节点配置面板（用 pushReplacement 替换当前页，
             // 与配置页「保存并进入运行页」的 pushReplacement 对称，避免栈内重复）
             onPressed: () => Navigator.pushReplacement(
@@ -412,7 +464,7 @@ class _RunViewState extends ConsumerState<RunView> {
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
       body: Column(
@@ -420,96 +472,132 @@ class _RunViewState extends ConsumerState<RunView> {
           // 由「再次运行」进入时，说明参数来源与 seed 的处理方式
           if (widget.initialParams != null) _buildRestoreBanner(),
           Expanded(
-            child: Builder(builder: (context) {
-              // 按节点分组展示：同一节点的多个参数合并为一张卡片，支持展开/折叠
-              final groups = <String, List<WorkflowNode>>{};
-              for (final n in _formConfig) {
-                groups.putIfAbsent(n.id, () => []).add(n);
-              }
-              final groupIds = groups.keys.toList();
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: groupIds.length,
-                itemBuilder: (context, index) {
-                  final nodeId = groupIds[index];
-                  final params = groups[nodeId]!;
-                  final expanded = _expandedNodeIds.contains(nodeId)
-                      ? true
-                      : _collapsedNodeIds.contains(nodeId)
-                          ? false
-                          : true; // 运行页默认全部展开
+            child: Builder(
+              builder: (context) {
+                // 按节点分组展示：同一节点的多个参数合并为一张卡片，支持展开/折叠
+                final groups = <String, List<WorkflowNode>>{};
+                for (final n in _formConfig) {
+                  groups.putIfAbsent(n.id, () => []).add(n);
+                }
+                final groupIds = groups.keys.toList();
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: groupIds.length,
+                  itemBuilder: (context, index) {
+                    final nodeId = groupIds[index];
+                    final params = groups[nodeId]!;
+                    final expanded = _expandedNodeIds.contains(nodeId)
+                        ? true
+                        : _collapsedNodeIds.contains(nodeId)
+                        ? false
+                        : true; // 运行页默认全部展开
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      children: [
-                        InkWell(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                          onTap: () => setState(() {
-                            if (expanded) {
-                              _collapsedNodeIds.add(nodeId);
-                              _expandedNodeIds.remove(nodeId);
-                            } else {
-                              _expandedNodeIds.add(nodeId);
-                              _collapsedNodeIds.remove(nodeId);
-                            }
-                          }),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            child: Row(
-                              children: [
-                                AnimatedRotation(
-                                  turns: expanded ? 0 : -0.25,
-                                  duration: const Duration(milliseconds: 150),
-                                  child: const Icon(Icons.expand_more, size: 20, color: Colors.grey),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _groupLabel(params),
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                    overflow: TextOverflow.ellipsis,
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        children: [
+                          InkWell(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(12),
+                            ),
+                            onTap: () => setState(() {
+                              if (expanded) {
+                                _collapsedNodeIds.add(nodeId);
+                                _expandedNodeIds.remove(nodeId);
+                              } else {
+                                _expandedNodeIds.add(nodeId);
+                                _collapsedNodeIds.remove(nodeId);
+                              }
+                            }),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  AnimatedRotation(
+                                    turns: expanded ? 0 : -0.25,
+                                    duration: const Duration(milliseconds: 150),
+                                    child: const Icon(
+                                      Icons.expand_more,
+                                      size: 20,
+                                      color: Colors.grey,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  '${params.length} 项参数',
-                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _groupLabel(params),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    AppLocalizations.of(context)
+                                        .configParamCount(params.length),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        if (expanded)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            child: Column(
-                              children: [
-                                const Divider(height: 1),
-                                ...params.map((node) => Padding(
+                          if (expanded)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              child: Column(
+                                children: [
+                                  const Divider(height: 1),
+                                  ...params.map(
+                                    (node) => Padding(
                                       padding: const EdgeInsets.only(top: 16),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             children: [
                                               Expanded(
-                                                child: Text(node.alias, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                                                child: Text(
+                                                  node.alias,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
                                               ),
-                                              if (node.key != 'text' && node.key != 'value')
+                                              if (node.key != 'text' &&
+                                                  node.key != 'value')
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2,
+                                                      ),
                                                   decoration: BoxDecoration(
                                                     color: Colors.grey.shade100,
-                                                    borderRadius: BorderRadius.circular(4),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          4,
+                                                        ),
                                                   ),
                                                   child: Text(
                                                     node.key,
-                                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                                    style: const TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.grey,
+                                                    ),
                                                   ),
                                                 ),
                                             ],
@@ -518,16 +606,18 @@ class _RunViewState extends ConsumerState<RunView> {
                                           _buildInputControl(node),
                                         ],
                                       ),
-                                    )),
-                              ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            }),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
           SafeArea(
             child: Padding(
@@ -538,13 +628,30 @@ class _RunViewState extends ConsumerState<RunView> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: _isExecuting ? Colors.grey : Colors.green,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: _isExecuting ? null : _handleExecute,
-                  icon: _isExecuting 
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  icon: _isExecuting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Icon(Icons.rocket_launch),
-                  label: Text(_isExecuting ? '下发任务中...' : '立即生成', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  label: Text(
+                    _isExecuting
+                        ? AppLocalizations.of(context).runSubmitting
+                        : AppLocalizations.of(context).runGenerateNow,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -572,7 +679,7 @@ class _RunViewState extends ConsumerState<RunView> {
           maxLines: 3,
           minLines: 3,
           decoration: InputDecoration(
-            hintText: '请输入描述...',
+            hintText: AppLocalizations.of(context).runTextHint,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             isDense: true,
             filled: true,
@@ -587,7 +694,9 @@ class _RunViewState extends ConsumerState<RunView> {
                 controller: _controllers[k],
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   isDense: true,
                   filled: true,
                   fillColor: Colors.white,
@@ -598,8 +707,8 @@ class _RunViewState extends ConsumerState<RunView> {
             ElevatedButton.icon(
               onPressed: () => _generateSeed(k),
               icon: const Icon(Icons.casino, size: 18),
-              label: const Text('随机'),
-            )
+              label: Text(AppLocalizations.of(context).runRandom),
+            ),
           ],
         );
       case ParamType.intType:
@@ -607,7 +716,7 @@ class _RunViewState extends ConsumerState<RunView> {
           controller: _controllers[k],
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            hintText: '整数',
+            hintText: AppLocalizations.of(context).runIntHint,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             isDense: true,
             filled: true,
@@ -619,7 +728,7 @@ class _RunViewState extends ConsumerState<RunView> {
           controller: _controllers[k],
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            hintText: '数值（可小数）',
+            hintText: AppLocalizations.of(context).runFloatHint,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             isDense: true,
             filled: true,
@@ -630,7 +739,9 @@ class _RunViewState extends ConsumerState<RunView> {
         return SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(
-            (_widgetValues[k] == true) ? '开启' : '关闭',
+            (_widgetValues[k] == true)
+                ? AppLocalizations.of(context).runBoolOn
+                : AppLocalizations.of(context).runBoolOff,
             style: const TextStyle(fontSize: 14),
           ),
           value: _widgetValues[k] == true,
@@ -640,18 +751,32 @@ class _RunViewState extends ConsumerState<RunView> {
         final opts = node.options;
         final current = _widgetValues[k]?.toString() ?? '';
         // 若当前值不在选项里（理论上不会），仍显示它
-        final items = opts.contains(current) ? opts : [...opts, if (current.isNotEmpty) current];
+        final items = opts.contains(current)
+            ? opts
+            : [...opts, if (current.isNotEmpty) current];
         return DropdownButtonFormField<String>(
-          initialValue: items.contains(current) ? current : (items.isNotEmpty ? items.first : null),
+          initialValue: items.contains(current)
+              ? current
+              : (items.isNotEmpty ? items.first : null),
           isExpanded: true,
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             isDense: true,
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
           ),
-          items: items.map((o) => DropdownMenuItem(value: o, child: Text(o, overflow: TextOverflow.ellipsis))).toList(),
+          items: items
+              .map(
+                (o) => DropdownMenuItem(
+                  value: o,
+                  child: Text(o, overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
           onChanged: (val) {
             if (val != null) setState(() => _widgetValues[k] = val);
           },
@@ -675,13 +800,15 @@ class _RunViewState extends ConsumerState<RunView> {
                     height: 120,
                     width: double.infinity,
                     color: Colors.grey.shade100,
-                    child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                    child: const Center(
+                      child: Icon(Icons.broken_image, color: Colors.grey),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                '已用图: $serverImage',
+                AppLocalizations.of(context).runUsingServerImage(serverImage),
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -690,7 +817,11 @@ class _RunViewState extends ConsumerState<RunView> {
             OutlinedButton.icon(
               onPressed: () => _pickImage(k),
               icon: const Icon(Icons.image),
-              label: Text(hasImage ? '更换图片' : '选择图片'),
+              label: Text(
+                hasImage
+                    ? AppLocalizations.of(context).runChangeImage
+                    : AppLocalizations.of(context).runPickImage,
+              ),
             ),
             if (hasImage) ...[
               const SizedBox(height: 8),
@@ -703,7 +834,7 @@ class _RunViewState extends ConsumerState<RunView> {
                   fit: BoxFit.cover,
                 ),
               ),
-            ]
+            ],
           ],
         );
     }

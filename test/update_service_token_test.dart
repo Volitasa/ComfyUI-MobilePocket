@@ -4,8 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations_zh.dart';
 import 'package:comfyui_mobilepocket/models/release_info.dart';
 import 'package:comfyui_mobilepocket/services/update_service.dart';
+
+final AppLocalizations _l10n = AppLocalizationsZh();
 
 /// 构造一个 release JSON
 String _releaseJson({
@@ -17,7 +21,8 @@ String _releaseJson({
     'name': tag,
     'body': 'notes',
     'published_at': '2026-10-11T10:52:13Z',
-    'assets': assets ??
+    'assets':
+        assets ??
         [
           {
             'name': 'app-release.apk',
@@ -25,7 +30,7 @@ String _releaseJson({
             'url': 'https://api.github.com/repos/o/r/releases/assets/1',
             'browser_download_url':
                 'https://github.com/o/r/releases/download/$tag/app-release.apk',
-          }
+          },
         ],
   });
 }
@@ -54,10 +59,13 @@ void main() {
   group('私有仓库：匿名访问一律 404', () {
     test('latest 与列表都 404 且未配令牌 → 提示配置令牌，而不是说“没有发布版本”', () async {
       final rec = _Recorder();
-      final service = _service(rec, (_) async => http.Response('Not Found', 404));
+      final service = _service(
+        rec,
+        (_) async => http.Response('Not Found', 404),
+      );
 
       final err = await service
-          .fetchLatestRelease()
+          .fetchLatestRelease(l10n: _l10n)
           .then<Object?>((r) => r)
           .catchError((Object e) => e);
 
@@ -73,10 +81,13 @@ void main() {
 
     test('配了令牌仍 404 → 指向令牌权限问题', () async {
       final rec = _Recorder();
-      final service = _service(rec, (_) async => http.Response('Not Found', 404));
+      final service = _service(
+        rec,
+        (_) async => http.Response('Not Found', 404),
+      );
 
       final err = await service
-          .fetchLatestRelease(token: 'github_pat_xxx')
+          .fetchLatestRelease(token: 'github_pat_xxx', l10n: _l10n)
           .then<Object?>((r) => r)
           .catchError((Object e) => e);
 
@@ -86,18 +97,24 @@ void main() {
 
     test('带令牌时请求会附带 Authorization 头', () async {
       final rec = _Recorder();
-      final service = _service(rec, (_) async => http.Response(_releaseJson(), 200));
+      final service = _service(
+        rec,
+        (_) async => http.Response(_releaseJson(), 200),
+      );
 
-      await service.fetchLatestRelease(token: 'github_pat_abc123');
+      await service.fetchLatestRelease(token: 'github_pat_abc123', l10n: _l10n);
 
       expect(rec.headers.first['Authorization'], 'Bearer github_pat_abc123');
     });
 
     test('未配置令牌时不发送 Authorization 头', () async {
       final rec = _Recorder();
-      final service = _service(rec, (_) async => http.Response(_releaseJson(), 200));
+      final service = _service(
+        rec,
+        (_) async => http.Response(_releaseJson(), 200),
+      );
 
-      await service.fetchLatestRelease();
+      await service.fetchLatestRelease(l10n: _l10n);
 
       expect(rec.headers.first.containsKey('Authorization'), false);
     });
@@ -106,10 +123,13 @@ void main() {
   group('错误码分支', () {
     test('401 → 令牌无效或已过期', () async {
       final rec = _Recorder();
-      final service = _service(rec, (_) async => http.Response('Unauthorized', 401));
+      final service = _service(
+        rec,
+        (_) async => http.Response('Unauthorized', 401),
+      );
 
       final err = await service
-          .fetchLatestRelease(token: 'bad')
+          .fetchLatestRelease(token: 'bad', l10n: _l10n)
           .then<Object?>((r) => r)
           .catchError((Object e) => e);
 
@@ -118,10 +138,13 @@ void main() {
 
     test('403 且未配令牌 → 提到匿名限额与配置令牌', () async {
       final rec = _Recorder();
-      final service = _service(rec, (_) async => http.Response('rate limited', 403));
+      final service = _service(
+        rec,
+        (_) async => http.Response('rate limited', 403),
+      );
 
       final err = await service
-          .fetchLatestRelease()
+          .fetchLatestRelease(l10n: _l10n)
           .then<Object?>((r) => r)
           .catchError((Object e) => e);
 
@@ -140,7 +163,7 @@ void main() {
       });
 
       final err = await service
-          .fetchLatestRelease()
+          .fetchLatestRelease(l10n: _l10n)
           .then<Object?>((r) => r)
           .catchError((Object e) => e);
 
@@ -151,9 +174,12 @@ void main() {
   group('正常解析', () {
     test('解析出版本、安装包与 API 资产地址', () async {
       final rec = _Recorder();
-      final service = _service(rec, (_) async => http.Response(_releaseJson(), 200));
+      final service = _service(
+        rec,
+        (_) async => http.Response(_releaseJson(), 200),
+      );
 
-      final release = await service.fetchLatestRelease();
+      final release = await service.fetchLatestRelease(l10n: _l10n);
 
       expect(release.version, '1.0.6');
       expect(release.tagName, 'v1.0.6');
@@ -171,15 +197,22 @@ void main() {
       final service = _service(
         rec,
         (_) async => http.Response(
-          _releaseJson(assets: [
-            {'name': 'source.zip', 'size': 10, 'url': 'u', 'browser_download_url': 'b'}
-          ]),
+          _releaseJson(
+            assets: [
+              {
+                'name': 'source.zip',
+                'size': 10,
+                'url': 'u',
+                'browser_download_url': 'b',
+              },
+            ],
+          ),
           200,
         ),
       );
 
       final err = await service
-          .fetchLatestRelease()
+          .fetchLatestRelease(l10n: _l10n)
           .then<Object?>((r) => r)
           .catchError((Object e) => e);
 
@@ -205,7 +238,7 @@ void main() {
       );
 
       final err = await service
-          .downloadApk(empty, onProgress: (_) {})
+          .downloadApk(empty, onProgress: (_) {}, l10n: _l10n)
           .then<Object?>((r) => r)
           .catchError((Object e) => e);
 

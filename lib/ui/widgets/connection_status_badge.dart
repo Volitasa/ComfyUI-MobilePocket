@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+
 import '../../theme.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/ws_event_provider.dart';
@@ -15,8 +17,12 @@ class ConnectionStatusBadge extends ConsumerWidget {
     final config = ref.watch(connectionProvider);
     final wsState = ref.watch(wsProvider);
 
-    final activeServer = config.servers.where((s) => s.id == config.activeServerId).toList();
-    final name = activeServer.isNotEmpty ? activeServer.first.name : '未连接';
+    final activeServer = config.servers
+        .where((s) => s.id == config.activeServerId)
+        .toList();
+    final name = activeServer.isNotEmpty
+        ? activeServer.first.name
+        : AppLocalizations.of(context).notConnected;
     final connected = config.isConnected && wsState.isConnected;
     final color = connected ? AppColors.success : AppColors.danger;
 

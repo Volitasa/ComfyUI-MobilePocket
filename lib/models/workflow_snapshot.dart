@@ -50,22 +50,28 @@ class WorkflowSnapshot {
       sourceName: json['sourceName'] as String? ?? '',
       createdAt: json['createdAt'] as int? ?? 0,
       serverId: json['serverId'] as String?,
-      workflowJson: Map<String, dynamic>.from(json['workflowJson'] as Map? ?? {}),
+      workflowJson: Map<String, dynamic>.from(
+        json['workflowJson'] as Map? ?? {},
+      ),
       mappingConfig: rawConfig is List
           ? rawConfig
-              .map((e) => WorkflowNode.fromJson(Map<String, dynamic>.from(e as Map)))
-              .toList()
+                .map(
+                  (e) => WorkflowNode.fromJson(
+                    Map<String, dynamic>.from(e as Map),
+                  ),
+                )
+                .toList()
           : const [],
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'displayName': displayName,
-        'sourceName': sourceName,
-        'createdAt': createdAt,
-        'serverId': serverId,
-        'workflowJson': workflowJson,
-        'mappingConfig': mappingConfig.map((e) => e.toJson()).toList(),
-      };
+    'id': id,
+    'displayName': displayName,
+    'sourceName': sourceName,
+    'createdAt': createdAt,
+    'serverId': serverId,
+    'workflowJson': workflowJson,
+    'mappingConfig': mappingConfig.map((e) => e.toJson()).toList(),
+  };
 }

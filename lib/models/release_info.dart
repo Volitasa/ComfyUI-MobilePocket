@@ -1,3 +1,5 @@
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+
 /// GitHub Release 中的一条发布信息（只保留更新功能需要的字段）。
 class ReleaseInfo {
   /// 规范化后的版本号，例如 1.2.0
@@ -38,8 +40,8 @@ class ReleaseInfo {
   });
 
   /// 人类可读的包大小，例如 18.4 MB
-  String get sizeText {
-    if (sizeBytes <= 0) return '未知大小';
+  String sizeText(AppLocalizations l10n) {
+    if (sizeBytes <= 0) return l10n.unknownSize;
     final mb = sizeBytes / (1024 * 1024);
     if (mb >= 1) return '${mb.toStringAsFixed(1)} MB';
     return '${(sizeBytes / 1024).toStringAsFixed(0)} KB';

@@ -172,7 +172,7 @@ void main() {
           '1': {
             'inputs': {'text': 'a cat'},
             'class_type': 'CLIPTextEncode',
-          }
+          },
         },
         'mappingConfig': [],
       };
@@ -180,7 +180,14 @@ void main() {
       // 有快照：按钮应是可用色，而不是置灰
       await _pumpHistory(
         tester,
-        [_task(status: 'completed', promptId: 'p-ok', nodePhase: 'done', snapshotId: 'snap_ok')],
+        [
+          _task(
+            status: 'completed',
+            promptId: 'p-ok',
+            nodePhase: 'done',
+            snapshotId: 'snap_ok',
+          ),
+        ],
         snapshots: [snap],
       );
       expect(
@@ -189,10 +196,14 @@ void main() {
       );
 
       // 快照被手动删除（记录里仍留着 snapshotId）：必须置灰
-      await _pumpHistory(
-        tester,
-        [_task(status: 'completed', promptId: 'p-gone', nodePhase: 'done', snapshotId: 'snap_gone')],
-      );
+      await _pumpHistory(tester, [
+        _task(
+          status: 'completed',
+          promptId: 'p-gone',
+          nodePhase: 'done',
+          snapshotId: 'snap_gone',
+        ),
+      ]);
       expect(
         tester.widget<Icon>(find.byIcon(Icons.replay)).color,
         Colors.grey.shade400,

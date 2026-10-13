@@ -31,5 +31,6 @@ class GithubTokenNotifier extends Notifier<String> {
   Future<void> clear() => save('');
 }
 
-final githubTokenProvider =
-    NotifierProvider<GithubTokenNotifier, String>(GithubTokenNotifier.new);
+final githubTokenProvider = NotifierProvider<GithubTokenNotifier, String>(
+  GithubTokenNotifier.new,
+);

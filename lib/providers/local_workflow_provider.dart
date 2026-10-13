@@ -96,7 +96,9 @@ class LocalWorkflowNotifier extends Notifier<List<LocalWorkflow>> {
       createdAt: DateTime.now().millisecondsSinceEpoch,
       sourceKind: sourceKind,
       originName: originName,
-      workflowJson: Map<String, dynamic>.from(normalizeWorkflowJson(workflowJson)),
+      workflowJson: Map<String, dynamic>.from(
+        normalizeWorkflowJson(workflowJson),
+      ),
     );
 
     final exists = byId(finalId) != null;
@@ -136,16 +138,15 @@ class LocalWorkflowNotifier extends Notifier<List<LocalWorkflow>> {
 
 final localWorkflowProvider =
     NotifierProvider<LocalWorkflowNotifier, List<LocalWorkflow>>(() {
-  return LocalWorkflowNotifier();
-});
+      return LocalWorkflowNotifier();
+    });
 
 /// 本地资产与解析缓存的合集，供展示名解析使用。
 /// WidgetRef 不继承 Ref，所以没法做成收 ref 的函数。
 List<WorkflowEntry> knownWorkflows(
   List<LocalWorkflow> local,
   List<ParsedWorkflow> parsed,
-) =>
-    [...local, ...parsed];
+) => [...local, ...parsed];
 
 /// 参与展示名解析的全部已知条目（本地资产 + 解析缓存）。
 /// 比手搓 knownWorkflows 更省事，也不用每个调用点都读两个 provider。
@@ -162,10 +163,16 @@ final knownWorkflowEntriesProvider = Provider<List<WorkflowEntry>>((ref) {
 /// 收 WidgetRef —— 只有页面层需要它，Notifier 走各自的 provider。
 Map<String, dynamic>? persistedWorkflowJson(WidgetRef ref, String workflowId) {
   if (workflowId.startsWith('local_')) {
-    return ref.read(localWorkflowProvider.notifier).byId(workflowId)?.workflowJson;
+    return ref
+        .read(localWorkflowProvider.notifier)
+        .byId(workflowId)
+        ?.workflowJson;
   }
   if (workflowId.startsWith('parsed_')) {
-    return ref.read(parsedWorkflowProvider.notifier).byId(workflowId)?.workflowJson;
+    return ref
+        .read(parsedWorkflowProvider.notifier)
+        .byId(workflowId)
+        ?.workflowJson;
   }
   return null;
 }

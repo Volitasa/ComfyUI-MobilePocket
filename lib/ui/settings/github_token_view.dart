@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../providers/github_token_provider.dart';
 import '../../theme.dart';
@@ -39,13 +40,17 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
 
   Future<void> _save() async {
     await ref.read(githubTokenProvider.notifier).save(_controller.text);
-    _snack(_controller.text.trim().isEmpty ? '令牌已清除' : '令牌已保存');
+    _snack(
+      _controller.text.trim().isEmpty
+          ? AppLocalizations.of(context).tokenCleared
+          : AppLocalizations.of(context).tokenSaved,
+    );
   }
 
   Future<void> _clear() async {
     _controller.clear();
     await ref.read(githubTokenProvider.notifier).clear();
-    _snack('令牌已清除');
+    _snack(AppLocalizations.of(context).tokenCleared);
   }
 
   @override
@@ -55,7 +60,10 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('GitHub 访问令牌', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          AppLocalizations.of(context).tokenTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: false,
       ),
       body: SingleChildScrollView(
@@ -70,21 +78,30 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
                 side: BorderSide(color: Colors.grey.shade200),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Icon(
-                      configured ? Icons.check_circle_outline : Icons.info_outline,
+                      configured
+                          ? Icons.check_circle_outline
+                          : Icons.info_outline,
                       size: 20,
                       color: configured ? AppColors.success : AppColors.neutral,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        configured ? '已配置' : '未配置',
+                        configured
+                            ? AppLocalizations.of(context).tokenConfigured
+                            : AppLocalizations.of(context).wfStatusUnconfigured,
                         style: TextStyle(
                           fontSize: 13,
-                          color: configured ? AppColors.success : AppColors.neutral,
+                          color: configured
+                              ? AppColors.success
+                              : AppColors.neutral,
                         ),
                       ),
                     ),
@@ -102,7 +119,9 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
                 hintText: 'github_pat_… 或 ghp_…',
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
-                  icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
+                  icon: Icon(
+                    _obscure ? Icons.visibility_off : Icons.visibility,
+                  ),
                   onPressed: () => setState(() => _obscure = !_obscure),
                 ),
               ),
@@ -111,25 +130,31 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
             FilledButton.icon(
               onPressed: _save,
               icon: const Icon(Icons.save_outlined),
-              label: const Text('保存'),
+              label: Text(AppLocalizations.of(context).save),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 16,
+                ),
               ),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: configured ? _clear : null,
               icon: const Icon(Icons.delete_outline),
-              label: const Text('清除令牌'),
+              label: Text(AppLocalizations.of(context).tokenClearButton),
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 16,
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              '令牌仅保存在本机，不会上传。',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            Text(
+              AppLocalizations.of(context).tokenLocalOnlyNote,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),

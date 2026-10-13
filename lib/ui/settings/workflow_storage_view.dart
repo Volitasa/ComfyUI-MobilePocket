@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../models/local_workflow.dart';
 import '../../models/parsed_workflow.dart';
@@ -31,19 +32,16 @@ class WorkflowStorageView extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除本地工作流'),
-        content: Text(
-          '确定删除「${workflow.name}」吗？\n\n'
-          '它的节点配置会一并清除，删除后无法恢复。已生成的记录不受影响。',
-        ),
+        title: Text(AppLocalizations.of(ctx).localDeleteTitle),
+        content: Text(AppLocalizations.of(ctx).localDeleteBody(workflow.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(ctx).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删除'),
+            child: Text(AppLocalizations.of(ctx).delete),
           ),
         ],
       ),
@@ -51,8 +49,9 @@ class WorkflowStorageView extends ConsumerWidget {
     if (confirmed == true) {
       ref.read(localWorkflowProvider.notifier).remove(workflow.id);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('已删除')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).localDeleted)),
+        );
       }
     }
   }
@@ -65,20 +64,18 @@ class WorkflowStorageView extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('清除解析缓存'),
+        title: Text(AppLocalizations.of(ctx).uiMenuClearParse),
         content: Text(
-          '确定清除「${workflow.name}」的解析结果吗？\n\n'
-          '清除后回到未解析状态，在服务器列表里可以重新解析。'
-          '已保存的节点配置不受影响。',
+          AppLocalizations.of(ctx).storageClearCacheBody(workflow.name),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(ctx).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('清除'),
+            child: Text(AppLocalizations.of(ctx).clear),
           ),
         ],
       ),
@@ -86,8 +83,9 @@ class WorkflowStorageView extends ConsumerWidget {
     if (confirmed == true) {
       ref.read(parsedWorkflowProvider.notifier).remove(workflow.id);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('已清除解析结果')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).clearParseDone)),
+        );
       }
     }
   }
@@ -99,12 +97,17 @@ class WorkflowStorageView extends ConsumerWidget {
     if (local.isEmpty && parsed.isEmpty) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('工作流存储', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(
+            AppLocalizations.of(context).storageTitle,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           centerTitle: false,
         ),
-        body: const Center(
-          child: Text('本机还没有保存任何工作流',
-              style: TextStyle(color: Colors.grey)),
+        body: Center(
+          child: Text(
+            AppLocalizations.of(context).storageEmpty,
+            style: const TextStyle(color: Colors.grey),
+          ),
         ),
       );
     }
@@ -116,7 +119,10 @@ class WorkflowStorageView extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('工作流存储', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          AppLocalizations.of(context).storageTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: false,
       ),
       body: ListView(
@@ -125,25 +131,29 @@ class WorkflowStorageView extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
             child: Text(
-              '共 $total 项 · 合计 ${formatBytes(localBytes + parsedBytes)}',
+              AppLocalizations.of(context)
+                  .storageSummary(total, formatBytes(localBytes + parsedBytes)),
               style: const TextStyle(fontSize: 13, color: Colors.black54),
             ),
           ),
           if (local.isNotEmpty) ...[
-            _buildGroupTitle('本地资产 · ${local.length} 项'),
+            _buildGroupTitle(
+              AppLocalizations.of(context).storageGroupLocal(local.length),
+            ),
             ...local.map((w) => _buildLocalTile(context, ref, w)),
             const SizedBox(height: 16),
           ],
           if (parsed.isNotEmpty) ...[
-            _buildGroupTitle('解析缓存 · ${parsed.length} 项'),
+            _buildGroupTitle(
+              AppLocalizations.of(context).storageGroupParsed(parsed.length),
+            ),
             ...parsed.map((w) => _buildParsedTile(context, ref, w, servers)),
             const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
-                '解析缓存由服务器上的 UI 工作流转换而来，'
-                '清除后回到未解析状态，可随时重新解析。',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                AppLocalizations.of(context).storageParsedNote,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ),
           ],
@@ -155,11 +165,18 @@ class WorkflowStorageView extends ConsumerWidget {
   Widget _buildGroupTitle(String text) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-      child: Text(text, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      ),
     );
   }
 
-  Widget _buildLocalTile(BuildContext context, WidgetRef ref, LocalWorkflow workflow) {
+  Widget _buildLocalTile(
+    BuildContext context,
+    WidgetRef ref,
+    LocalWorkflow workflow,
+  ) {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       elevation: 0,
@@ -179,14 +196,15 @@ class WorkflowStorageView extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${workflow.sourceKind.label} · ${_formatTime(workflow.createdAt)}'
+                '${workflow.sourceKind.label(AppLocalizations.of(context))} · ${_formatTime(workflow.createdAt)}'
                 ' · ${formatBytes(workflow.sizeBytes)}',
               ),
               if (workflow.originName != null &&
                   workflow.originName!.isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(
-                  '来源 ${workflow.originName}',
+                  AppLocalizations.of(context)
+                      .storageOrigin(workflow.originName!),
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
@@ -195,7 +213,7 @@ class WorkflowStorageView extends ConsumerWidget {
         ),
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline),
-          tooltip: '删除',
+          tooltip: AppLocalizations.of(context).delete,
           onPressed: () => _confirmDelete(context, ref, workflow),
         ),
       ),
@@ -232,12 +250,18 @@ class WorkflowStorageView extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'UI 工作流解析 · ${_formatTime(workflow.parsedAt)}'
-                ' · ${formatBytes(workflow.sizeBytes)}',
+                AppLocalizations.of(context).storageParsedAt(
+                  _formatTime(workflow.parsedAt),
+                  formatBytes(workflow.sizeBytes),
+                ),
               ),
               const SizedBox(height: 2),
               Text(
-                '来源 ${serverName.isEmpty ? '未知连接' : '$serverName / ${workflow.filename}'}',
+                AppLocalizations.of(context).storageOrigin(
+                  serverName.isEmpty
+                      ? AppLocalizations.of(context).unknownConnection
+                      : '$serverName / ${workflow.filename}',
+                ),
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
@@ -246,7 +270,7 @@ class WorkflowStorageView extends ConsumerWidget {
         // 用「清除」而不是删除图标：这条数据可再生，语义不同不宜混用
         trailing: IconButton(
           icon: const Icon(Icons.restart_alt),
-          tooltip: '清除解析缓存',
+          tooltip: AppLocalizations.of(context).uiMenuClearParse,
           onPressed: () => _confirmClearCache(context, ref, workflow),
         ),
       ),

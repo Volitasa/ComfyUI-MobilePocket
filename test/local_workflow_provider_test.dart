@@ -12,22 +12,22 @@ import 'package:comfyui_mobilepocket/providers/workflow_provider.dart';
 import 'package:comfyui_mobilepocket/utils.dart';
 
 Map<String, dynamic> _workflow([String text = 'a cat']) => {
-      '1': {
-        'inputs': {'text': text, 'seed': 123},
-        'class_type': 'CLIPTextEncode',
-      },
-    };
+  '1': {
+    'inputs': {'text': text, 'seed': 123},
+    'class_type': 'CLIPTextEncode',
+  },
+};
 
 WorkflowNode _node() => WorkflowNode(
-      id: '1',
-      classType: 'CLIPTextEncode',
-      key: 'text',
-      alias: '提示词',
-      exposed: true,
-      title: 'CLIP 文本编码',
-      paramType: ParamType.text,
-      value: 'a cat',
-    );
+  id: '1',
+  classType: 'CLIPTextEncode',
+  key: 'text',
+  alias: '提示词',
+  exposed: true,
+  title: 'CLIP 文本编码',
+  paramType: ParamType.text,
+  value: 'a cat',
+);
 
 Future<SharedPreferences> _prefsWith([Map<String, Object>? values]) async {
   SharedPreferences.setMockInitialValues(values ?? {});
@@ -35,8 +35,8 @@ Future<SharedPreferences> _prefsWith([Map<String, Object>? values]) async {
 }
 
 ProviderContainer _container(SharedPreferences prefs) => ProviderContainer(
-      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-    );
+  overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+);
 
 void main() {
   group('本地工作流库', () {
@@ -45,7 +45,9 @@ void main() {
       final container = _container(prefs);
       addTearDown(container.dispose);
 
-      container.read(localWorkflowProvider.notifier).save(
+      container
+          .read(localWorkflowProvider.notifier)
+          .save(
             name: '我的写真',
             workflowJson: _workflow(),
             sourceKind: LocalWorkflowSource.importFile,
@@ -69,11 +71,14 @@ void main() {
       addTearDown(container.dispose);
 
       // 旧版本遗留：配置已按 local_abc 存好
-      await container
-          .read(workflowProvider.notifier)
-          .saveMappingConfig('local_abc', [_node()]);
+      await container.read(workflowProvider.notifier).saveMappingConfig(
+        'local_abc',
+        [_node()],
+      );
 
-      final id = container.read(localWorkflowProvider.notifier).save(
+      final id = container
+          .read(localWorkflowProvider.notifier)
+          .save(
             name: '导入的工作流',
             workflowJson: _workflow(),
             sourceKind: LocalWorkflowSource.importFile,
@@ -81,7 +86,10 @@ void main() {
           );
 
       expect(id, 'local_abc');
-      expect(container.read(workflowProvider.notifier).hasMappingConfig(id), isTrue);
+      expect(
+        container.read(workflowProvider.notifier).hasMappingConfig(id),
+        isTrue,
+      );
     });
 
     test('重名自动追加序号；覆盖同一 id 时不给自己加序号', () async {
@@ -137,14 +145,16 @@ void main() {
       final container = _container(prefs);
       addTearDown(container.dispose);
 
-      final id = container.read(localWorkflowProvider.notifier).save(
+      final id = container
+          .read(localWorkflowProvider.notifier)
+          .save(
             name: '待删除',
             workflowJson: _workflow(),
             sourceKind: LocalWorkflowSource.importFile,
           );
-      await container
-          .read(workflowProvider.notifier)
-          .saveMappingConfig(id, [_node()]);
+      await container.read(workflowProvider.notifier).saveMappingConfig(id, [
+        _node(),
+      ]);
       expect(prefs.containsKey('mapping_$id'), isTrue);
 
       container.read(localWorkflowProvider.notifier).remove(id);
@@ -215,9 +225,7 @@ void main() {
   group('节点配置的内容哈希', () {
     test('旧格式（裸数组）仍能读出节点，哈希为 null', () async {
       final prefs = await _prefsWith({
-        'mapping_old': jsonEncode([
-          _node().toJson(),
-        ]),
+        'mapping_old': jsonEncode([_node().toJson()]),
       });
       final container = _container(prefs);
       addTearDown(container.dispose);

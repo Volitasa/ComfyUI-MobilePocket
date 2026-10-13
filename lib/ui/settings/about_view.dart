@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import 'package:open_filex/open_filex.dart';
 
 import '../../models/release_info.dart';
@@ -41,7 +42,9 @@ class _AboutViewState extends ConsumerState<AboutView> {
         type: 'application/vnd.android.package-archive',
       );
       if (result.type != ResultType.done) {
-        _snack('无法唤起安装界面：${result.message}');
+        _snack(
+          AppLocalizations.of(context).installLaunchFailed(result.message),
+        );
       }
     } on UpdateException catch (e) {
       _snack(e.message);
@@ -53,12 +56,16 @@ class _AboutViewState extends ConsumerState<AboutView> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(updateProvider);
-    final busy = state.status == UpdateStatus.checking ||
+    final busy =
+        state.status == UpdateStatus.checking ||
         state.status == UpdateStatus.downloading;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('关于', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          AppLocalizations.of(context).settingsAbout,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: false,
       ),
       body: SingleChildScrollView(
@@ -73,20 +80,23 @@ class _AboutViewState extends ConsumerState<AboutView> {
                   ? null
                   : () => ref.read(updateProvider.notifier).checkForUpdate(),
               icon: const Icon(Icons.system_update_alt),
-              label: const Text('检查更新'),
+              label: Text(AppLocalizations.of(context).updateCheckButton),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 // 水平 padding 不能省：styleFrom 会覆盖默认值，
                 // 只给 vertical 会让图标与文字紧贴边缘甚至被裁切
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 16,
+                ),
               ),
             ),
             const SizedBox(height: 16),
             _buildStatus(state),
             const SizedBox(height: 24),
-            const Text(
-              '更新来源：GitHub Releases',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            Text(
+              AppLocalizations.of(context).updateSourceNote,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 4),
             SelectableText(
@@ -132,7 +142,8 @@ class _AboutViewState extends ConsumerState<AboutView> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '版本 $version（构建 $build）',
+                  AppLocalizations.of(context)
+                      .aboutVersionBuild(version, build),
                   style: const TextStyle(fontSize: 13, color: Colors.grey),
                 ),
               ],
@@ -146,17 +157,18 @@ class _AboutViewState extends ConsumerState<AboutView> {
   Widget _buildStatus(UpdateState state) {
     switch (state.status) {
       case UpdateStatus.checking:
-        return const _InfoRow(
+        return _InfoRow(
           icon: Icons.hourglass_top,
           color: Colors.grey,
-          text: '正在检查更新…',
+          text: AppLocalizations.of(context).updateChecking,
         );
 
       case UpdateStatus.upToDate:
         return _InfoRow(
           icon: Icons.check_circle_outline,
           color: AppColors.success,
-          text: '当前已是最新版本 ${state.currentVersion}',
+          text: AppLocalizations.of(context)
+              .updateUpToDate(state.currentVersion),
         );
 
       case UpdateStatus.error:
@@ -166,13 +178,14 @@ class _AboutViewState extends ConsumerState<AboutView> {
         return _InfoRow(
           icon: Icons.error_outline,
           color: AppColors.danger,
-          text: state.message ?? '检查更新失败',
+          text: state.message ?? AppLocalizations.of(context).updateCheckFailed,
           action: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextButton(
-                onPressed: () => ref.read(updateProvider.notifier).checkForUpdate(),
-                child: const Text('重试'),
+                onPressed: () =>
+                    ref.read(updateProvider.notifier).checkForUpdate(),
+                child: Text(AppLocalizations.of(context).retry),
               ),
               if (needsToken)
                 TextButton(
@@ -180,7 +193,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
                     context,
                     MaterialPageRoute(builder: (_) => const GithubTokenView()),
                   ),
-                  child: const Text('配置令牌'),
+                  child: Text(AppLocalizations.of(context).configureToken),
                 ),
             ],
           ),
@@ -194,7 +207,8 @@ class _AboutViewState extends ConsumerState<AboutView> {
           return _InfoRow(
             icon: Icons.info_outline,
             color: Colors.grey,
-            text: '发现新版本 ${release.version}，当前平台不支持应用内安装，请到 Release 页面手动下载',
+            text: AppLocalizations.of(context)
+                .updateAvailableOtherPlatform(release.version),
           );
         }
         return _buildReleaseCard(state, release);
@@ -225,7 +239,8 @@ class _AboutViewState extends ConsumerState<AboutView> {
                 Icon(Icons.new_releases_outlined, color: Colors.green.shade700),
                 const SizedBox(width: 8),
                 Text(
-                  '发现新版本 ${release.version}',
+                  AppLocalizations.of(context)
+                      .updateAvailableTitle(release.version),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -236,13 +251,19 @@ class _AboutViewState extends ConsumerState<AboutView> {
             ),
             const SizedBox(height: 6),
             Text(
-              '${release.assetName} · ${release.sizeText}',
+              '${release.assetName} · ${release.sizeText(AppLocalizations.of(context))}',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
             // GitHub 自动生成的说明含 Markdown 与裸链接，需清洗后再展示
             if (notes.text.isNotEmpty) ...[
               const SizedBox(height: 12),
-              const Text('更新说明', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              Text(
+                AppLocalizations.of(context).releaseNotesTitle,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 6),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 180),
@@ -256,7 +277,13 @@ class _AboutViewState extends ConsumerState<AboutView> {
             ] else if (notes.changelogUrl.isNotEmpty) ...[
               // 没有手写说明时，至少把「完整变更」链接给出来，而不是留空白
               const SizedBox(height: 12),
-              const Text('完整变更记录', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              Text(
+                AppLocalizations.of(context).changelogTitle,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 6),
               SelectableText(
                 notes.changelogUrl,
@@ -277,8 +304,10 @@ class _AboutViewState extends ConsumerState<AboutView> {
                   const SizedBox(height: 8),
                   Text(
                     state.progress > 0
-                        ? '下载中 ${(state.progress * 100).toStringAsFixed(0)}%'
-                        : '正在下载…',
+                        ? AppLocalizations.of(context).updateDownloadingPercent(
+                            (state.progress * 100).toStringAsFixed(0),
+                          )
+                        : AppLocalizations.of(context).updateDownloading,
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
@@ -289,10 +318,15 @@ class _AboutViewState extends ConsumerState<AboutView> {
                 child: FilledButton.icon(
                   onPressed: _downloadAndInstall,
                   icon: const Icon(Icons.download),
-                  label: const Text('下载并安装'),
+                  label: Text(
+                    AppLocalizations.of(context).updateDownloadInstall,
+                  ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
                   ),
                 ),
               ),

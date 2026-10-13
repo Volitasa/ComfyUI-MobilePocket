@@ -111,5 +111,5 @@ class ParsedWorkflowNotifier extends Notifier<List<ParsedWorkflow>> {
 
 final parsedWorkflowProvider =
     NotifierProvider<ParsedWorkflowNotifier, List<ParsedWorkflow>>(() {
-  return ParsedWorkflowNotifier();
-});
+      return ParsedWorkflowNotifier();
+    });

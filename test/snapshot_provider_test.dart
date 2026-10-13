@@ -10,22 +10,22 @@ import 'package:comfyui_mobilepocket/providers/connection_provider.dart';
 import 'package:comfyui_mobilepocket/providers/snapshot_provider.dart';
 
 Map<String, dynamic> _workflow([String text = 'a cat']) => {
-      '1': {
-        'inputs': {'text': text, 'seed': 123},
-        'class_type': 'CLIPTextEncode',
-      },
-    };
+  '1': {
+    'inputs': {'text': text, 'seed': 123},
+    'class_type': 'CLIPTextEncode',
+  },
+};
 
 WorkflowNode _node({bool exposed = true}) => WorkflowNode(
-      id: '1',
-      classType: 'CLIPTextEncode',
-      key: 'text',
-      alias: '提示词',
-      exposed: exposed,
-      title: 'CLIP 文本编码',
-      paramType: ParamType.text,
-      value: 'a cat',
-    );
+  id: '1',
+  classType: 'CLIPTextEncode',
+  key: 'text',
+  alias: '提示词',
+  exposed: exposed,
+  title: 'CLIP 文本编码',
+  paramType: ParamType.text,
+  value: 'a cat',
+);
 
 void main() {
   group('快照 provider', () {
@@ -36,7 +36,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final id = container.read(snapshotProvider.notifier).upsert(
+      final id = container
+          .read(snapshotProvider.notifier)
+          .upsert(
             workflowJson: _workflow(),
             mappingConfig: [_node()],
             sourceName: '基础文生图',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+
 import '../../providers/connection_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/snapshot_provider.dart';
@@ -32,7 +33,10 @@ class SettingsView extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.settingsTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          l.settingsTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: false,
       ),
       body: ListView(
@@ -86,7 +90,9 @@ class SettingsView extends ConsumerWidget {
           _EntryTile(
             icon: Icons.key_outlined,
             title: l.settingsToken,
-            subtitle: tokenConfigured ? l.settingsTokenSet : l.settingsTokenUnset,
+            subtitle: tokenConfigured
+                ? l.settingsTokenSet
+                : l.settingsTokenUnset,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const GithubTokenView()),
@@ -110,10 +116,10 @@ class SettingsView extends ConsumerWidget {
 
   /// 设置项上显示的当前语言；未选择即跟随系统
   String _languageLabel(AppLocalizations l, String? code) => switch (code) {
-        'zh' => l.settingsLanguageZh,
-        'en' => l.settingsLanguageEn,
-        _ => l.settingsLanguageFollow,
-      };
+    'zh' => l.settingsLanguageZh,
+    'en' => l.settingsLanguageEn,
+    _ => l.settingsLanguageFollow,
+  };
 
   Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
     final l = AppLocalizations.of(context);
@@ -192,7 +198,10 @@ class _EntryTile extends StatelessWidget {
     return ListTile(
       leading: Icon(icon, color: Colors.black87),
       title: Text(title),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      ),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: onTap,
     );

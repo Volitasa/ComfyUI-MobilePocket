@@ -7,11 +7,17 @@ void main() {
     // 本地标签由调用方按当前语言传入，函数本身不产出任何文案
     test('本地工作流显示为传入的本地标签', () {
       expect(workflowDisplayName('local_abc123', localLabel: '本地导入'), '本地导入');
-      expect(workflowDisplayName('local_abc123', localLabel: 'Local import'), 'Local import');
+      expect(
+        workflowDisplayName('local_abc123', localLabel: 'Local import'),
+        'Local import',
+      );
     });
 
     test('线上工作流去掉 _api.json 后缀', () {
-      expect(workflowDisplayName('txt2img_api.json', localLabel: '本地导入'), 'txt2img');
+      expect(
+        workflowDisplayName('txt2img_api.json', localLabel: '本地导入'),
+        'txt2img',
+      );
     });
 
     test('无后缀名原样返回', () {
@@ -39,7 +45,10 @@ void main() {
     test('prompt 包装格式被解包为扁平节点 Map', () {
       final wrapped = {
         'prompt': {
-          '3': {'class_type': 'KSampler', 'inputs': {'seed': 1}},
+          '3': {
+            'class_type': 'KSampler',
+            'inputs': {'seed': 1},
+          },
         },
         'extra_data': {'foo': 'bar'},
       };
@@ -50,7 +59,10 @@ void main() {
 
     test('顶层即为节点结构时原样返回', () {
       final flat = {
-        '3': {'class_type': 'KSampler', 'inputs': {'seed': 1}},
+        '3': {
+          'class_type': 'KSampler',
+          'inputs': {'seed': 1},
+        },
       };
       expect(normalizeWorkflowJson(flat), flat);
     });
@@ -92,9 +104,12 @@ void main() {
       expect(inferParamType('model', ['4', 0]), isNull);
     });
     test('嵌套列表 → null', () {
-      expect(inferParamType('x', [
-        [1, 2]
-      ]), isNull);
+      expect(
+        inferParamType('x', [
+          [1, 2],
+        ]),
+        isNull,
+      );
     });
   });
 

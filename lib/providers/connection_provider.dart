@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -53,22 +54,25 @@ class ServerConfig {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'primary': primaryUrl,
-        'backup': backupUrl,
-      };
+    'id': id,
+    'name': name,
+    'primary': primaryUrl,
+    'backup': backupUrl,
+  };
 
   factory ServerConfig.fromJson(Map<String, dynamic> json) => ServerConfig(
-        id: json['id'],
-        // 旧数据缺失名称时留空，由界面按当前语言补默认名——
-        // 不在持久化层写死中文
-        name: (json['name'] as String?) ?? '',
-        primaryUrl: json['primary'] ?? '',
-        backupUrl: json['backup'] ?? '',
-      );
+    id: json['id'],
+    // 旧数据缺失名称时留空，由界面按当前语言补默认名——
+    // 不在持久化层写死中文
+    name: (json['name'] as String?) ?? '',
+    primaryUrl: json['primary'] ?? '',
+    backupUrl: json['backup'] ?? '',
+  );
 
-  List<String> get urls => [primaryUrl, if (backupUrl.trim().isNotEmpty) backupUrl];
+  List<String> get urls => [
+    primaryUrl,
+    if (backupUrl.trim().isNotEmpty) backupUrl,
+  ];
 }
 
 /// 状态实体
@@ -123,7 +127,8 @@ class ConnectionNotifier extends Notifier<ConfigState> {
     _prefs = ref.watch(sharedPreferencesProvider);
     final servers = _loadServers();
     String? activeId = _prefs.getString('comfy_active_server');
-    if (servers.isNotEmpty && (activeId == null || !servers.any((s) => s.id == activeId))) {
+    if (servers.isNotEmpty &&
+        (activeId == null || !servers.any((s) => s.id == activeId))) {
       activeId = servers.first.id;
     }
     final activeUrl = _prefs.getString('comfyUrl') ?? 'http://127.0.0.1:8190';
@@ -171,10 +176,14 @@ class ConnectionNotifier extends Notifier<ConfigState> {
   }
 
   void _saveServers(List<ServerConfig> servers) {
-    _prefs.setString('comfy_servers', jsonEncode(servers.map((e) => e.toJson()).toList()));
+    _prefs.setString(
+      'comfy_servers',
+      jsonEncode(servers.map((e) => e.toJson()).toList()),
+    );
   }
 
-  String _newId() => 'srv_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
+  String _newId() =>
+      'srv_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
 
   String _cleanUrl(String url) {
     final t = url.trim();
@@ -187,7 +196,7 @@ class ConnectionNotifier extends Notifier<ConfigState> {
       id: _newId(),
       name: trimmed.isEmpty
           ? l10nFor(ref.read(localeProvider))
-              .serverDefaultNameWithIndex(state.servers.length + 1)
+                .serverDefaultNameWithIndex(state.servers.length + 1)
           : trimmed,
       primaryUrl: _cleanUrl(primary),
       backupUrl: _cleanUrl(backup),
@@ -201,7 +210,12 @@ class ConnectionNotifier extends Notifier<ConfigState> {
     }
   }
 
-  Future<void> updateServer(String id, String name, String primary, String backup) async {
+  Future<void> updateServer(
+    String id,
+    String name,
+    String primary,
+    String backup,
+  ) async {
     final servers = state.servers.map((s) {
       if (s.id != id) return s;
       return ServerConfig(
@@ -248,8 +262,9 @@ class ConnectionNotifier extends Notifier<ConfigState> {
       final clean = _cleanUrl(url);
       if (clean.isEmpty) continue;
       try {
-        final response =
-            await http.get(Uri.parse('$clean/system_stats')).timeout(const Duration(seconds: 4));
+        final response = await http
+            .get(Uri.parse('$clean/system_stats'))
+            .timeout(const Duration(seconds: 4));
         if (response.statusCode == 200) return clean;
       } catch (_) {
         // 尝试下一个地址
@@ -266,7 +281,11 @@ class ConnectionNotifier extends Notifier<ConfigState> {
     }
     if (server == null) return;
 
-    state = state.copyWith(isTesting: true, isConnected: false, clearTestResult: true);
+    state = state.copyWith(
+      isTesting: true,
+      isConnected: false,
+      clearTestResult: true,
+    );
 
     final url = await _probe(server);
     if (url == null) {
@@ -302,7 +321,12 @@ class ConnectionNotifier extends Notifier<ConfigState> {
 
   // 编辑对话框内的双地址测试（不改变启用状态）
   Future<ConnectionTestResult> testUrls(String primary, String backup) async {
-    final tmp = ServerConfig(id: 'tmp', name: 'tmp', primaryUrl: primary, backupUrl: backup);
+    final tmp = ServerConfig(
+      id: 'tmp',
+      name: 'tmp',
+      primaryUrl: primary,
+      backupUrl: backup,
+    );
     final url = await _probe(tmp);
     if (url == null) {
       return const ConnectionTestResult(
@@ -326,8 +350,9 @@ class ConnectionNotifier extends Notifier<ConfigState> {
     final lastUrl = _prefs.getString('comfyUrl');
     if (lastUrl != null && lastUrl.isNotEmpty) {
       try {
-        final response =
-            await http.get(Uri.parse('$lastUrl/system_stats')).timeout(const Duration(seconds: 5));
+        final response = await http
+            .get(Uri.parse('$lastUrl/system_stats'))
+            .timeout(const Duration(seconds: 5));
         if (response.statusCode == 200) {
           state = state.copyWith(isConnected: true);
           return;
@@ -340,6 +365,8 @@ class ConnectionNotifier extends Notifier<ConfigState> {
   }
 }
 
-final connectionProvider = NotifierProvider<ConnectionNotifier, ConfigState>(() {
-  return ConnectionNotifier();
-});
+final connectionProvider = NotifierProvider<ConnectionNotifier, ConfigState>(
+  () {
+    return ConnectionNotifier();
+  },
+);

@@ -12,9 +12,9 @@ enum TaskStatus {
 
   /// 终结态：任务已经结束，不会再有新的输出或状态变化。
   bool get isTerminal => switch (this) {
-        TaskStatus.completed || TaskStatus.failed || TaskStatus.interrupted => true,
-        TaskStatus.queued || TaskStatus.running => false,
-      };
+    TaskStatus.completed || TaskStatus.failed || TaskStatus.interrupted => true,
+    TaskStatus.queued || TaskStatus.running => false,
+  };
 
   /// 非终结态：仍可能收到服务端推送。
   bool get isPending => !isTerminal;
@@ -71,12 +71,12 @@ TaskStatus taskStatusFromStorage(Object? raw) {
 
 /// 旧记录的 phase 丢失了（只存过整句中文），按状态推断一个最接近的。
 TaskNodePhase taskPhaseFromStatus(TaskStatus status) => switch (status) {
-      TaskStatus.completed => TaskNodePhase.done,
-      TaskStatus.failed => TaskNodePhase.error,
-      TaskStatus.interrupted => TaskNodePhase.interrupted,
-      TaskStatus.running => TaskNodePhase.running,
-      TaskStatus.queued => TaskNodePhase.waiting,
-    };
+  TaskStatus.completed => TaskNodePhase.done,
+  TaskStatus.failed => TaskNodePhase.error,
+  TaskStatus.interrupted => TaskNodePhase.interrupted,
+  TaskStatus.running => TaskNodePhase.running,
+  TaskStatus.queued => TaskNodePhase.waiting,
+};
 
 /// 从持久化值还原阶段；缺失时退回按状态推断。
 TaskNodePhase taskPhaseFromStorage(Object? raw, TaskStatus status) {

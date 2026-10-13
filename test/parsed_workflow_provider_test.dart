@@ -16,28 +16,34 @@ Future<SharedPreferences> _prefsWith([Map<String, Object>? values]) async {
 }
 
 ProviderContainer _container(SharedPreferences prefs) => ProviderContainer(
-      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-    );
+  overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+);
 
 Map<String, dynamic> _parsedJson() => {
-      '3': {
-        'inputs': {'seed': 1},
-        'class_type': 'KSampler',
-      },
-    };
+  '3': {
+    'inputs': {'seed': 1},
+    'class_type': 'KSampler',
+  },
+};
 
 void main() {
   group('解析缓存 id', () {
     test('同一服务器同一文件永远推导出同一条', () {
-      expect(ParsedWorkflowNotifier.buildId('srv1', 'a.json'),
-          ParsedWorkflowNotifier.buildId('srv1', 'a.json'));
+      expect(
+        ParsedWorkflowNotifier.buildId('srv1', 'a.json'),
+        ParsedWorkflowNotifier.buildId('srv1', 'a.json'),
+      );
     });
 
     test('不同文件或不同服务器互不冲突', () {
-      expect(ParsedWorkflowNotifier.buildId('srv1', 'a.json'),
-          isNot(ParsedWorkflowNotifier.buildId('srv1', 'b.json')));
-      expect(ParsedWorkflowNotifier.buildId('srv1', 'a.json'),
-          isNot(ParsedWorkflowNotifier.buildId('srv2', 'a.json')));
+      expect(
+        ParsedWorkflowNotifier.buildId('srv1', 'a.json'),
+        isNot(ParsedWorkflowNotifier.buildId('srv1', 'b.json')),
+      );
+      expect(
+        ParsedWorkflowNotifier.buildId('srv1', 'a.json'),
+        isNot(ParsedWorkflowNotifier.buildId('srv2', 'a.json')),
+      );
     });
   });
 
@@ -46,7 +52,9 @@ void main() {
     final container = _container(prefs);
     addTearDown(container.dispose);
 
-    final id = container.read(parsedWorkflowProvider.notifier).upsert(
+    final id = container
+        .read(parsedWorkflowProvider.notifier)
+        .upsert(
           serverId: 'srv1',
           filename: '基础文生图.json',
           name: '基础文生图',
@@ -78,7 +86,9 @@ void main() {
     final first = _container(prefs);
     addTearDown(first.dispose);
 
-    first.read(parsedWorkflowProvider.notifier).upsert(
+    first
+        .read(parsedWorkflowProvider.notifier)
+        .upsert(
           serverId: 'srv1',
           filename: 'a.json',
           name: 'a',
@@ -104,7 +114,7 @@ void main() {
       'parsedAt': 0,
       'workflowJson': {
         'nodes': [
-          {'id': 3, 'type': 'KSampler'}
+          {'id': 3, 'type': 'KSampler'},
         ],
         'links': <Object>[],
       },
@@ -227,7 +237,9 @@ void main() {
     final container = _container(prefs);
     addTearDown(container.dispose);
 
-    final id = container.read(parsedWorkflowProvider.notifier).upsert(
+    final id = container
+        .read(parsedWorkflowProvider.notifier)
+        .upsert(
           serverId: 'srv1',
           filename: '基础文生图.json',
           name: '基础文生图',
@@ -249,7 +261,9 @@ void main() {
     final before = '{"nodes":[]}';
     final after = '{"nodes":[{"id":1}]}';
 
-    expect(WorkflowApiConverter.sourceHashOf(before),
-        isNot(WorkflowApiConverter.sourceHashOf(after)));
+    expect(
+      WorkflowApiConverter.sourceHashOf(before),
+      isNot(WorkflowApiConverter.sourceHashOf(after)),
+    );
   });
 }

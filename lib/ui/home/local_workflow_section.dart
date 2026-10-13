@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../../models/local_workflow.dart';
@@ -35,15 +36,16 @@ class LocalWorkflowSection extends ConsumerWidget {
       children: [
         Text(
           workflows.isEmpty
-              ? '本地库为空'
-              : '本地库 ${workflows.length} 项 · ${formatBytes(totalBytes)}',
+              ? AppLocalizations.of(context).localEmpty
+              : AppLocalizations.of(context)
+                    .localSummary(workflows.length, formatBytes(totalBytes)),
           style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 14),
         OutlinedButton.icon(
           onPressed: () => _importLocalJson(context, ref),
           icon: const Icon(Icons.upload_file),
-          label: const Text('导入工作流 JSON'),
+          label: Text(AppLocalizations.of(context).localImportButton),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
             side: const BorderSide(color: Colors.grey),
@@ -51,13 +53,11 @@ class LocalWorkflowSection extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
-            '提示：这里导入的是 ComfyUI 的 API 格式 JSON（_api.json），'
-            '即以节点 ID 为键、含 class_type 与 inputs 的结构；'
-            '普通 UI 界面保存的 workflow JSON 不适用。',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            AppLocalizations.of(context).localImportNote,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ),
         const SizedBox(height: 20),
@@ -66,16 +66,20 @@ class LocalWorkflowSection extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Column(
               children: [
-                Icon(Icons.folder_off_outlined, size: 48, color: Colors.grey.shade400),
+                Icon(
+                  Icons.folder_off_outlined,
+                  size: 48,
+                  color: Colors.grey.shade400,
+                ),
                 const SizedBox(height: 12),
-                const Text(
-                  '还没有本地工作流',
-                  style: TextStyle(color: Colors.black54, fontSize: 16),
+                Text(
+                  AppLocalizations.of(context).localNoWorkflows,
+                  style: const TextStyle(color: Colors.black54, fontSize: 16),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '导入或另存的工作流会保存在这里',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                Text(
+                  AppLocalizations.of(context).localNoWorkflowsHint,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
             ),
@@ -83,19 +87,24 @@ class LocalWorkflowSection extends ConsumerWidget {
         else
           ...workflows.map((w) => _buildCard(context, ref, w)),
         if (workflows.isNotEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 12, left: 4, right: 4),
+          Padding(
+            padding: const EdgeInsets.only(top: 12, left: 4, right: 4),
             child: Text(
-              '来自你自己的文件，与服务器无关，可重命名或删除。删除后无法恢复。',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              AppLocalizations.of(context).localFooterNote,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildCard(BuildContext context, WidgetRef ref, LocalWorkflow workflow) {
-    final exposedCount = ref
+  Widget _buildCard(
+    BuildContext context,
+    WidgetRef ref,
+    LocalWorkflow workflow,
+  ) {
+    final exposedCount =
+        ref
             .read(workflowProvider.notifier)
             .getMappingConfig(workflow.id)
             ?.where((n) => n.exposed)
@@ -130,9 +139,9 @@ class LocalWorkflowSection extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${workflow.sourceKind.label} · ${_formatDate(workflow.createdAt)}'
+                      '${workflow.sourceKind.label(AppLocalizations.of(context))} · ${_formatDate(workflow.createdAt)}'
                       ' · ${formatBytes(workflow.sizeBytes)}'
-                      ' · ${exposedCount == 0 ? '未配置' : '$exposedCount 项参数'}',
+                      ' · ${exposedCount == 0 ? AppLocalizations.of(context).wfStatusUnconfigured : AppLocalizations.of(context).configParamCount(exposedCount)}',
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],
@@ -140,12 +149,21 @@ class LocalWorkflowSection extends ConsumerWidget {
               ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: Colors.grey),
-                tooltip: '更多操作',
+                tooltip: AppLocalizations.of(context).menuMore,
                 onSelected: (v) => _onMenuSelected(context, ref, workflow, v),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'rename', child: Text('重命名')),
-                  PopupMenuItem(value: 'config', child: Text('重新配置节点')),
-                  PopupMenuItem(value: 'delete', child: Text('删除')),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'rename',
+                    child: Text(AppLocalizations.of(context).menuRename),
+                  ),
+                  PopupMenuItem(
+                    value: 'config',
+                    child: Text(AppLocalizations.of(context).wfMenuReconfig),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text(AppLocalizations.of(context).delete),
+                  ),
                 ],
               ),
             ],
@@ -187,19 +205,16 @@ class LocalWorkflowSection extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除本地工作流'),
-        content: Text(
-          '确定删除「${workflow.name}」吗？\n\n'
-          '它的节点配置会一并清除，删除后无法恢复。已生成的记录不受影响。',
-        ),
+        title: Text(AppLocalizations.of(ctx).localDeleteTitle),
+        content: Text(AppLocalizations.of(ctx).localDeleteBody(workflow.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(ctx).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删除'),
+            child: Text(AppLocalizations.of(ctx).delete),
           ),
         ],
       ),
@@ -207,8 +222,9 @@ class LocalWorkflowSection extends ConsumerWidget {
     if (confirmed == true) {
       ref.read(localWorkflowProvider.notifier).remove(workflow.id);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('已删除')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).localDeleted)),
+        );
       }
     }
   }
@@ -219,8 +235,9 @@ class LocalWorkflowSection extends ConsumerWidget {
     WidgetRef ref,
     LocalWorkflow workflow,
   ) async {
-    final hasConfig =
-        ref.read(workflowProvider.notifier).hasMappingConfig(workflow.id);
+    final hasConfig = ref
+        .read(workflowProvider.notifier)
+        .hasMappingConfig(workflow.id);
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -248,7 +265,9 @@ class LocalWorkflowSection extends ConsumerWidget {
       final localId = 'local_${stableHash(jsonString).toRadixString(36)}';
       final fileName = result.files.single.name.replaceAll('_api.json', '');
 
-      ref.read(localWorkflowProvider.notifier).save(
+      ref
+          .read(localWorkflowProvider.notifier)
+          .save(
             name: fileName.replaceAll(RegExp(r'\.json$'), ''),
             workflowJson: data,
             sourceKind: LocalWorkflowSource.importFile,
@@ -259,15 +278,16 @@ class LocalWorkflowSection extends ConsumerWidget {
       if (context.mounted) {
         await Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => WorkflowView(workflowId: localId),
-          ),
+          MaterialPageRoute(builder: (_) => WorkflowView(workflowId: localId)),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('JSON 文件解析失败')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).localJsonParseFailed),
+          ),
+        );
       }
     }
   }
@@ -300,27 +320,26 @@ class _RenameDialogState extends State<_RenameDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('重命名'),
+      title: Text(AppLocalizations.of(context).menuRename),
       content: TextField(
         controller: _controller,
         autofocus: true,
-        decoration: const InputDecoration(
-          labelText: '名称',
-          border: OutlineInputBorder(),
+        decoration: InputDecoration(
+          labelText: AppLocalizations.of(context).nameLabel,
+          border: const OutlineInputBorder(),
         ),
         onSubmitted: (v) => Navigator.pop(context, v),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
+          child: Text(AppLocalizations.of(context).cancel),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, _controller.text),
-          child: const Text('保存'),
+          child: Text(AppLocalizations.of(context).save),
         ),
       ],
     );
   }
 }
-

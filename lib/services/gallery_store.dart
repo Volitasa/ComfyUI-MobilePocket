@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:path_provider/path_provider.dart';
 
 /// 本地画廊存储服务：把生成的图片下载到 App 沙盒，保留原始文件
@@ -47,15 +48,22 @@ class GalleryStore {
   Future<List<File>> listImages() async {
     final dir = await _ensureDir();
     final files = await dir.list().where((e) => e is File).toList();
-    final imgs = files.cast<File>()
-        .where((f) => _isImage(f.path))
-        .toList();
+    final imgs = files.cast<File>().where((f) => _isImage(f.path)).toList();
     imgs.sort((a, b) => b.path.compareTo(a.path)); // 文件名含时间戳，倒序即最新在前
     return imgs;
   }
 
   bool _isImage(String path) {
     final ext = path.split('.').last.toLowerCase();
-    return ['png', 'jpg', 'jpeg', 'webp', 'gif', 'mp4', 'webm', 'mov'].contains(ext);
+    return [
+      'png',
+      'jpg',
+      'jpeg',
+      'webp',
+      'gif',
+      'mp4',
+      'webm',
+      'mov',
+    ].contains(ext);
   }
 }

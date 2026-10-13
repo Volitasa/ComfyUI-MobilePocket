@@ -1,7 +1,9 @@
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/workflow_node.dart';
 import '../services/workflow_api_converter.dart';
 import '../utils.dart';
@@ -134,14 +136,18 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
     state = state.copyWith(isLoading: true);
     try {
       final uri = Uri.parse('${config.comfyUrl}/userdata?dir=workflows');
-      final response =
-          await http.get(uri).timeout(const Duration(seconds: 15));
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
-        List<dynamic> filesRaw = decoded is List ? decoded : (decoded['files'] ?? []);
+        List<dynamic> filesRaw = decoded is List
+            ? decoded
+            : (decoded['files'] ?? []);
 
-        final files = filesRaw.map((e) => e.toString()).where(isWorkflowFile).toList();
+        final files = filesRaw
+            .map((e) => e.toString())
+            .where(isWorkflowFile)
+            .toList();
         final apiFiles = files.where(isApiWorkflowFile).toList();
         final uiFiles = files.where(isUiWorkflowFile).toList();
 
@@ -171,34 +177,36 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
     final results = <String, WorkflowMappingStatus>{};
 
     try {
-      await Future.wait(files.map((filename) async {
-        if (!hasMappingConfig(filename)) {
-          results[filename] = WorkflowMappingStatus.unconfigured;
-          return;
-        }
-
-        final data = await _fetchContent(filename);
-        if (data == null) {
-          results[filename] = WorkflowMappingStatus.configured;
-          return;
-        }
-
-        final hash = contentHashOf(data);
-        final savedHash = getMappingContentHash(filename);
-        if (savedHash == null) {
-          // 旧配置没有哈希记录，借这次拉取补上，之后就能正常检测
-          final nodes = getMappingConfig(filename);
-          if (nodes != null) {
-            await saveMappingConfig(filename, nodes, contentHash: hash);
+      await Future.wait(
+        files.map((filename) async {
+          if (!hasMappingConfig(filename)) {
+            results[filename] = WorkflowMappingStatus.unconfigured;
+            return;
           }
-          results[filename] = WorkflowMappingStatus.configured;
-          return;
-        }
 
-        results[filename] = hash == savedHash
-            ? WorkflowMappingStatus.configured
-            : WorkflowMappingStatus.stale;
-      }));
+          final data = await _fetchContent(filename);
+          if (data == null) {
+            results[filename] = WorkflowMappingStatus.configured;
+            return;
+          }
+
+          final hash = contentHashOf(data);
+          final savedHash = getMappingContentHash(filename);
+          if (savedHash == null) {
+            // 旧配置没有哈希记录，借这次拉取补上，之后就能正常检测
+            final nodes = getMappingConfig(filename);
+            if (nodes != null) {
+              await saveMappingConfig(filename, nodes, contentHash: hash);
+            }
+            results[filename] = WorkflowMappingStatus.configured;
+            return;
+          }
+
+          results[filename] = hash == savedHash
+              ? WorkflowMappingStatus.configured
+              : WorkflowMappingStatus.stale;
+        }),
+      );
     } finally {
       state = state.copyWith(statuses: results, isChecking: false);
     }
@@ -218,26 +226,29 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
     final results = <String, UiWorkflowStatus>{};
 
     try {
-      await Future.wait(files.map((filename) async {
-        final cached =
-            ref.read(parsedWorkflowProvider.notifier).byServerFile(serverId, filename);
-        if (cached == null) {
-          results[filename] = UiWorkflowStatus.unparsed;
-          return;
-        }
+      await Future.wait(
+        files.map((filename) async {
+          final cached = ref
+              .read(parsedWorkflowProvider.notifier)
+              .byServerFile(serverId, filename);
+          if (cached == null) {
+            results[filename] = UiWorkflowStatus.unparsed;
+            return;
+          }
 
-        final text = await fetchWorkflowRawText(filename);
-        if (text == null) {
-          // 拉取失败不误报成「有更新」
-          results[filename] = UiWorkflowStatus.parsed;
-          return;
-        }
+          final text = await fetchWorkflowRawText(filename);
+          if (text == null) {
+            // 拉取失败不误报成「有更新」
+            results[filename] = UiWorkflowStatus.parsed;
+            return;
+          }
 
-        results[filename] =
-            WorkflowApiConverter.sourceHashOf(text) == cached.sourceHash
-                ? UiWorkflowStatus.parsed
-                : UiWorkflowStatus.stale;
-      }));
+          results[filename] =
+              WorkflowApiConverter.sourceHashOf(text) == cached.sourceHash
+              ? UiWorkflowStatus.parsed
+              : UiWorkflowStatus.stale;
+        }),
+      );
     } finally {
       state = state.copyWith(uiStatuses: results, isChecking: false);
     }
@@ -250,8 +261,7 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
     try {
       final fileParam = Uri.encodeComponent('workflows/$filename');
       final uri = Uri.parse('${config.comfyUrl}/userdata/$fileParam');
-      final response =
-          await http.get(uri).timeout(const Duration(seconds: 15));
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) return response.body;
     } catch (e) {
       // 生产环境可接入日志
@@ -280,8 +290,7 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
     try {
       final fileParam = Uri.encodeComponent('workflows/$filename');
       final uri = Uri.parse('${config.comfyUrl}/userdata/$fileParam');
-      final response =
-          await http.get(uri).timeout(const Duration(seconds: 15));
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = Map<String, dynamic>.from(jsonDecode(response.body));
@@ -295,7 +304,10 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
 
   // 直接写入工作流数据并标注归属（本地资产、解析缓存、快照都走这里）。
   // 同样做归一化，保证与线上工作流结构一致。
-  void setWorkflowData(Map<String, dynamic> data, {required String workflowId}) {
+  void setWorkflowData(
+    Map<String, dynamic> data, {
+    required String workflowId,
+  }) {
     state = state.copyWith(
       currentWorkflowData: normalizeWorkflowJson(data),
       currentWorkflowId: workflowId,
@@ -352,7 +364,11 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
       if (decoded is Map) return Map<String, dynamic>.from(decoded);
       // 旧格式：裸节点数组，包一层以便统一读取
       if (decoded is List) {
-        return <String, dynamic>{'version': 0, 'contentHash': null, 'nodes': decoded};
+        return <String, dynamic>{
+          'version': 0,
+          'contentHash': null,
+          'nodes': decoded,
+        };
       }
     } catch (_) {
       return null;

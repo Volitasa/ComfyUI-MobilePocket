@@ -49,9 +49,7 @@ void main() {
     });
 
     test('markdown 链接只保留可读文字', () {
-      final n = parseReleaseNotes(
-        '详见 [更新说明](https://example.com/notes) 一节',
-      );
+      final n = parseReleaseNotes('详见 [更新说明](https://example.com/notes) 一节');
 
       expect(n.text, '详见 更新说明 一节');
     });

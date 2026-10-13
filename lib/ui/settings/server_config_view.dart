@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+
 import '../../providers/connection_provider.dart';
 import '../../providers/parsed_workflow_provider.dart';
 
 /// 连接探测结果 → 展示文案。结果本身只描述“发生了什么”，
 /// 这里才按当前语言拼出句子（颜色也由 ok 决定，不再靠文案里的字眼判断）。
-String testResultText(AppLocalizations l, ConnectionTestResult r) => switch (r.kind) {
+String testResultText(AppLocalizations l, ConnectionTestResult r) =>
+    switch (r.kind) {
       ConnectionTestKind.activatedPrimary => l.serverActivatedPrimary(r.name),
       ConnectionTestKind.activatedBackup => l.serverActivatedBackup(r.name),
       ConnectionTestKind.activateFailed => l.serverActivateFailed(r.name),
@@ -35,7 +37,10 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.serverTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          l.serverTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: false,
       ),
       body: config.servers.isEmpty
@@ -69,7 +74,9 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                 ...config.servers.map((s) => _buildServerCard(config, s, l)),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
-                  onPressed: config.isTesting ? null : () => _showServerDialog(),
+                  onPressed: config.isTesting
+                      ? null
+                      : () => _showServerDialog(),
                   icon: const Icon(Icons.add),
                   label: Text(l.serverAdd),
                   style: OutlinedButton.styleFrom(
@@ -106,7 +113,10 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
   }
 
   Widget _buildServerCard(
-      ConfigState config, ServerConfig server, AppLocalizations l) {
+    ConfigState config,
+    ServerConfig server,
+    AppLocalizations l,
+  ) {
     final isActive = config.activeServerId == server.id;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -122,9 +132,15 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         // 单选指示：同时只能启用一个连接（点击卡片主体或圆点启用）
         leading: config.isTesting && isActive
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
             : Icon(
-                isActive ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                isActive
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
                 color: isActive ? Colors.green : Colors.grey,
               ),
         title: Row(
@@ -132,7 +148,10 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
             Expanded(
               child: Text(
                 serverDisplayName(l, server.name),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -140,14 +159,18 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: config.isConnected ? Colors.green.shade50 : Colors.orange.shade50,
+                  color: config.isConnected
+                      ? Colors.green.shade50
+                      : Colors.orange.shade50,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   config.isConnected ? l.serverConnected : l.serverActivated,
                   style: TextStyle(
                     fontSize: 10,
-                    color: config.isConnected ? Colors.green.shade700 : Colors.orange.shade800,
+                    color: config.isConnected
+                        ? Colors.green.shade700
+                        : Colors.orange.shade800,
                   ),
                 ),
               ),
@@ -175,7 +198,9 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
             ? null
             : () {
                 if (!isActive) {
-                  ref.read(connectionProvider.notifier).activateServer(server.id);
+                  ref
+                      .read(connectionProvider.notifier)
+                      .activateServer(server.id);
                 }
               },
         trailing: Row(
@@ -187,7 +212,11 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
               onPressed: () => _showServerDialog(existing: server),
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+              icon: const Icon(
+                Icons.delete_outline,
+                size: 20,
+                color: Colors.redAccent,
+              ),
               tooltip: l.delete,
               onPressed: () => _confirmDelete(server),
             ),
@@ -212,7 +241,12 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
     if (existing == null) {
       await notifier.addServer(result.name, result.primary, result.backup);
     } else {
-      await notifier.updateServer(existing.id, result.name, result.primary, result.backup);
+      await notifier.updateServer(
+        existing.id,
+        result.name,
+        result.primary,
+        result.backup,
+      );
     }
   }
 
@@ -224,7 +258,10 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
         title: Text(l.serverDeleteTitle),
         content: Text(l.serverDeleteConfirm(serverDisplayName(l, server.name))),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.cancel),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
@@ -270,7 +307,9 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.existing?.name ?? '');
-    _primaryCtrl = TextEditingController(text: widget.existing?.primaryUrl ?? '');
+    _primaryCtrl = TextEditingController(
+      text: widget.existing?.primaryUrl ?? '',
+    );
     _backupCtrl = TextEditingController(text: widget.existing?.backupUrl ?? '');
   }
 
@@ -285,10 +324,12 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
 
   Future<void> _test() async {
     if (_primaryCtrl.text.trim().isEmpty) {
-      setState(() => _testResult = const ConnectionTestResult(
-            ok: false,
-            kind: ConnectionTestKind.emptyPrimary,
-          ));
+      setState(
+        () => _testResult = const ConnectionTestResult(
+          ok: false,
+          kind: ConnectionTestKind.emptyPrimary,
+        ),
+      );
       return;
     }
     setState(() {
@@ -351,7 +392,9 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
                 testResultText(l, _testResult!),
                 style: TextStyle(
                   fontSize: 12,
-                  color: _testResult!.ok ? Colors.green.shade700 : Colors.red.shade700,
+                  color: _testResult!.ok
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
                 ),
               ),
             ],
@@ -359,7 +402,11 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
             OutlinedButton.icon(
               onPressed: _testing ? null : _test,
               icon: _testing
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.wifi_find, size: 18),
               label: Text(l.serverTest),
             ),
@@ -377,7 +424,11 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
             if (_primaryCtrl.text.trim().isEmpty) return;
             Navigator.pop(
               context,
-              _ServerFormResult(_nameCtrl.text, _primaryCtrl.text, _backupCtrl.text),
+              _ServerFormResult(
+                _nameCtrl.text,
+                _primaryCtrl.text,
+                _backupCtrl.text,
+              ),
             );
           },
           child: Text(l.save),

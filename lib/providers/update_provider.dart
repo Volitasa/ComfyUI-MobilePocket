@@ -4,16 +4,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../models/release_info.dart';
 import '../services/update_service.dart';
 import 'github_token_provider.dart';
+import 'locale_provider.dart';
 
 /// 更新检查的状态：仅手动触发，没有自动检查。
-enum UpdateStatus {
-  idle,
-  checking,
-  upToDate,
-  available,
-  downloading,
-  error,
-}
+enum UpdateStatus { idle, checking, upToDate, available, downloading, error }
 
 class UpdateState {
   final UpdateStatus status;
@@ -84,10 +78,13 @@ class UpdateNotifier extends Notifier<UpdateState> {
 
     try {
       // 私有仓库需要令牌；未配置时按匿名请求走（仅公开仓库可用）
-      final release = await UpdateService.instance
-          .fetchLatestRelease(token: ref.read(githubTokenProvider));
+      final release = await UpdateService.instance.fetchLatestRelease(
+        token: ref.read(githubTokenProvider),
+        l10n: l10nFor(ref.read(localeProvider)),
+      );
       final current = state.currentVersion;
-      final hasUpdate = current.isEmpty ||
+      final hasUpdate =
+          current.isEmpty ||
           UpdateService.compareVersion(release.version, current) > 0;
 
       state = state.copyWith(
@@ -99,7 +96,7 @@ class UpdateNotifier extends Notifier<UpdateState> {
     } catch (_) {
       state = state.copyWith(
         status: UpdateStatus.error,
-        message: '检查更新失败，请稍后重试',
+        message: l10nFor(ref.read(localeProvider)).updateCheckFailedRetry,
       );
     }
   }
@@ -108,7 +105,9 @@ class UpdateNotifier extends Notifier<UpdateState> {
   /// 下载本身不负责安装，交由调用方唤起系统安装界面。
   Future<String> downloadUpdate() async {
     final release = state.release;
-    if (release == null) throw UpdateException('没有待下载的版本');
+    if (release == null) {
+      throw UpdateException(l10nFor(ref.read(localeProvider)).updateNoPending);
+    }
 
     state = state.copyWith(
       status: UpdateStatus.downloading,
@@ -120,6 +119,7 @@ class UpdateNotifier extends Notifier<UpdateState> {
       final path = await UpdateService.instance.downloadApk(
         release,
         token: ref.read(githubTokenProvider),
+        l10n: l10nFor(ref.read(localeProvider)),
         onProgress: (p) {
           state = state.copyWith(progress: p);
         },
@@ -132,7 +132,7 @@ class UpdateNotifier extends Notifier<UpdateState> {
     } catch (_) {
       state = state.copyWith(
         status: UpdateStatus.error,
-        message: '下载失败，请稍后重试',
+        message: l10nFor(ref.read(localeProvider)).updateDownloadFailedRetry,
       );
       rethrow;
     }
@@ -148,5 +148,6 @@ class UpdateNotifier extends Notifier<UpdateState> {
   }
 }
 
-final updateProvider =
-    NotifierProvider<UpdateNotifier, UpdateState>(UpdateNotifier.new);
+final updateProvider = NotifierProvider<UpdateNotifier, UpdateState>(
+  UpdateNotifier.new,
+);

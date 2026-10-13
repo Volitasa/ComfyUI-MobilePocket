@@ -54,7 +54,9 @@ class WorkflowNode {
       paramType: json['paramType'] != null
           ? _paramTypeFromName(json['paramType'])
           : _paramTypeFromKey(json['key']),
-      options: (json['options'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      options:
+          (json['options'] as List?)?.map((e) => e.toString()).toList() ??
+          const [],
       value: json['value'],
     );
   }
@@ -81,14 +83,14 @@ class WorkflowNode {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'classType': classType,
-        'key': key,
-        'alias': alias,
-        'exposed': exposed,
-        'title': title,
-        'paramType': paramType.name,
-        'options': options,
-        'value': value,
-      };
+    'id': id,
+    'classType': classType,
+    'key': key,
+    'alias': alias,
+    'exposed': exposed,
+    'title': title,
+    'paramType': paramType.name,
+    'options': options,
+    'value': value,
+  };
 }
