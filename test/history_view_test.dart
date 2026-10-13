@@ -59,7 +59,8 @@ Map<String, dynamic> _task({
     'status': status,
     'progressValue': progressValue,
     'progressMax': progressMax,
-    if (nodePhase != null) 'nodePhase': nodePhase,
+    // null-aware element：为 null 时整个键不出现在 map 里
+    'nodePhase': ?nodePhase,
     'nodeDetail': nodeDetail,
     'nodeInfo': nodeInfo,
     'images': images,

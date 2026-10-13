@@ -237,11 +237,14 @@ class TaskManagerNotifier extends Notifier<TaskState> {
         final data = jsonDecode(q.body);
         if (data is Map) {
           for (final item in (data['queue_running'] as List? ?? [])) {
-            if (item is List && item.length > 1)
+            if (item is List && item.length > 1) {
               running.add(item[1].toString());
+            }
           }
           for (final item in (data['queue_pending'] as List? ?? [])) {
-            if (item is List && item.length > 1) queued.add(item[1].toString());
+            if (item is List && item.length > 1) {
+              queued.add(item[1].toString());
+            }
           }
         }
       }

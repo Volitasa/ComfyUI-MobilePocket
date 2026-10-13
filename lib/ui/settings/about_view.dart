@@ -35,6 +35,8 @@ class _AboutViewState extends ConsumerState<AboutView> {
   }
 
   Future<void> _downloadAndInstall() async {
+    // 在首个 await 前取好文案，避免异步 gap 后使用 context
+    final l = AppLocalizations.of(context);
     try {
       final path = await ref.read(updateProvider.notifier).downloadUpdate();
       final result = await OpenFilex.open(
@@ -42,9 +44,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
         type: 'application/vnd.android.package-archive',
       );
       if (result.type != ResultType.done) {
-        _snack(
-          AppLocalizations.of(context).installLaunchFailed(result.message),
-        );
+        _snack(l.installLaunchFailed(result.message));
       }
     } on UpdateException catch (e) {
       _snack(e.message);

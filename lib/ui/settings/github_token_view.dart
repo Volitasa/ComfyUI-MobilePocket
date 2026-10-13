@@ -39,18 +39,17 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
   }
 
   Future<void> _save() async {
+    // 在 await 前取好文案，避免异步 gap 后使用 context
+    final l = AppLocalizations.of(context);
     await ref.read(githubTokenProvider.notifier).save(_controller.text);
-    _snack(
-      _controller.text.trim().isEmpty
-          ? AppLocalizations.of(context).tokenCleared
-          : AppLocalizations.of(context).tokenSaved,
-    );
+    _snack(_controller.text.trim().isEmpty ? l.tokenCleared : l.tokenSaved);
   }
 
   Future<void> _clear() async {
     _controller.clear();
+    final l = AppLocalizations.of(context);
     await ref.read(githubTokenProvider.notifier).clear();
-    _snack(AppLocalizations.of(context).tokenCleared);
+    _snack(l.tokenCleared);
   }
 
   @override

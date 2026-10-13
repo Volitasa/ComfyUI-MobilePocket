@@ -195,12 +195,13 @@ class _GalleryViewerState extends State<_GalleryViewer> {
         );
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context).gallerySaveFailed),
           ),
         );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

@@ -87,11 +87,11 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
         timer.cancel();
         return;
       }
+      // 在 await 前取好文案，避免异步 gap 后使用 context
+      final l = AppLocalizations.of(context);
       if (DateTime.now().isAfter(deadline)) {
         timer.cancel();
-        _finish(
-          ParsedApiResult.fail(AppLocalizations.of(context).parseLoadTimeout),
-        );
+        _finish(ParsedApiResult.fail(l.parseLoadTimeout));
         return;
       }
 
@@ -106,8 +106,8 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
           return;
         }
         final next = readiness == FrontendReadiness.missing
-            ? AppLocalizations.of(context).parseStatusLoadingFrontend
-            : AppLocalizations.of(context).parseStatusWaitingReady;
+            ? l.parseStatusLoadingFrontend
+            : l.parseStatusWaitingReady;
         if (next != lastStatus) {
           lastStatus = next;
           if (mounted) setState(() => _status = next);
@@ -121,17 +121,15 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
   Future<void> _runConversion() async {
     if (_done || _converting) return;
     _converting = true;
+    // 在 await / 定时器回调前取好文案
+    final l = AppLocalizations.of(context);
     if (mounted) {
-      setState(
-        () => _status = AppLocalizations.of(context).parseStatusConverting,
-      );
+      setState(() => _status = l.parseStatusConverting);
     }
 
     _convertTimer?.cancel();
     _convertTimer = Timer(WorkflowApiConverter.convertTimeout, () {
-      _finish(
-        ParsedApiResult.fail(AppLocalizations.of(context).parseConvertTimeout),
-      );
+      _finish(ParsedApiResult.fail(l.parseConvertTimeout));
     });
 
     try {
@@ -139,11 +137,7 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
         WorkflowApiConverter.conversionScript(jsonEncode(widget.uiWorkflow)),
       );
     } catch (e) {
-      _finish(
-        ParsedApiResult.fail(
-          AppLocalizations.of(context).parseConvertFailed(e.toString()),
-        ),
-      );
+      _finish(ParsedApiResult.fail(l.parseConvertFailed(e.toString())));
     }
   }
 

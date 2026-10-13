@@ -315,13 +315,14 @@ class _RunViewState extends ConsumerState<RunView> {
   }
 
   Future<void> _handleExecute() async {
+    // 在首个 await 前取好文案，避免异步 gap 后使用 context
+    final l = AppLocalizations.of(context);
     final wfState = ref.read(workflowProvider);
     // 提交前再次校验：数据必须存在且归属匹配，避免提交错误的工作流
     if (!wfState.hasDataFor(_dataOwnerId)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).runDataNotReady)),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l.runDataNotReady)));
       }
       return;
     }
@@ -351,10 +352,9 @@ class _RunViewState extends ConsumerState<RunView> {
               picked['bytes'],
               picked['filename'],
             );
-            if (uploadedName == null)
-              throw Exception(
-                AppLocalizations.of(context).runImageUploadFailed,
-              );
+            if (uploadedName == null) {
+              throw Exception(l.runImageUploadFailed);
+            }
             value = uploadedName;
             // 记进快照参数，否则再次运行时会丢掉本次上传的图
             _widgetValues[paramKey] = uploadedName;
@@ -377,7 +377,7 @@ class _RunViewState extends ConsumerState<RunView> {
       final result = await taskManager.executeWorkflow(promptNodes);
 
       if (result == null) {
-        throw Exception(AppLocalizations.of(context).runSubmitFailed);
+        throw Exception(l.runSubmitFailed);
       }
       if (result.containsKey('prompt_id')) {
         // 固化快照：内容没变则复用同一份，供后续「再次运行」还原表单
@@ -417,19 +417,17 @@ class _RunViewState extends ConsumerState<RunView> {
         if (body is Map && body['node_errors'] != null) {
           final errors = body['node_errors'];
           detail = errors is Map && errors.isNotEmpty
-              ? AppLocalizations.of(context)
-                    .runErrorNodes(errors.keys.join(', '))
+              ? l.runErrorNodes(errors.keys.join(', '))
               : '';
         }
-        throw Exception(
-          AppLocalizations.of(context).runSubmitFailedHttp('$code', detail),
-        );
+        throw Exception(l.runSubmitFailedHttp('$code', detail));
       }
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(msg)));
+      }
     } finally {
       if (mounted) setState(() => _isExecuting = false);
     }
