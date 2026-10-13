@@ -8,6 +8,7 @@ import '../../providers/connection_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../providers/parsed_workflow_provider.dart';
 import '../../utils.dart';
+import 'server_config_view.dart' show serverDisplayName;
 
 /// 工作流存储：汇总所有保存在本机的工作流，显示占用并集中提供清理入口。
 ///
@@ -226,9 +227,11 @@ class WorkflowStorageView extends ConsumerWidget {
     ParsedWorkflow workflow,
     List<ServerConfig> servers,
   ) {
+    final l = AppLocalizations.of(context);
     final serverName = servers
         .where((s) => s.id == workflow.serverId)
-        .map((s) => s.name)
+        // 名字为空（用户没填）时按当前语言补默认名
+        .map((s) => serverDisplayName(l, s.name))
         .firstWhere((n) => n.isNotEmpty, orElse: () => '');
 
     return Card(

@@ -61,12 +61,6 @@ class SnapshotNotifier extends Notifier<List<WorkflowSnapshot>> {
   static String buildId(Map<String, dynamic> workflowJson) =>
       'snap_${stableHash(jsonEncode(workflowJson)).toRadixString(36)}';
 
-  String _formatStamp(int millis) {
-    final t = DateTime.fromMillisecondsSinceEpoch(millis);
-    String two(int v) => v.toString().padLeft(2, '0');
-    return '${two(t.month)}-${two(t.day)} ${two(t.hour)}:${two(t.minute)}';
-  }
-
   /// 固化一份快照。
   ///
   /// 同内容（workflowJson 相同）已存在时**复用**已有快照、沿用原创建时间，
@@ -82,11 +76,10 @@ class SnapshotNotifier extends Notifier<List<WorkflowSnapshot>> {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     if (existing != null) {
-      // 复用：保留原 createdAt，只更新配置与来源服务器
+      // 复用：保留原 createdAt，只更新配置与来源服务器。
+      // 展示名由模型按当前语言推导，这里不再构造（避免固化旧语言文案）。
       final updated = WorkflowSnapshot(
         id: id,
-        displayName:
-            '${existing.sourceName} · ${_formatStamp(existing.createdAt)}',
         sourceName: existing.sourceName,
         createdAt: existing.createdAt,
         serverId: serverId ?? existing.serverId,
@@ -99,7 +92,6 @@ class SnapshotNotifier extends Notifier<List<WorkflowSnapshot>> {
 
     final snapshot = WorkflowSnapshot(
       id: id,
-      displayName: '$sourceName · ${_formatStamp(now)}',
       sourceName: sourceName,
       createdAt: now,
       serverId: serverId,
@@ -116,7 +108,6 @@ class SnapshotNotifier extends Notifier<List<WorkflowSnapshot>> {
     if (existing == null) return;
     final updated = WorkflowSnapshot(
       id: existing.id,
-      displayName: existing.displayName,
       sourceName: existing.sourceName,
       createdAt: existing.createdAt,
       serverId: existing.serverId,

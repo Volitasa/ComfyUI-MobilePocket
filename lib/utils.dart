@@ -1,3 +1,5 @@
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+
 import 'models/workflow_entry.dart';
 import 'models/workflow_node.dart';
 
@@ -138,6 +140,58 @@ String resolveWorkflowName(
     }
   }
   return workflowDisplayName(workflowId, localLabel: localLabel);
+}
+
+/// 写入磁盘用的工作流名：取不到真实名字时返回 null（调用方存空串）。
+///
+/// 与 [resolveWorkflowName] 的区别：**绝不返回「本地导入」这类翻译文案**。
+/// 翻译一旦落盘，用户切换界面语言后磁盘里仍残留旧语言的名字——
+/// 与「任务状态只存枚举名、展示时才翻译」是同一个原则。
+String? workflowNameForStorage(List<WorkflowEntry> known, String workflowId) {
+  if (workflowId.startsWith('local_') || workflowId.startsWith('parsed_')) {
+    for (final w in known) {
+      if (w.id == workflowId && w.name.trim().isNotEmpty) return w.name;
+    }
+    // 本地库里已删除、或解析缓存已清除 → 不猜名字，留空由展示层按语言补
+    return null;
+  }
+  return workflowId.replaceAll('_api.json', '');
+}
+
+/// 展示工作流名：磁盘里为空（本地库已删 / 解析缓存已清）时，
+/// 按**当前语言**补默认名。翻译不落盘，因此这里永远不会显示旧语言的残留。
+String workflowDisplayNameOr(AppLocalizations l, String? name) =>
+    (name == null || name.trim().isEmpty) ? l.workflowLocalImport : name;
+
+/// 旧版本曾把「本地导入」/「Local import」直接写进磁盘，
+/// 读取时识别并清空，让展示层按当前语言重新补上。
+const Set<String> _staleLocalLabels = {'本地导入', 'Local import'};
+
+/// 清洗磁盘里读出的工作流名（历史 title、快照 sourceName 等）。
+/// 命中旧版本残留的翻译文案时返回 null，其余原样返回。
+String? cleanStoredWorkflowName(String? name) {
+  if (name == null) return null;
+  final trimmed = name.trim();
+  return _staleLocalLabels.contains(trimmed) ? null : name;
+}
+
+/// 清洗磁盘里读出的服务器名。
+///
+/// 旧版本在「用户没填名字」时把当时语言的默认名（「服务器」「Server」、
+/// 「服务器 2」「Server 2」…）直接写进了磁盘；这里识别并清空，
+/// 让展示层按当前语言重新补上。
+final RegExp _staleServerNameRe = RegExp(r'^(服务器|Server)( \d+)?$');
+
+String cleanStoredServerName(String? name) {
+  if (name == null) return '';
+  final trimmed = name.trim();
+  return _staleServerNameRe.hasMatch(trimmed) ? '' : name;
+}
+
+String formatSnapshotStamp(int millis) {
+  final t = DateTime.fromMillisecondsSinceEpoch(millis);
+  String two(int v) => v.toString().padLeft(2, '0');
+  return '${two(t.month)}-${two(t.day)} ${two(t.hour)}:${two(t.minute)}';
 }
 
 /// 字节数格式化（工作流占用、快照大小等共用同一口径）

@@ -11,7 +11,6 @@ import '../models/task_status.dart';
 import '../services/gallery_store.dart';
 import '../utils.dart';
 import 'connection_provider.dart';
-import 'locale_provider.dart';
 import 'local_workflow_provider.dart';
 import 'workflow_provider.dart';
 
@@ -57,16 +56,15 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     // 记住任务所属的服务器连接，切换服务器时不会把旧服务器的任务误判
     final config = ref.read(connectionProvider);
     // 本地资产用库里的名称、解析缓存用文件名，否则记录里全是「本地导入」无法分辨。
-    // Notifier 没有 context，用当前语言偏好取文案（只读一次，不建立依赖）
-    final title = resolveWorkflowName(
+    // 取不到真实名字时留空：展示层按当前语言补默认名（翻译不落盘，避免切语言残留）。
+    final title = workflowNameForStorage(
       ref.read(knownWorkflowEntriesProvider),
       workflowId,
-      localLabel: l10nFor(ref.read(localeProvider)).workflowLocalImport,
     );
     final newTask = TaskHistory(
       promptId: promptId,
       workflowId: workflowId,
-      title: title,
+      title: title ?? '',
       serverId: config.activeServerId,
       snapshotId: snapshotId,
       params: params,

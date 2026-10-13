@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations_en.dart';
+import 'package:comfyui_mobilepocket/l10n/app_localizations_zh.dart';
 import 'package:comfyui_mobilepocket/utils.dart';
+import 'package:comfyui_mobilepocket/models/local_workflow.dart';
 import 'package:comfyui_mobilepocket/models/workflow_node.dart';
 
 void main() {
@@ -171,6 +174,59 @@ void main() {
       expect(restored.paramType, ParamType.enumType);
       expect(restored.options, ['euler']);
       expect(restored.value, 'euler');
+    });
+  });
+
+  group('workflowNameForStorage（落盘名，绝不产出翻译文案）', () {
+    test('本地工作流命中库里的名字时返回真名', () {
+      final known = <LocalWorkflow>[
+        LocalWorkflow(
+          id: 'local_x1',
+          name: '我的工作流',
+          createdAt: 0,
+          sourceKind: LocalWorkflowSource.importFile,
+          workflowJson: const {},
+        ),
+      ];
+      expect(workflowNameForStorage(known, 'local_x1'), '我的工作流');
+    });
+
+    test('本地工作流已删除时不猜名字，返回 null', () {
+      expect(workflowNameForStorage(<LocalWorkflow>[], 'local_x1'), isNull);
+    });
+
+    test('线上工作流沿用文件名规则', () {
+      expect(
+        workflowNameForStorage(<LocalWorkflow>[], 'txt2img_api.json'),
+        'txt2img',
+      );
+    });
+  });
+
+  group('workflowDisplayNameOr（展示名按当前语言补默认名）', () {
+    test('磁盘里为空时按语言补', () {
+      expect(workflowDisplayNameOr(AppLocalizationsZh(), ''), '本地导入');
+      expect(workflowDisplayNameOr(AppLocalizationsEn(), ''), 'Local import');
+    });
+
+    test('有真名时原样返回', () {
+      expect(workflowDisplayNameOr(AppLocalizationsEn(), '我的工作流'), '我的工作流');
+    });
+  });
+
+  group('旧数据清洗', () {
+    test('旧版本写死的「本地导入」识别为空', () {
+      expect(cleanStoredWorkflowName('本地导入'), isNull);
+      expect(cleanStoredWorkflowName('Local import'), isNull);
+      expect(cleanStoredWorkflowName('我的工作流'), '我的工作流');
+    });
+
+    test('旧版本写死的服务器默认名识别为空', () {
+      expect(cleanStoredServerName('服务器'), '');
+      expect(cleanStoredServerName('Server'), '');
+      expect(cleanStoredServerName('服务器 2'), '');
+      expect(cleanStoredServerName('Server 3'), '');
+      expect(cleanStoredServerName('我的服务器'), '我的服务器');
     });
   });
 }

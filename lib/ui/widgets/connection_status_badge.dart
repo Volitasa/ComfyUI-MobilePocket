@@ -5,6 +5,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import '../../theme.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/ws_event_provider.dart';
+import '../settings/server_config_view.dart' show serverDisplayName;
 
 /// 连接状态指示：显示当前连接的服务器名 + 连接状态点。
 /// 首页与生成记录页顶部复用，保证两处一致性。
@@ -20,9 +21,11 @@ class ConnectionStatusBadge extends ConsumerWidget {
     final activeServer = config.servers
         .where((s) => s.id == config.activeServerId)
         .toList();
+    final l = AppLocalizations.of(context);
     final name = activeServer.isNotEmpty
-        ? activeServer.first.name
-        : AppLocalizations.of(context).notConnected;
+        // 名字为空（用户没填）时按当前语言补默认名
+        ? serverDisplayName(l, activeServer.first.name)
+        : l.notConnected;
     final connected = config.isConnected && wsState.isConnected;
     final color = connected ? AppColors.success : AppColors.danger;
 

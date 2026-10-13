@@ -8,7 +8,6 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
-import '../../providers/locale_provider.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../providers/task_manager.dart';
@@ -386,12 +385,13 @@ class _RunViewState extends ConsumerState<RunView> {
             .upsert(
               workflowJson: workflowData,
               mappingConfig: _formConfig,
-              sourceName: resolveWorkflowName(
-                ref.read(localWorkflowProvider),
-                widget.workflowId,
-                localLabel: l10nFor(ref.read(localeProvider))
-                    .workflowLocalImport,
-              ),
+              // 取不到真实名字时留空，展示时按当前语言补默认名（翻译不落盘）
+              sourceName:
+                  workflowNameForStorage(
+                    ref.read(localWorkflowProvider),
+                    widget.workflowId,
+                  ) ??
+                  '',
               serverId: ref.read(connectionProvider).activeServerId,
             );
         taskManager.createNewTask(

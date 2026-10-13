@@ -167,11 +167,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serverDefaultName => '服务器';
 
   @override
-  String serverDefaultNameWithIndex(int index) {
-    return '服务器 $index';
-  }
-
-  @override
   String get serverTitle => '服务器配置';
 
   @override

@@ -1,3 +1,6 @@
+import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
+
+import '../utils.dart';
 import 'workflow_node.dart';
 
 /// 工作流快照：某次运行时固化下来的「工作流 JSON + 节点暴露配置」。
@@ -11,10 +14,16 @@ class WorkflowSnapshot {
   /// 否则已存在的生成记录会指向一个失效的快照。
   final String id;
 
-  /// 展示名：工作流名 + 固化时间。**仅用于显示**，可能重名，不能当键用。
-  final String displayName;
+  /// 展示名：来源名 + 固化时间。**仅用于显示**，可能重名，不能当键用。
+  ///
+  /// 刻意不落盘：它由 [sourceName] 与时间戳推导，固化进磁盘会把当时的
+  /// 语言与时间格式一起写死（切语言后残留旧文案）。按当前语言实时生成。
+  String displayName(AppLocalizations l) =>
+      '${workflowDisplayNameOr(l, sourceName)} · ${formatSnapshotStamp(createdAt)}';
 
-  /// 来源工作流名（已去掉 _api.json 后缀）
+  /// 来源工作流名（已去掉 _api.json 后缀）。
+  ///
+  /// 本地库里已删除、或解析缓存已清除时为空串，展示层按当前语言补默认名。
   final String sourceName;
 
   /// 首次固化的时间戳（毫秒）
@@ -31,7 +40,6 @@ class WorkflowSnapshot {
 
   const WorkflowSnapshot({
     required this.id,
-    required this.displayName,
     required this.sourceName,
     required this.createdAt,
     this.serverId,
@@ -46,8 +54,8 @@ class WorkflowSnapshot {
     final rawConfig = json['mappingConfig'];
     return WorkflowSnapshot(
       id: json['id'] as String,
-      displayName: json['displayName'] as String? ?? '',
-      sourceName: json['sourceName'] as String? ?? '',
+      // 旧版本曾把「本地导入」等翻译文案写进 sourceName，这里一并清洗
+      sourceName: cleanStoredWorkflowName(json['sourceName'] as String?) ?? '',
       createdAt: json['createdAt'] as int? ?? 0,
       serverId: json['serverId'] as String?,
       workflowJson: Map<String, dynamic>.from(
@@ -67,7 +75,6 @@ class WorkflowSnapshot {
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'displayName': displayName,
     'sourceName': sourceName,
     'createdAt': createdAt,
     'serverId': serverId,

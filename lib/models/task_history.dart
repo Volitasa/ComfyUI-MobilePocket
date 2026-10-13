@@ -1,3 +1,4 @@
+import '../utils.dart';
 import 'task_status.dart';
 
 class TaskHistory {
@@ -51,7 +52,9 @@ class TaskHistory {
     return TaskHistory(
       promptId: json['promptId'],
       workflowId: json['workflowId'],
-      title: json['title'],
+      // 旧版本会把「本地导入」这类翻译文案写进 title，这里清洗成空串，
+      // 展示层按当前语言重新补上（否则切语言后残留旧语言的名字）
+      title: cleanStoredWorkflowName(json['title'] as String?) ?? '',
       status: status,
       progressValue: json['progressValue'] ?? 0,
       progressMax: json['progressMax'] ?? 0,

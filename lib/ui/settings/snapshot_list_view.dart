@@ -37,8 +37,10 @@ class SnapshotListView extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: Text(AppLocalizations.of(ctx).snapshotDeleteTitle),
         content: Text(
-          AppLocalizations.of(ctx)
-              .snapshotDeleteBody(snapshot.displayName, refCount),
+          AppLocalizations.of(ctx).snapshotDeleteBody(
+            snapshot.displayName(AppLocalizations.of(ctx)),
+            refCount,
+          ),
         ),
         actions: [
           TextButton(
@@ -64,6 +66,7 @@ class SnapshotListView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final snapshots = ref.watch(snapshotProvider);
     final history = ref.watch(taskManagerProvider).history;
     final servers = ref.watch(connectionProvider).servers;
@@ -113,7 +116,7 @@ class SnapshotListView extends ConsumerWidget {
                       vertical: 6,
                     ),
                     title: Text(
-                      s.displayName,
+                      s.displayName(l),
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Padding(

@@ -15,6 +15,7 @@ import '../../providers/snapshot_provider.dart';
 import '../../models/task_history.dart';
 import '../../models/task_status.dart';
 import '../../models/workflow_snapshot.dart';
+import '../../utils.dart';
 import '../../utils/task_display.dart';
 import '../widgets/connection_status_badge.dart';
 import '../builder/run_view.dart';
@@ -198,7 +199,8 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l.historyDeleteConfirm(task.title)),
+            // 名字为空（本地库已删/缓存已清）时按当前语言补默认名
+            Text(l.historyDeleteConfirm(workflowDisplayNameOr(l, task.title))),
             if (hasLocal) ...[
               const SizedBox(height: 10),
               Text(
@@ -368,7 +370,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                                             MainAxisAlignment.center,
                                         children: [
                                           Text(
-                                            task.title,
+                                            workflowDisplayNameOr(
+                                              l,
+                                              task.title,
+                                            ),
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 16,

@@ -125,11 +125,8 @@
   "@historyVideoLoadFailed": { "description": "视频加载失败" },
 
   "serverDefaultName": "服务器",
-  "@serverDefaultName": { "description": "连接没有名称时的默认名" },
-  "serverDefaultNameWithIndex": "服务器 {index}",
-  "@serverDefaultNameWithIndex": {
-    "description": "新增连接未填名称时的默认名",
-    "placeholders": { "index": { "type": "int" } }
+  "@serverDefaultName": {
+    "description": "连接没有名称时的默认名（仅在展示层兜底，不落盘）"
   },
   "serverTitle": "服务器配置",
   "@serverTitle": { "description": "服务器配置页标题" },

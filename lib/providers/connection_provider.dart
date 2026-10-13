@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
-import 'locale_provider.dart';
+import '../utils.dart';
 // export 不会把符号引入本文件作用域，本文件自己也要用到
 import 'shared_preferences_provider.dart';
 
@@ -63,8 +63,8 @@ class ServerConfig {
   factory ServerConfig.fromJson(Map<String, dynamic> json) => ServerConfig(
     id: json['id'],
     // 旧数据缺失名称时留空，由界面按当前语言补默认名——
-    // 不在持久化层写死中文
-    name: (json['name'] as String?) ?? '',
+    // 不在持久化层写死中文；旧版本写死的默认名也一并清洗掉
+    name: cleanStoredServerName(json['name'] as String?),
     primaryUrl: json['primary'] ?? '',
     backupUrl: json['backup'] ?? '',
   );
@@ -167,7 +167,8 @@ class ConnectionNotifier extends Notifier<ConfigState> {
       return [
         ServerConfig(
           id: _newId(),
-          name: l10nFor(ref.read(localeProvider)).serverDefaultName,
+          // 名字留空：展示层按当前语言补默认名（翻译不落盘）
+          name: '',
           primaryUrl: legacy,
         ),
       ];
@@ -194,10 +195,9 @@ class ConnectionNotifier extends Notifier<ConfigState> {
     final trimmed = name.trim();
     final server = ServerConfig(
       id: _newId(),
-      name: trimmed.isEmpty
-          ? l10nFor(ref.read(localeProvider))
-                .serverDefaultNameWithIndex(state.servers.length + 1)
-          : trimmed,
+      // 未填名字就留空：展示层按当前语言补默认名，
+      // 不把翻译文案写进磁盘（否则切语言后残留旧语言的名字）
+      name: trimmed,
       primaryUrl: _cleanUrl(primary),
       backupUrl: _cleanUrl(backup),
     );

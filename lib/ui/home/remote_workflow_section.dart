@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../models/local_workflow.dart';
+import '../../models/workflow_entry.dart';
 import '../../providers/connection_provider.dart';
-import '../../providers/locale_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../providers/parsed_workflow_provider.dart';
 import '../../providers/workflow_provider.dart';
@@ -568,10 +568,11 @@ class RemoteWorkflowSection extends ConsumerWidget {
     final name = await showDialog<String>(
       context: context,
       builder: (_) => _SaveToLocalDialog(
-        initialName: workflowDisplayName(
-          filename,
-          localLabel: l10nFor(ref.read(localeProvider)).workflowLocalImport,
-        ),
+        // 默认名直接用文件名推导（远程工作流永远有文件名），
+        // 不写入「本地导入」这类翻译文案，免得存进本地库后切语言残留
+        initialName:
+            workflowNameForStorage(const <WorkflowEntry>[], filename) ??
+            filename,
       ),
     );
     if (name == null || name.trim().isEmpty) return;
