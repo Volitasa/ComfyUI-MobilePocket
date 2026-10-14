@@ -33,14 +33,53 @@ class LocalWorkflowNotifier extends Notifier<List<LocalWorkflow>> {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return [];
-      return decoded
+      final list = decoded
           .whereType<Map>()
           .map((e) => LocalWorkflow.fromJson(Map<String, dynamic>.from(e)))
           .toList();
+      return _migrateLegacyLwIds(list);
     } catch (_) {
       // 数据损坏时退回空列表，避免整个页面打不开
       return [];
     }
+  }
+
+  /// 旧版本「另存到本地」生成的 id 前缀是 `lw_`，而打开/加载链路只认
+  /// `local_`/`parsed_` 前缀，导致这类条目被误判成服务器工作流。
+  /// 读取时把 `lw_<哈希>` 改写成 `local_<哈希>`；若改写后的 id 已存在
+  /// （id 由内容哈希决定，内容必然相同），直接丢弃旧条目。
+  List<LocalWorkflow> _migrateLegacyLwIds(List<LocalWorkflow> list) {
+    var changed = false;
+    final ids = {for (final w in list) w.id: w};
+    final migrated = <LocalWorkflow>[];
+    for (final w in list) {
+      if (!w.id.startsWith('lw_')) {
+        migrated.add(w);
+        continue;
+      }
+      changed = true;
+      final newId = 'local_${w.id.substring(3)}';
+      if (!ids.containsKey(newId)) {
+        migrated.add(
+          LocalWorkflow(
+            id: newId,
+            name: w.name,
+            createdAt: w.createdAt,
+            sourceKind: w.sourceKind,
+            originName: w.originName,
+            workflowJson: w.workflowJson,
+          ),
+        );
+      }
+    }
+    if (changed) {
+      // 只写盘不动 state——build 阶段不允许改 provider 状态
+      _prefs.setString(
+        localWorkflowsPrefsKey,
+        jsonEncode(migrated.map((e) => e.toJson()).toList()),
+      );
+    }
+    return migrated;
   }
 
   void _persist(List<LocalWorkflow> list) {
@@ -78,8 +117,9 @@ class LocalWorkflowNotifier extends Notifier<List<LocalWorkflow>> {
 
   /// 保存一条本地工作流，返回最终使用的 id。
   ///
-  /// [id] 可指定：导入流程沿用 `local_<内容哈希>`，
-  /// 这样已存在的 `mapping_local_<hash>` 配置能直接复用。
+  /// id 统一用 `local_<内容哈希>`：无论是文件导入还是从服务器另存，
+  /// 都必须带 `local_` 前缀——打开/加载链路靠这个前缀识别本地资产，
+  /// 不带前缀的 id 会被误判成服务器工作流而去线上拉取（历史 bug）。
   /// 同名 id 已存在时覆盖。
   String save({
     required String name,
@@ -89,7 +129,7 @@ class LocalWorkflowNotifier extends Notifier<List<LocalWorkflow>> {
     String? id,
   }) {
     final finalId =
-        id ?? 'lw_${stableHash(jsonEncode(workflowJson)).toRadixString(36)}';
+        id ?? 'local_${stableHash(jsonEncode(workflowJson)).toRadixString(36)}';
     final entry = LocalWorkflow(
       id: finalId,
       name: uniqueName(name, excludeId: finalId),

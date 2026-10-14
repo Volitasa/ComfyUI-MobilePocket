@@ -262,4 +262,74 @@ void main() {
       );
     });
   });
+
+  group('另存到本地的 id 前缀（历史 bug：lw_ 被误判成服务器工作流）', () {
+    test('save 不指定 id 时使用 local_ 前缀', () async {
+      final prefs = await _prefsWith();
+      final container = _container(prefs);
+      addTearDown(container.dispose);
+
+      final id = container
+          .read(localWorkflowProvider.notifier)
+          .save(
+            name: '来自服务器',
+            workflowJson: _workflow(),
+            sourceKind: LocalWorkflowSource.savedFromRemote,
+          );
+
+      expect(id, startsWith('local_'));
+    });
+
+    test('读取时旧 lw_ 条目迁移成 local_ 前缀，名字保留', () async {
+      final legacy = {
+        'id': 'lw_abc123',
+        'name': '基础ZIT文生图',
+        'createdAt': 1791579799776,
+        'sourceKind': 'savedFromRemote',
+        'originName': 'basic_api.json',
+        'workflowJson': _workflow(),
+      };
+      final prefs = await _prefsWith({
+        localWorkflowsPrefsKey: jsonEncode([legacy]),
+      });
+      final container = _container(prefs);
+      addTearDown(container.dispose);
+
+      final list = container.read(localWorkflowProvider);
+      expect(list, hasLength(1));
+      expect(list.single.id, 'local_abc123');
+      expect(list.single.name, '基础ZIT文生图');
+      // 迁移结果要落盘，重启后依然是 local_ 前缀
+      final stored =
+          jsonDecode(prefs.getString(localWorkflowsPrefsKey)!) as List;
+      expect((stored.single as Map)['id'], 'local_abc123');
+    });
+
+    test('lw_ 迁移时若 local_ 同 id 已存在（内容相同），丢弃旧条目', () async {
+      final legacy = {
+        'id': 'lw_abc123',
+        'name': '重复条目',
+        'createdAt': 1,
+        'sourceKind': 'savedFromRemote',
+        'workflowJson': _workflow(),
+      };
+      final kept = {
+        'id': 'local_abc123',
+        'name': '正式条目',
+        'createdAt': 2,
+        'sourceKind': 'importFile',
+        'workflowJson': _workflow(),
+      };
+      final prefs = await _prefsWith({
+        localWorkflowsPrefsKey: jsonEncode([legacy, kept]),
+      });
+      final container = _container(prefs);
+      addTearDown(container.dispose);
+
+      final list = container.read(localWorkflowProvider);
+      expect(list, hasLength(1));
+      expect(list.single.id, 'local_abc123');
+      expect(list.single.name, '正式条目');
+    });
+  });
 }
