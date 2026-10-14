@@ -120,7 +120,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String historyServerMismatchBody(String old, String current) {
-    return 'This record ran on "$old", but "$current" is connected now.\n\nThe two servers may have different models or custom nodes, so running it again can fail with errors like "model not found" or "node type not found". Continue anyway?';
+    return 'This record ran on \"$old\", but \"$current\" is connected now.\n\nThe two servers may have different models or custom nodes, so running it again can fail with errors like \"model not found\" or \"node type not found\". Continue anyway?';
   }
 
   @override
@@ -137,12 +137,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String historyDeleteConfirm(String title) {
-    return 'Delete the record "$title"?';
+    return 'Delete the record \"$title\"?';
   }
 
   @override
   String get historyDeleteImagesNote =>
-      'Choosing "Also delete gallery images" removes the local images saved for this record as well. This cannot be undone. Deleting only the record keeps the gallery images.';
+      'Choosing \"Also delete gallery images\" removes the local images saved for this record as well. This cannot be undone. Deleting only the record keeps the gallery images.';
 
   @override
   String get historyDeleteRecordOnly => 'Delete record only';
@@ -208,7 +208,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String serverDeleteConfirm(String name) {
-    return 'Delete "$name"?';
+    return 'Delete \"$name\"?';
   }
 
   @override
@@ -247,17 +247,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String serverActivateFailed(String name) {
-    return 'Could not connect to "$name": neither address is reachable';
+    return 'Could not connect to \"$name\": neither address is reachable';
   }
 
   @override
   String serverActivatedPrimary(String name) {
-    return 'Connected to "$name" (primary)';
+    return 'Connected to \"$name\" (primary)';
   }
 
   @override
   String serverActivatedBackup(String name) {
-    return 'Connected to "$name" (backup)';
+    return 'Connected to \"$name\" (backup)';
   }
 
   @override
@@ -759,7 +759,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String localDeleteBody(String name) {
-    return 'Delete "$name"?\n\nIts node configuration will be removed as well. This cannot be undone. Existing generation records are not affected.';
+    return 'Delete \"$name\"?\n\nIts node configuration will be removed as well. This cannot be undone. Existing generation records are not affected.';
   }
 
   @override
@@ -858,7 +858,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String storageClearCacheBody(String name) {
-    return 'Clear the parsed result of "$name"?\n\nIt returns to the unparsed state and can be parsed again from the server list. Saved node configuration is not affected.';
+    return 'Clear the parsed result of \"$name\"?\n\nIt returns to the unparsed state and can be parsed again from the server list. Saved node configuration is not affected.';
   }
 
   @override
@@ -866,7 +866,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String snapshotDeleteBody(String name, int count) {
-    return 'Delete "$name"?\n\nAfter deletion, the $count generation records referencing it cannot be run again.';
+    return 'Delete \"$name\"?\n\nAfter deletion, the $count generation records referencing it cannot be run again.';
   }
 
   @override
@@ -1023,11 +1023,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateRepoForbidden =>
-      'Repository not accessible. If it is private, enter a read-only token in "Settings → GitHub access token" and try again';
+      'Repository not accessible. If it is private, enter a read-only token in \"Settings → GitHub access token\" and try again';
 
   @override
   String get updateTokenInvalid =>
-      'The GitHub token is invalid or expired. Update it in "Settings → GitHub access token"; if the repository is public, just clear the token';
+      'The GitHub token is invalid or expired. Update it in \"Settings → GitHub access token\"; if the repository is public, just clear the token';
 
   @override
   String get updateRateLimitedWithToken =>

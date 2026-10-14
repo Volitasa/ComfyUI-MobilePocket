@@ -12,6 +12,55 @@ import 'app_localizations_zh.dart';
 
 /// Callers can lookup localized strings with an instance of AppLocalizations
 /// returned by `AppLocalizations.of(context)`.
+///
+/// Applications need to include `AppLocalizations.delegate()` in their app's
+/// `localizationDelegates` list, and the locales they support in the app's
+/// `supportedLocales` list. For example:
+///
+/// ```dart
+/// import 'l10n/app_localizations.dart';
+///
+/// return MaterialApp(
+///   localizationsDelegates: AppLocalizations.localizationsDelegates,
+///   supportedLocales: AppLocalizations.supportedLocales,
+///   home: MyApplicationHome(),
+/// );
+/// ```
+///
+/// ## Update pubspec.yaml
+///
+/// Please make sure to update your pubspec.yaml to include the following
+/// packages:
+///
+/// ```yaml
+/// dependencies:
+///   # Internationalization support.
+///   flutter_localizations:
+///     sdk: flutter
+///   intl: any # Use the pinned version from flutter_localizations
+///
+///   # Rest of dependencies
+/// ```
+///
+/// ## iOS Applications
+///
+/// iOS applications define key application metadata, including supported
+/// locales, in an Info.plist file that is built into the application bundle.
+/// To configure the locales supported by your app, you’ll need to edit this
+/// file.
+///
+/// First, open your project’s ios/Runner.xcworkspace Xcode workspace file.
+/// Then, in the Project Navigator, open the Info.plist file under the Runner
+/// project’s Runner folder.
+///
+/// Next, select the Information Property List item, select Add Item from the
+/// Editor menu, then select Localizations from the pop-up menu.
+///
+/// Select and expand the newly-created Localizations item then, for each
+/// locale your application supports, add a new item and select the locale
+/// you wish to add from the pop-up menu in the Value field. This list should
+/// be consistent with the languages listed in the AppLocalizations.supportedLocales
+/// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
     : localeName = intl.Intl.canonicalizedLocale(locale.toString());
@@ -25,6 +74,16 @@ abstract class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
+  /// A list of this localizations delegate along with the default localizations
+  /// delegates.
+  ///
+  /// Returns a list of localizations delegates containing this delegate along with
+  /// GlobalMaterialLocalizations.delegate, GlobalCupertinoLocalizations.delegate,
+  /// and GlobalWidgetsLocalizations.delegate.
+  ///
+  /// Additional delegates can be added by appending to this list in
+  /// MaterialApp. This list does not have to be used at all if a custom list
+  /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
         delegate,
@@ -33,6 +92,7 @@ abstract class AppLocalizations {
         GlobalWidgetsLocalizations.delegate,
       ];
 
+  /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
     Locale('zh'),
@@ -239,7 +299,7 @@ abstract class AppLocalizations {
   /// 跨服务器再次运行的确认正文
   ///
   /// In zh, this message translates to:
-  /// **'这条记录当时运行在「{old}」，当前连接的是「{current}」。  两台服务器的模型、插件节点可能不同，继续运行可能出现「模型不存在／节点类型不存在」之类的报错。是否继续？'**
+  /// **'这条记录当时运行在「{old}」，当前连接的是「{current}」。\n\n两台服务器的模型、插件节点可能不同，继续运行可能出现「模型不存在／节点类型不存在」之类的报错。是否继续？'**
   String historyServerMismatchBody(String old, String current);
 
   /// 跨服务器仍要运行
@@ -1199,7 +1259,7 @@ abstract class AppLocalizations {
   /// 清除解析缓存对话框正文
   ///
   /// In zh, this message translates to:
-  /// **'清除后会回到未解析状态，可随时从服务器重新解析。  已保存的节点配置不受影响。'**
+  /// **'清除后会回到未解析状态，可随时从服务器重新解析。\n\n已保存的节点配置不受影响。'**
   String get clearParseBody;
 
   /// 首页：已清除解析结果
@@ -1361,7 +1421,7 @@ abstract class AppLocalizations {
   /// 本地库：删除确认正文
   ///
   /// In zh, this message translates to:
-  /// **'确定删除「{name}」吗？  它的节点配置会一并清除，删除后无法恢复。已生成的记录不受影响。'**
+  /// **'确定删除「{name}」吗？\n\n它的节点配置会一并清除，删除后无法恢复。已生成的记录不受影响。'**
   String localDeleteBody(String name);
 
   /// 本地库：删除完成
@@ -1472,469 +1532,469 @@ abstract class AppLocalizations {
   /// **'分享功能即将上线'**
   String get galleryShareSoon;
 
-  /// storageTitle
+  /// No description provided for @storageTitle.
   ///
   /// In zh, this message translates to:
   /// **'工作流存储'**
   String get storageTitle;
 
-  /// storageEmpty
+  /// No description provided for @storageEmpty.
   ///
   /// In zh, this message translates to:
   /// **'本机还没有保存任何工作流'**
   String get storageEmpty;
 
-  /// storageSummary
+  /// No description provided for @storageSummary.
   ///
   /// In zh, this message translates to:
   /// **'共 {total} 项 · 合计 {size}'**
   String storageSummary(int total, String size);
 
-  /// storageGroupLocal
+  /// No description provided for @storageGroupLocal.
   ///
   /// In zh, this message translates to:
   /// **'本地资产 · {count} 项'**
   String storageGroupLocal(int count);
 
-  /// storageGroupParsed
+  /// No description provided for @storageGroupParsed.
   ///
   /// In zh, this message translates to:
   /// **'解析缓存 · {count} 项'**
   String storageGroupParsed(int count);
 
-  /// storageParsedNote
+  /// No description provided for @storageParsedNote.
   ///
   /// In zh, this message translates to:
   /// **'解析缓存由服务器上的 UI 工作流转换而来，清除后回到未解析状态，可随时重新解析。'**
   String get storageParsedNote;
 
-  /// storageOrigin
+  /// No description provided for @storageOrigin.
   ///
   /// In zh, this message translates to:
   /// **'来源 {name}'**
   String storageOrigin(String name);
 
-  /// storageParsedAt
+  /// No description provided for @storageParsedAt.
   ///
   /// In zh, this message translates to:
   /// **'UI 工作流解析 · {time} · {size}'**
   String storageParsedAt(String time, String size);
 
-  /// unknownConnection
+  /// No description provided for @unknownConnection.
   ///
   /// In zh, this message translates to:
   /// **'未知连接'**
   String get unknownConnection;
 
-  /// storageClearCacheBody
+  /// No description provided for @storageClearCacheBody.
   ///
   /// In zh, this message translates to:
-  /// **'确定清除「{name}」的解析结果吗？  清除后回到未解析状态，在服务器列表里可以重新解析。已保存的节点配置不受影响。'**
+  /// **'确定清除「{name}」的解析结果吗？\n\n清除后回到未解析状态，在服务器列表里可以重新解析。已保存的节点配置不受影响。'**
   String storageClearCacheBody(String name);
 
-  /// snapshotDeleteTitle
+  /// No description provided for @snapshotDeleteTitle.
   ///
   /// In zh, this message translates to:
   /// **'删除快照'**
   String get snapshotDeleteTitle;
 
-  /// snapshotDeleteBody
+  /// No description provided for @snapshotDeleteBody.
   ///
   /// In zh, this message translates to:
-  /// **'确定删除「{name}」吗？  删除后，引用它的 {count} 条生成记录将无法再次运行。'**
+  /// **'确定删除「{name}」吗？\n\n删除后，引用它的 {count} 条生成记录将无法再次运行。'**
   String snapshotDeleteBody(String name, int count);
 
-  /// snapshotDeleted
+  /// No description provided for @snapshotDeleted.
   ///
   /// In zh, this message translates to:
   /// **'快照已删除'**
   String get snapshotDeleted;
 
-  /// snapshotNotRecorded
+  /// No description provided for @snapshotNotRecorded.
   ///
   /// In zh, this message translates to:
   /// **'未记录'**
   String get snapshotNotRecorded;
 
-  /// snapshotTitle
+  /// No description provided for @snapshotTitle.
   ///
   /// In zh, this message translates to:
   /// **'工作流快照'**
   String get snapshotTitle;
 
-  /// snapshotEmpty
+  /// No description provided for @snapshotEmpty.
   ///
   /// In zh, this message translates to:
   /// **'暂无工作流快照'**
   String get snapshotEmpty;
 
-  /// snapshotFrozenAt
+  /// No description provided for @snapshotFrozenAt.
   ///
   /// In zh, this message translates to:
   /// **'固化时间 {time} · {size}'**
   String snapshotFrozenAt(String time, String size);
 
-  /// snapshotSourceServer
+  /// No description provided for @snapshotSourceServer.
   ///
   /// In zh, this message translates to:
   /// **'来源服务器 {name}'**
   String snapshotSourceServer(String name);
 
-  /// snapshotRefCount
+  /// No description provided for @snapshotRefCount.
   ///
   /// In zh, this message translates to:
   /// **'被 {count} 条生成记录引用'**
   String snapshotRefCount(int count);
 
-  /// snapshotNoRef
+  /// No description provided for @snapshotNoRef.
   ///
   /// In zh, this message translates to:
   /// **'未被任何生成记录引用'**
   String get snapshotNoRef;
 
-  /// tokenTitle
+  /// No description provided for @tokenTitle.
   ///
   /// In zh, this message translates to:
   /// **'GitHub 访问令牌'**
   String get tokenTitle;
 
-  /// tokenSaved
+  /// No description provided for @tokenSaved.
   ///
   /// In zh, this message translates to:
   /// **'令牌已保存'**
   String get tokenSaved;
 
-  /// tokenCleared
+  /// No description provided for @tokenCleared.
   ///
   /// In zh, this message translates to:
   /// **'令牌已清除'**
   String get tokenCleared;
 
-  /// tokenConfigured
+  /// No description provided for @tokenConfigured.
   ///
   /// In zh, this message translates to:
   /// **'已配置'**
   String get tokenConfigured;
 
-  /// tokenClearButton
+  /// No description provided for @tokenClearButton.
   ///
   /// In zh, this message translates to:
   /// **'清除令牌'**
   String get tokenClearButton;
 
-  /// tokenLocalOnlyNote
+  /// No description provided for @tokenLocalOnlyNote.
   ///
   /// In zh, this message translates to:
   /// **'令牌仅保存在本机，不会上传。'**
   String get tokenLocalOnlyNote;
 
-  /// updateCheckButton
+  /// No description provided for @updateCheckButton.
   ///
   /// In zh, this message translates to:
   /// **'检查更新'**
   String get updateCheckButton;
 
-  /// updateSourceNote
+  /// No description provided for @updateSourceNote.
   ///
   /// In zh, this message translates to:
   /// **'更新来源：GitHub Releases'**
   String get updateSourceNote;
 
-  /// aboutVersionBuild
+  /// No description provided for @aboutVersionBuild.
   ///
   /// In zh, this message translates to:
   /// **'版本 {version}（构建 {build}）'**
   String aboutVersionBuild(String version, String build);
 
-  /// updateChecking
+  /// No description provided for @updateChecking.
   ///
   /// In zh, this message translates to:
   /// **'正在检查更新…'**
   String get updateChecking;
 
-  /// updateUpToDate
+  /// No description provided for @updateUpToDate.
   ///
   /// In zh, this message translates to:
   /// **'当前已是最新版本 {version}'**
   String updateUpToDate(String version);
 
-  /// updateCheckFailed
+  /// No description provided for @updateCheckFailed.
   ///
   /// In zh, this message translates to:
   /// **'检查更新失败'**
   String get updateCheckFailed;
 
-  /// retry
+  /// No description provided for @retry.
   ///
   /// In zh, this message translates to:
   /// **'重试'**
   String get retry;
 
-  /// configureToken
+  /// No description provided for @configureToken.
   ///
   /// In zh, this message translates to:
   /// **'配置令牌'**
   String get configureToken;
 
-  /// updateAvailableTitle
+  /// No description provided for @updateAvailableTitle.
   ///
   /// In zh, this message translates to:
   /// **'发现新版本 {version}'**
   String updateAvailableTitle(String version);
 
-  /// updateAvailableOtherPlatform
+  /// No description provided for @updateAvailableOtherPlatform.
   ///
   /// In zh, this message translates to:
   /// **'发现新版本 {version}，当前平台不支持应用内安装，请到 Release 页面手动下载'**
   String updateAvailableOtherPlatform(String version);
 
-  /// releaseNotesTitle
+  /// No description provided for @releaseNotesTitle.
   ///
   /// In zh, this message translates to:
   /// **'更新说明'**
   String get releaseNotesTitle;
 
-  /// changelogTitle
+  /// No description provided for @changelogTitle.
   ///
   /// In zh, this message translates to:
   /// **'完整变更记录'**
   String get changelogTitle;
 
-  /// updateDownloadingPercent
+  /// No description provided for @updateDownloadingPercent.
   ///
   /// In zh, this message translates to:
   /// **'下载中 {percent}%'**
   String updateDownloadingPercent(String percent);
 
-  /// updateDownloading
+  /// No description provided for @updateDownloading.
   ///
   /// In zh, this message translates to:
   /// **'正在下载…'**
   String get updateDownloading;
 
-  /// updateDownloadInstall
+  /// No description provided for @updateDownloadInstall.
   ///
   /// In zh, this message translates to:
   /// **'下载并安装'**
   String get updateDownloadInstall;
 
-  /// installLaunchFailed
+  /// No description provided for @installLaunchFailed.
   ///
   /// In zh, this message translates to:
   /// **'无法唤起安装界面：{message}'**
   String installLaunchFailed(String message);
 
-  /// saveAlbumPermission
+  /// No description provided for @saveAlbumPermission.
   ///
   /// In zh, this message translates to:
   /// **'需要相册权限'**
   String get saveAlbumPermission;
 
-  /// saveAlbumTitle
+  /// No description provided for @saveAlbumTitle.
   ///
   /// In zh, this message translates to:
   /// **'保存到相册'**
   String get saveAlbumTitle;
 
-  /// saveAlbumBody
+  /// No description provided for @saveAlbumBody.
   ///
   /// In zh, this message translates to:
   /// **'这张 PNG 内嵌了工作流信息。选择保存方式：'**
   String get saveAlbumBody;
 
-  /// saveAlbumPlain
+  /// No description provided for @saveAlbumPlain.
   ///
   /// In zh, this message translates to:
   /// **'普通图片（剔除信息）'**
   String get saveAlbumPlain;
 
-  /// saveAlbumWithWorkflow
+  /// No description provided for @saveAlbumWithWorkflow.
   ///
   /// In zh, this message translates to:
   /// **'带工作流原图'**
   String get saveAlbumWithWorkflow;
 
-  /// parseBadPayload
+  /// No description provided for @parseBadPayload.
   ///
   /// In zh, this message translates to:
   /// **'前端返回了无法识别的数据'**
   String get parseBadPayload;
 
-  /// parseNoWorkflow
+  /// No description provided for @parseNoWorkflow.
   ///
   /// In zh, this message translates to:
   /// **'前端未返回工作流结构'**
   String get parseNoWorkflow;
 
-  /// parseUnreadable
+  /// No description provided for @parseUnreadable.
   ///
   /// In zh, this message translates to:
   /// **'解析结果无法读取'**
   String get parseUnreadable;
 
-  /// convertEmpty
+  /// No description provided for @convertEmpty.
   ///
   /// In zh, this message translates to:
   /// **'转换结果为空（工作流可能没有可运行的节点）'**
   String get convertEmpty;
 
-  /// convertUiNotApi
+  /// No description provided for @convertUiNotApi.
   ///
   /// In zh, this message translates to:
   /// **'前端返回了 UI 结构而非 API 结构'**
   String get convertUiNotApi;
 
-  /// convertBadNode
+  /// No description provided for @convertBadNode.
   ///
   /// In zh, this message translates to:
   /// **'转换结果第 {index} 项不是有效的 API 节点'**
   String convertBadNode(String index);
 
-  /// updateRepoForbiddenWithToken
+  /// No description provided for @updateRepoForbiddenWithToken.
   ///
   /// In zh, this message translates to:
   /// **'仓库不可访问：请确认令牌对该仓库有 Contents 读取权限，且未过期'**
   String get updateRepoForbiddenWithToken;
 
-  /// updateRepoForbidden
+  /// No description provided for @updateRepoForbidden.
   ///
   /// In zh, this message translates to:
   /// **'仓库不可访问。若该仓库是私有的，请在「设置 → GitHub 访问令牌」中填入只读令牌后重试'**
   String get updateRepoForbidden;
 
-  /// updateTokenInvalid
+  /// No description provided for @updateTokenInvalid.
   ///
   /// In zh, this message translates to:
   /// **'GitHub 令牌无效或已过期。可在「设置 → GitHub 访问令牌」中更新；若仓库已公开，直接清除令牌即可'**
   String get updateTokenInvalid;
 
-  /// updateRateLimitedWithToken
+  /// No description provided for @updateRateLimitedWithToken.
   ///
   /// In zh, this message translates to:
   /// **'GitHub 拒绝了请求（令牌权限不足或触发限流），请稍后再试'**
   String get updateRateLimitedWithToken;
 
-  /// updateRateLimited
+  /// No description provided for @updateRateLimited.
   ///
   /// In zh, this message translates to:
   /// **'GitHub 接口访问受限（匿名请求每小时 60 次），配置访问令牌可放宽限额'**
   String get updateRateLimited;
 
-  /// updateHttpFailed
+  /// No description provided for @updateHttpFailed.
   ///
   /// In zh, this message translates to:
   /// **'查询更新失败（HTTP {code}）'**
   String updateHttpFailed(String code);
 
-  /// updateNoRelease
+  /// No description provided for @updateNoRelease.
   ///
   /// In zh, this message translates to:
   /// **'该仓库还没有发布带安装包的版本（仅有 git tag 不会被识别）'**
   String get updateNoRelease;
 
-  /// updateBadTag
+  /// No description provided for @updateBadTag.
   ///
   /// In zh, this message translates to:
   /// **'发布版本号无法识别（{tag}）'**
   String updateBadTag(String tag);
 
-  /// updateTimeout
+  /// No description provided for @updateTimeout.
   ///
   /// In zh, this message translates to:
   /// **'连接 GitHub 超时，请检查网络后重试'**
   String get updateTimeout;
 
-  /// updateUnreachable
+  /// No description provided for @updateUnreachable.
   ///
   /// In zh, this message translates to:
   /// **'无法连接 GitHub，请检查网络后重试'**
   String get updateUnreachable;
 
-  /// updateQueryFailed
+  /// No description provided for @updateQueryFailed.
   ///
   /// In zh, this message translates to:
   /// **'查询更新失败，请检查网络后重试'**
   String get updateQueryFailed;
 
-  /// updateNoAsset
+  /// No description provided for @updateNoAsset.
   ///
   /// In zh, this message translates to:
   /// **'该版本没有附带安装包'**
   String get updateNoAsset;
 
-  /// updateNoApk
+  /// No description provided for @updateNoApk.
   ///
   /// In zh, this message translates to:
   /// **'该版本没有可安装的 APK'**
   String get updateNoApk;
 
-  /// updateAssetMissing
+  /// No description provided for @updateAssetMissing.
   ///
   /// In zh, this message translates to:
   /// **'安装包地址缺失，请稍后重试'**
   String get updateAssetMissing;
 
-  /// updateDownloadTimeout
+  /// No description provided for @updateDownloadTimeout.
   ///
   /// In zh, this message translates to:
   /// **'下载超时，请检查网络后重试'**
   String get updateDownloadTimeout;
 
-  /// updateDownloadInterrupted
+  /// No description provided for @updateDownloadInterrupted.
   ///
   /// In zh, this message translates to:
   /// **'下载失败，网络连接已中断'**
   String get updateDownloadInterrupted;
 
-  /// updateDownloadFailed
+  /// No description provided for @updateDownloadFailed.
   ///
   /// In zh, this message translates to:
   /// **'下载失败，请检查网络后重试'**
   String get updateDownloadFailed;
 
-  /// updateDownload404Token
+  /// No description provided for @updateDownload404Token.
   ///
   /// In zh, this message translates to:
   /// **'安装包下载失败（404），请确认令牌仍有该仓库的读取权限'**
   String get updateDownload404Token;
 
-  /// updateDownload404
+  /// No description provided for @updateDownload404.
   ///
   /// In zh, this message translates to:
   /// **'安装包下载失败（404）'**
   String get updateDownload404;
 
-  /// updateDownloadHttp
+  /// No description provided for @updateDownloadHttp.
   ///
   /// In zh, this message translates to:
   /// **'下载失败（HTTP {code}）'**
   String updateDownloadHttp(String code);
 
-  /// updateDownloadAborted
+  /// No description provided for @updateDownloadAborted.
   ///
   /// In zh, this message translates to:
   /// **'下载中断，请重试'**
   String get updateDownloadAborted;
 
-  /// updateWriteFailed
+  /// No description provided for @updateWriteFailed.
   ///
   /// In zh, this message translates to:
   /// **'安装包写入失败'**
   String get updateWriteFailed;
 
-  /// updateCheckFailedRetry
+  /// No description provided for @updateCheckFailedRetry.
   ///
   /// In zh, this message translates to:
   /// **'检查更新失败，请稍后重试'**
   String get updateCheckFailedRetry;
 
-  /// updateNoPending
+  /// No description provided for @updateNoPending.
   ///
   /// In zh, this message translates to:
   /// **'没有待下载的版本'**
   String get updateNoPending;
 
-  /// updateDownloadFailedRetry
+  /// No description provided for @updateDownloadFailedRetry.
   ///
   /// In zh, this message translates to:
   /// **'下载失败，请稍后重试'**
