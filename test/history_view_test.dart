@@ -16,6 +16,8 @@ Future<void> _pumpHistory(
   WidgetTester tester,
   List<Map<String, dynamic>> history, {
   List<Map<String, dynamic>> snapshots = const [],
+  // 默认按中文渲染；传 en 可验证英文分支（防止翻译漏接）
+  Locale locale = const Locale('zh'),
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
@@ -28,7 +30,7 @@ Future<void> _pumpHistory(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       child: MaterialApp(
-        locale: const Locale('zh'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: const HistoryView(),
@@ -132,6 +134,25 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
       expect(find.byIcon(Icons.error_outline), findsNothing);
+    });
+  });
+
+  group('英文分支冒烟', () {
+    testWidgets('英文界面下空态走英文文案', (tester) async {
+      await _pumpHistory(tester, [], locale: const Locale('en'));
+
+      expect(find.text('No history yet'), findsOneWidget);
+      expect(find.text('暂无生成记录'), findsNothing);
+    });
+
+    testWidgets('英文界面下状态文案走英文', (tester) async {
+      await _pumpHistory(tester, [
+        _task(status: 'failed', promptId: 'p-en-failed'),
+      ], locale: const Locale('en'));
+
+      // 卡片上的状态行形如「Failed · ...」
+      expect(find.textContaining('Failed'), findsOneWidget);
+      expect(find.textContaining('已失败'), findsNothing);
     });
   });
 
