@@ -63,7 +63,9 @@ Map<String, dynamic> _task({
     'progressMax': progressMax,
     // null-aware element：为 null 时整个键不出现在 map 里
     'nodePhase': ?nodePhase,
-    'nodeDetail': nodeDetail,
+    // 旧版本数据没有 nodeDetail 键（详情藏在 nodeInfo 整句里）；
+    // 只有显式传入才写这个键，否则空串会挡住 _migrateDetail 的旧数据迁移
+    if (nodeDetail.isNotEmpty) 'nodeDetail': nodeDetail,
     'nodeInfo': nodeInfo,
     'images': images,
     'timestamp': 1791579799776,
