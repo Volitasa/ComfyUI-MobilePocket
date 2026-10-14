@@ -33,7 +33,9 @@ class ComfyuiMobilePocket extends ConsumerWidget {
     final preferred = ref.watch(localeProvider);
 
     return MaterialApp(
-      title: 'ComfyUI Remote',
+      // 与 android:label（安装器/桌面显示名）保持一致；
+      // 应用名是品牌标识，不随界面语言切换
+      title: 'ComfyUI Pocket',
       debugShowCheckedModeBanner: false, // 隐藏右上角 Debug 标签
       // 用户显式选过语言时直接生效；否则走下面的回调按系统语言匹配
       locale: preferred,
