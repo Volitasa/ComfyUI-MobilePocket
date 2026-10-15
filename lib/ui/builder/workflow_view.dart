@@ -34,10 +34,13 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   // 搜索关键字：只影响列表过滤，不改数据
   String _keyword = '';
 
+  final TextEditingController _searchController = TextEditingController();
+
   /// 当前实际显示的参数：按关键字过滤别名 / 参数名 / 节点类名。
   ///
-  /// 命中参数所在的节点分组整体保留 —— 只过滤"哪些节点该显示"，
-  /// 节点内部不再二次过滤，避免用户勾了参数却看不见。
+  /// 过滤粒度是"参数"而非"节点"：命中哪个参数就只显示哪个参数。
+  /// 若按节点整体保留，搜一个词会把该节点的几十个参数一起带出来，搜索就没意义了。
+  /// 卡片头部的统计与全选按钮跟随可见参数走，保证"看到的就是能选的"。
   List<WorkflowNode> get _visibleNodes => _keyword.isEmpty
       ? _extractableNodes
       : _extractableNodes
@@ -48,7 +51,6 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                   n.classType.toLowerCase().contains(_keyword),
             )
             .toList();
-  final TextEditingController _searchController = TextEditingController();
 
   @override
   void dispose() {
@@ -545,12 +547,14 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                               params.isNotEmpty &&
                               exposedCount == params.length;
 
-                          // 默认展开含已勾选参数的节点，其余收起；用户可手动切换
+                          // 默认展开含已勾选参数的节点，其余收起；用户可手动切换。
+                          // 搜索命中时一并展开 —— 否则卡片留在列表里却是收起的，
+                          // 用户不知道自己搜到了什么。手动展开/折叠的状态始终优先。
                           final expanded = _expandedNodeIds.contains(nodeId)
                               ? true
                               : _collapsedNodeIds.contains(nodeId)
                               ? false
-                              : exposedCount > 0;
+                              : _keyword.isNotEmpty || exposedCount > 0;
 
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
