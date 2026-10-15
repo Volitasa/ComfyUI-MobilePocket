@@ -2053,6 +2053,30 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'取消本节点'**
   String get configNodeClearAll;
+
+  /// 生成记录页：搜索框提示
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索工作流或提示词'**
+  String get historySearchHint;
+
+  /// 生成记录页：搜索无结果
+  ///
+  /// In zh, this message translates to:
+  /// **'没有匹配的记录'**
+  String get historySearchEmpty;
+
+  /// 生成记录页：状态筛选-全部
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get historyFilterAll;
+
+  /// 生成记录页：状态筛选-进行中（排队+生成）
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get historyFilterPending;
 }
 
 class _AppLocalizationsDelegate

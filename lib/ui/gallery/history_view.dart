@@ -16,6 +16,7 @@ import '../../models/task_history.dart';
 import '../../models/task_status.dart';
 import '../../models/workflow_snapshot.dart';
 import '../../utils.dart';
+import '../../utils/history_search.dart';
 import '../../utils/task_display.dart';
 import '../widgets/connection_status_badge.dart';
 import '../builder/run_view.dart';
@@ -34,6 +35,19 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   @override
   void initState() {
     super.initState();
+  }
+
+  // ── 搜索与筛选（纯展示态，不落盘）────────────────────────
+  final TextEditingController _searchController = TextEditingController();
+  String _keyword = '';
+
+  /// 状态筛选：null = 全部；其余为「进行中」这类合并后的筛选键。
+  HistoryStatusFilter _statusFilter = HistoryStatusFilter.all;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   /// 卡片底部的操作区：左右各占一半，仅用图标颜色做轻度区分，不加重装饰
@@ -67,6 +81,89 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
           onTap: () => _confirmDelete(task),
         ),
       ],
+    );
+  }
+
+  /// 搜索框：按工作流名 / 填入的文本 / 参数别名过滤。
+  ///
+  /// 样式与配置页的搜索框保持一致（圆角 8、图标 18、dense）。
+  Widget _buildSearchField(AppLocalizations l) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (v) => setState(() => _keyword = v.trim()),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: l.historySearchHint,
+          prefixIcon: const Icon(Icons.search, size: 18),
+          suffixIcon: _keyword.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _keyword = '');
+                  },
+                ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 状态筛选条。
+  ///
+  /// 只用「边框色 + 文字色」区分选中态，不加底色块 —— 跟页面其它部分
+  /// 一样走轻量路线，避免一排彩色药丸抢走记录的注意力。
+  Widget _buildFilterChips(AppLocalizations l) {
+    final items = <(HistoryStatusFilter, String)>[
+      (HistoryStatusFilter.all, l.historyFilterAll),
+      (HistoryStatusFilter.pending, l.historyFilterPending),
+      (HistoryStatusFilter.completed, l.taskStatusCompleted),
+      (HistoryStatusFilter.failed, l.taskStatusFailed),
+      (HistoryStatusFilter.interrupted, l.taskStatusInterrupted),
+    ];
+
+    return SizedBox(
+      height: 34,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final (filter, label) = items[i];
+          final selected = _statusFilter == filter;
+          return InkWell(
+            onTap: () => setState(() => _statusFilter = filter),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: selected ? AppColors.primary : Colors.grey.shade300,
+                  width: selected ? 1.2 : 1,
+                ),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: selected ? AppColors.primary : Colors.grey.shade700,
+                  fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -293,6 +390,26 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     final configState = ref.watch(connectionProvider);
     final snapshots = ref.watch(snapshotProvider);
 
+    // 快照建索引：反查参数别名要用，50 条的量级不建索引也行，
+    // 但每条记录都遍历一遍列表没必要
+    final snapshotById = <String, WorkflowSnapshot>{
+      for (final s in snapshots) s.id: s,
+    };
+
+    // 过滤只算一次，不放进 itemBuilder 里重复跑
+    final hits =
+        HistorySearch.search(
+              tasks,
+              _keyword,
+              // 必须比展示名：旧记录 title 是空串，界面上显示的是补出来的默认名
+              displayName: (t) => workflowDisplayNameOr(l, t.title),
+              snapshotOf: (id) => snapshotById[id],
+            )
+            .where(
+              (h) => HistorySearch.passesFilter(_statusFilter, h.task.status),
+            )
+            .toList();
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -328,192 +445,210 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                 style: const TextStyle(color: Colors.grey),
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                final statusColor = _statusColor(task.status);
-                final progress = task.progressMax > 0
-                    ? (task.progressValue / task.progressMax)
-                    : 0.0;
+          : Column(
+              children: [
+                _buildSearchField(l),
+                _buildFilterChips(l),
+                const SizedBox(height: 6),
+                Expanded(
+                  child: hits.isEmpty
+                      ? Center(
+                          child: Text(
+                            l.historySearchEmpty,
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          itemCount: hits.length,
+                          itemBuilder: (context, index) =>
+                              _buildHistoryCard(hits[index], snapshots, l),
+                        ),
+                ),
+              ],
+            ),
+    );
+  }
 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: IntrinsicHeight(
+  /// 单张生成记录卡片。
+  ///
+  /// [hit.summary] 非空时（有关键词且靠参数内容命中）在工作流名下方
+  /// 补一行命中摘要，让用户一眼看出这条为什么被匹配。
+  Widget _buildHistoryCard(
+    HistoryHit hit,
+    List<WorkflowSnapshot> snapshots,
+    AppLocalizations l,
+  ) {
+    final task = hit.task;
+    final statusColor = _statusColor(task.status);
+    final progress = task.progressMax > 0
+        ? (task.progressValue / task.progressMax)
+        : 0.0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 状态色条：一屏内快速区分成功/失败/中断/进行中
+            Container(width: 4, color: statusColor),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(14.0),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // 状态色条：一屏内快速区分成功/失败/中断/进行中
-                        Container(width: 4, color: statusColor),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.all(14.0),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            workflowDisplayNameOr(
-                                              l,
-                                              task.title,
-                                            ),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            '${taskStatusLabel(l, task.status)} · ${taskNodeText(l, task)}',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: statusColor,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          // 终结态不再显示进度条（失败/中断时它是条永远不动的空槽）
-                                          if (task.status.isPending) ...[
-                                            const SizedBox(height: 8),
-                                            LinearProgressIndicator(
-                                              value: progress,
-                                              backgroundColor:
-                                                  Colors.grey.shade200,
-                                              color: statusColor,
-                                              minHeight: 4,
-                                            ),
-                                          ],
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            _formatTime(task.timestamp),
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        GestureDetector(
-                                          onTap: () =>
-                                              _openViewer(task.images, 0),
-                                          child: Container(
-                                            width: 72,
-                                            height: 72,
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey.shade100,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: Colors.grey.shade300,
-                                              ),
-                                            ),
-                                            clipBehavior: Clip.hardEdge,
-                                            child: task.images.isNotEmpty
-                                                ? Stack(
-                                                    fit: StackFit.expand,
-                                                    children: [
-                                                      _isVideo(
-                                                            task.images[0]['filename'],
-                                                          )
-                                                          ? const Center(
-                                                              child: Icon(
-                                                                Icons.videocam,
-                                                                color:
-                                                                    Colors.grey,
-                                                              ),
-                                                            )
-                                                          : _thumbnail(
-                                                              task.images[0],
-                                                            ),
-                                                      if (task.images.length >
-                                                          1)
-                                                        Positioned(
-                                                          right: 4,
-                                                          bottom: 4,
-                                                          child: Container(
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  horizontal: 6,
-                                                                  vertical: 2,
-                                                                ),
-                                                            decoration: BoxDecoration(
-                                                              color: Colors
-                                                                  .black
-                                                                  .withValues(
-                                                                    alpha: 0.6,
-                                                                  ),
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    10,
-                                                                  ),
-                                                            ),
-                                                            child: Text(
-                                                              '${task.images.length}',
-                                                              style: const TextStyle(
-                                                                color: Colors
-                                                                    .white,
-                                                                fontSize: 10,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                    ],
-                                                  )
-                                                : Center(
-                                                    child: _noOutputPlaceholder(
-                                                      task,
-                                                      statusColor,
-                                                      l,
-                                                    ),
-                                                  ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                              Text(
+                                workflowDisplayNameOr(l, task.title),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              // 命中摘要：说明这条为什么被搜到。
+                              // 只在有关键词且靠参数内容命中时出现，靠名称命中的不重复展示
+                              if (hit.summary != null) ...[
+                                const SizedBox(height: 5),
+                                Text(
+                                  hit.summary!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                              const SizedBox(height: 6),
+                              Text(
+                                '${taskStatusLabel(l, task.status)} · ${taskNodeText(l, task)}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: statusColor,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              // 终结态不再显示进度条（失败/中断时它是条永远不动的空槽）
+                              if (task.status.isPending) ...[
+                                const SizedBox(height: 8),
+                                LinearProgressIndicator(
+                                  value: progress,
+                                  backgroundColor: Colors.grey.shade200,
+                                  color: statusColor,
+                                  minHeight: 4,
+                                ),
+                              ],
+                              const SizedBox(height: 6),
+                              Text(
+                                _formatTime(task.timestamp),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
                                 ),
                               ),
-                              const Divider(height: 1),
-                              // 操作区放在卡片底部左右排开，不再挤在缩略图下方：
-                              // 两个按钮各占一半宽度，触控目标也更大
-                              _buildActionBar(task, snapshots, l),
                             ],
                           ),
+                        ),
+                        const SizedBox(width: 14),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: () => _openViewer(task.images, 0),
+                              child: Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                clipBehavior: Clip.hardEdge,
+                                child: task.images.isNotEmpty
+                                    ? Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          _isVideo(task.images[0]['filename'])
+                                              ? const Center(
+                                                  child: Icon(
+                                                    Icons.videocam,
+                                                    color: Colors.grey,
+                                                  ),
+                                                )
+                                              : _thumbnail(task.images[0]),
+                                          if (task.images.length > 1)
+                                            Positioned(
+                                              right: 4,
+                                              bottom: 4,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.6),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  '${task.images.length}',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      )
+                                    : Center(
+                                        child: _noOutputPlaceholder(
+                                          task,
+                                          statusColor,
+                                          l,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                );
-              },
+                  const Divider(height: 1),
+                  // 操作区放在卡片底部左右排开，不再挤在缩略图下方：
+                  // 两个按钮各占一半宽度，触控目标也更大
+                  _buildActionBar(task, snapshots, l),
+                ],
+              ),
             ),
+          ],
+        ),
+      ),
     );
   }
 }

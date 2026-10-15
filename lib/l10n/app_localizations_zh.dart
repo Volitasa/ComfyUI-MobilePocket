@@ -1095,4 +1095,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get configNodeClearAll => '取消本节点';
+
+  @override
+  String get historySearchHint => '搜索工作流或提示词';
+
+  @override
+  String get historySearchEmpty => '没有匹配的记录';
+
+  @override
+  String get historyFilterAll => '全部';
+
+  @override
+  String get historyFilterPending => '进行中';
 }

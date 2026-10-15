@@ -1140,4 +1140,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get configNodeClearAll => 'Clear this node';
+
+  @override
+  String get historySearchHint => 'Search workflow or prompt';
+
+  @override
+  String get historySearchEmpty => 'No matching records';
+
+  @override
+  String get historyFilterAll => 'All';
+
+  @override
+  String get historyFilterPending => 'Running';
 }

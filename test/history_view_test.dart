@@ -93,8 +93,9 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       // 终态也不该留着永远不动的进度条
       expect(find.byType(LinearProgressIndicator), findsNothing);
-      // 状态文案仍然是失败，且错误原文原样透出
-      expect(find.textContaining('已失败'), findsOneWidget);
+      // 状态文案仍然是失败，且错误原文原样透出。
+      // 匹配串带上「 · 」：筛选条上也有同名状态标签，只靠状态词会匹配到两个
+      expect(find.textContaining('已失败 · '), findsOneWidget);
       expect(find.textContaining("attribute 'patch'"), findsOneWidget);
     });
 
@@ -153,8 +154,8 @@ void main() {
       ], locale: const Locale('en'));
 
       // 卡片上的状态行形如「Failed · ...」
-      expect(find.textContaining('Failed'), findsOneWidget);
-      expect(find.textContaining('已失败'), findsNothing);
+      expect(find.textContaining('Failed · '), findsOneWidget);
+      expect(find.textContaining('已失败 · '), findsNothing);
     });
   });
 
@@ -170,7 +171,7 @@ void main() {
       ]);
 
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
-      expect(find.textContaining('已失败'), findsOneWidget);
+      expect(find.textContaining('已失败 · '), findsOneWidget);
       expect(find.textContaining("attribute 'patch'"), findsOneWidget);
     });
 

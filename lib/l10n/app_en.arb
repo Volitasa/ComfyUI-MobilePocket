@@ -355,5 +355,13 @@
   "configNodeSelectAll": "Select all in this node",
   "@configNodeSelectAll": { "description": "Config page: select all params of a node" },
   "configNodeClearAll": "Clear this node",
-  "@configNodeClearAll": { "description": "Config page: unselect all params of a node" }
+  "@configNodeClearAll": { "description": "Config page: unselect all params of a node" },
+  "historySearchHint": "Search workflow or prompt",
+  "@historySearchHint": { "description": "History page: search field hint" },
+  "historySearchEmpty": "No matching records",
+  "@historySearchEmpty": { "description": "History page: search empty state" },
+  "historyFilterAll": "All",
+  "@historyFilterAll": { "description": "History page: status filter - all" },
+  "historyFilterPending": "Running",
+  "@historyFilterPending": { "description": "History page: status filter - pending (queued + running)" }
 }

@@ -755,5 +755,13 @@
   "configNodeSelectAll": "全选本节点",
   "@configNodeSelectAll": { "description": "配置页：勾选该节点下全部参数" },
   "configNodeClearAll": "取消本节点",
-  "@configNodeClearAll": { "description": "配置页：取消该节点下全部参数" }
+  "@configNodeClearAll": { "description": "配置页：取消该节点下全部参数" },
+  "historySearchHint": "搜索工作流或提示词",
+  "@historySearchHint": { "description": "生成记录页：搜索框提示" },
+  "historySearchEmpty": "没有匹配的记录",
+  "@historySearchEmpty": { "description": "生成记录页：搜索无结果" },
+  "historyFilterAll": "全部",
+  "@historyFilterAll": { "description": "生成记录页：状态筛选-全部" },
+  "historyFilterPending": "进行中",
+  "@historyFilterPending": { "description": "生成记录页：状态筛选-进行中（排队+生成）" }
 }
