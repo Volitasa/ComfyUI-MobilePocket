@@ -55,6 +55,8 @@ ui-ux-review.md
 全功能逻辑说明.md
 工作流页面重构设计方案.md
 英文版UI可行性评估.md
+节点解析优化方案.md
+配置页与参数解析优化方案.md
 
 # Android signing keystore
 comfy-release-key.jks

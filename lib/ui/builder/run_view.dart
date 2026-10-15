@@ -296,13 +296,20 @@ class _RunViewState extends ConsumerState<RunView> {
   // 根据参数类型，把控件里的值解析成正确的 Dart 类型后提交
   dynamic _resolveValue(WorkflowNode node) {
     final k = nodeParamKey(node.id, node.key);
+    final text = _controllers[k]?.text ?? '';
     switch (node.paramType) {
       case ParamType.seed:
-        return int.tryParse(_controllers[k]?.text ?? '') ?? 0;
+        final n = num.tryParse(text);
+        return n?.round() ??
+            (node.value is num ? (node.value as num).round() : 0);
       case ParamType.intType:
-        return int.tryParse(_controllers[k]?.text ?? '');
+        // 解析不出来时退回工作流原值 —— 直接返回 null 会被提交给服务器，
+        // 而服务端的报错信息完全看不出是这儿出的问题。
+        final n = num.tryParse(text);
+        return n?.round() ?? node.value;
       case ParamType.float:
-        return double.tryParse(_controllers[k]?.text ?? '');
+        final n = num.tryParse(text);
+        return n?.toDouble() ?? node.value;
       case ParamType.boolType:
         return _widgetValues[k] ?? false;
       case ParamType.enumType:

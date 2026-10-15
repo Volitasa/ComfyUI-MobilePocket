@@ -4,6 +4,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
+import '../../services/workflow_node_parser.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../utils.dart';
@@ -30,9 +31,11 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   // 节点分组的展开/收起状态（用户手动切换）
   final Set<String> _expandedNodeIds = {};
   final Set<String> _collapsedNodeIds = {};
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void dispose() {
+    _searchController.dispose();
     for (final c in _aliasControllers.values) {
       c.dispose();
     }
@@ -130,140 +133,13 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     /// 直接指定「已保存配置」（快照模式用），优先级高于从 prefs 读
     List<WorkflowNode>? savedConfig,
   }) {
-    final List<WorkflowNode> nodes = [];
-
-    // 白名单节点类型：在这些节点内做全参数类型识别
-    const whitelist = {
-      'KSampler',
-      'KSamplerAdvanced',
-      'CLIPTextEncode',
-      'LoadImage',
-      'PrimitiveNode',
-      'EmptyLatentImage',
-      // 主流第三方文本节点（保留兼容，避免已有工作流反向失去支持）
-      'Text Multiline',
-      'Text box',
-      'String Input',
-      'Text Input',
-      // 模型加载节点
-      'CheckpointLoaderSimple',
-      'UNETLoader',
-      'CLIPLoader',
-      'VAELoader',
-      'LoraLoader',
-      'LoraLoaderModelOnly',
-    };
-
-    jsonMap.forEach((nodeId, nodeData) {
-      if (nodeData is! Map) return;
-
-      final classType = nodeData['class_type'] as String?;
-      final inputs = nodeData['inputs'] as Map<String, dynamic>?;
-      final meta = nodeData['_meta'] as Map<String, dynamic>?;
-
-      if (classType == null || inputs == null) return;
-
-      final title = meta?['title'] as String? ?? 'Node $nodeId';
-      final inWhitelist = whitelist.contains(classType);
-
-      // 兜底规则：任何节点的 text/value 参数若为字符串，都识别为文本节点。
-      // 第三方文本节点类名五花八门，靠类名白名单会漏，靠参数名兜底可全兼容。
-      final isTextNodeFallback =
-          !inWhitelist &&
-          ((inputs['text'] is String) || (inputs['value'] is String));
-
-      if (!inWhitelist && !isTextNodeFallback) return;
-
-      inputs.forEach((key, rawValue) {
-        if (isLinkReference(rawValue)) return; // 连线引用不暴露
-
-        // 非白名单节点只暴露 text/value 兜底参数
-        if (!inWhitelist && key != 'text' && key != 'value') return;
-
-        // seed 是整数，需特殊识别为 seed 类型（带随机按钮）
-        if ((key == 'seed' || key == 'noise_seed') && rawValue is! List) {
-          nodes.add(
-            WorkflowNode(
-              id: nodeId,
-              classType: classType,
-              key: key,
-              alias: _defaultAlias(
-                key,
-                title,
-                classType,
-                AppLocalizations.of(context),
-              ),
-              title: title,
-              exposed: true,
-              paramType: ParamType.seed,
-              value: rawValue is num ? rawValue.toInt() : rawValue,
-            ),
-          );
-          return;
-        }
-
-        // image 图片参数
-        if (key == 'image' && rawValue is String) {
-          nodes.add(
-            WorkflowNode(
-              id: nodeId,
-              classType: classType,
-              key: key,
-              alias: _defaultAlias(
-                key,
-                title,
-                classType,
-                AppLocalizations.of(context),
-              ),
-              title: title,
-              exposed: true,
-              paramType: ParamType.image,
-              value: rawValue,
-            ),
-          );
-          return;
-        }
-
-        // 其余参数按值类型推断
-        var type = inferParamType(key, rawValue);
-        if (type == null) return;
-
-        // 已知枚举参数名（sampler_name/scheduler/ckpt_name 等）：
-        // JSON 里是字符串，但语义是下拉选项，选项暂取当前值
-        if (type == ParamType.text && knownEnumParams.contains(key)) {
-          type = ParamType.enumType;
-        }
-
-        // 文本类型：优先显示为文本控件
-        final effectiveType =
-            (key == 'text' || key == 'value') && rawValue is String
-            ? ParamType.text
-            : type;
-
-        final List<String> options = effectiveType == ParamType.enumType
-            ? _enumOptions(rawValue)
-            : const [];
-
-        nodes.add(
-          WorkflowNode(
-            id: nodeId,
-            classType: classType,
-            key: key,
-            alias: _defaultAlias(
-              key,
-              title,
-              classType,
-              AppLocalizations.of(context),
-            ),
-            title: title,
-            exposed: isDefaultExposed(key, classType),
-            paramType: effectiveType,
-            options: options,
-            value: _normalizeValue(effectiveType, rawValue),
-          ),
-        );
-      });
-    });
+    // 解析规则已抽到 services/workflow_node_parser.dart：
+    // 那边是一张手写的数据化规则表（认哪些节点 / 暴露哪些参数 / 各是什么类型），
+    // 这里只负责把结果与「已保存配置」合并。
+    final nodes = WorkflowNodeParser.parse(
+      jsonMap,
+      l: AppLocalizations.of(context),
+    );
 
     // 默认优先使用历史保存的配置，但以最新解析为基准做合并：
     // 参数集合/类型/当前值取新解析（保证旧配置自动补齐新参数、类型不回退），
@@ -467,69 +343,6 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     return valueStr.isEmpty
         ? l.paramSummaryType(typeName)
         : l.paramSummaryTypeValue(typeName, valueStr);
-  }
-
-  // 给参数起一个可读的默认别名。
-  // 优先级：文本类参数优先用工作流里用户给节点起的标题（如“基础设定”），
-  // 无自定义标题才用内置描述名；结构化参数（steps/cfg 等）用参数级描述名。
-  String _defaultAlias(
-    String key,
-    String title,
-    String classType,
-    AppLocalizations l,
-  ) {
-    final t = title.trim();
-    final isDefaultTitle = !isMeaningfulTitle(title, classType);
-
-    if (key == 'text' || key == 'value') {
-      return isDefaultTitle ? l.aliasPrompt : t;
-    }
-
-    final map = {
-      'seed': l.aliasSeed,
-      'noise_seed': l.aliasSeed,
-      'image': l.aliasImage,
-      'steps': l.aliasSteps,
-      'cfg': l.aliasCfg,
-      'sampler_name': l.aliasSampler,
-      'scheduler': l.aliasScheduler,
-      'denoise': l.aliasDenoise,
-      'width': l.aliasWidth,
-      'height': l.aliasHeight,
-      'batch_size': l.aliasBatchSize,
-      'positive': l.aliasPositive,
-      'negative': l.aliasNegative,
-      'ckpt_name': l.aliasCkpt,
-      'unet_name': l.aliasUnet,
-      'clip_name': l.aliasClip,
-      'vae_name': l.aliasVae,
-      'lora_name': l.aliasLora,
-      'control_net_name': l.aliasControlNet,
-      'upscale_model': l.aliasUpscaleModel,
-    };
-    return map[key] ?? (isDefaultTitle ? t : t);
-  }
-
-  // 枚举选项：当前只取工作流里的当前值作为唯一下拉项
-  List<String> _enumOptions(dynamic value) {
-    if (value is List) {
-      return value.map((e) => e.toString()).toList();
-    }
-    if (value is String) return [value];
-    if (value != null) return [value.toString()];
-    return const [];
-  }
-
-  // 把值规整为可序列化、可回填的形态
-  dynamic _normalizeValue(ParamType type, dynamic rawValue) {
-    switch (type) {
-      case ParamType.enumType:
-        return rawValue is List
-            ? (rawValue.isNotEmpty ? rawValue.first : null)
-            : rawValue;
-      default:
-        return rawValue;
-    }
   }
 
   void _handleSaveMapping() {
