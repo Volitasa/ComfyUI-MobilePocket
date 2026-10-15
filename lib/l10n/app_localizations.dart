@@ -2017,6 +2017,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'未知大小'**
   String get unknownSize;
+
+  /// 配置页：展开全部节点分组
+  ///
+  /// In zh, this message translates to:
+  /// **'一键展开'**
+  String get configExpandAll;
+
+  /// 配置页：折叠全部节点分组
+  ///
+  /// In zh, this message translates to:
+  /// **'一键折叠'**
+  String get configCollapseAll;
+
+  /// 配置页：搜索框提示
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索参数或节点'**
+  String get configSearchHint;
+
+  /// 配置页：搜索无结果
+  ///
+  /// In zh, this message translates to:
+  /// **'没有匹配的参数'**
+  String get configSearchEmpty;
+
+  /// 配置页：勾选该节点下全部参数
+  ///
+  /// In zh, this message translates to:
+  /// **'全选本节点'**
+  String get configNodeSelectAll;
+
+  /// 配置页：取消该节点下全部参数
+  ///
+  /// In zh, this message translates to:
+  /// **'取消本节点'**
+  String get configNodeClearAll;
 }
 
 class _AppLocalizationsDelegate

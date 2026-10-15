@@ -742,5 +742,18 @@
   "localSourceSaved": "另存",
   "@localSourceSaved": { "description": "本地工作流来源：从服务器另存" },
   "unknownSize": "未知大小",
-  "@unknownSize": { "description": "通用：大小未知" }
+  "@unknownSize": { "description": "通用：大小未知" },
+
+  "configExpandAll": "一键展开",
+  "@configExpandAll": { "description": "配置页：展开全部节点分组" },
+  "configCollapseAll": "一键折叠",
+  "@configCollapseAll": { "description": "配置页：折叠全部节点分组" },
+  "configSearchHint": "搜索参数或节点",
+  "@configSearchHint": { "description": "配置页：搜索框提示" },
+  "configSearchEmpty": "没有匹配的参数",
+  "@configSearchEmpty": { "description": "配置页：搜索无结果" },
+  "configNodeSelectAll": "全选本节点",
+  "@configNodeSelectAll": { "description": "配置页：勾选该节点下全部参数" },
+  "configNodeClearAll": "取消本节点",
+  "@configNodeClearAll": { "description": "配置页：取消该节点下全部参数" }
 }

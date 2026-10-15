@@ -342,5 +342,18 @@
 
   "localSourceImport": "Imported",
   "localSourceSaved": "Saved from server",
-  "unknownSize": "Unknown size"
+  "unknownSize": "Unknown size",
+
+  "configExpandAll": "Expand all",
+  "@configExpandAll": { "description": "Config page: expand all node groups" },
+  "configCollapseAll": "Collapse all",
+  "@configCollapseAll": { "description": "Config page: collapse all node groups" },
+  "configSearchHint": "Search params or nodes",
+  "@configSearchHint": { "description": "Config page: search field hint" },
+  "configSearchEmpty": "No matching params",
+  "@configSearchEmpty": { "description": "Config page: search empty state" },
+  "configNodeSelectAll": "Select all in this node",
+  "@configNodeSelectAll": { "description": "Config page: select all params of a node" },
+  "configNodeClearAll": "Clear this node",
+  "@configNodeClearAll": { "description": "Config page: unselect all params of a node" }
 }

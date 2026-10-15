@@ -1122,4 +1122,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unknownSize => 'Unknown size';
+
+  @override
+  String get configExpandAll => 'Expand all';
+
+  @override
+  String get configCollapseAll => 'Collapse all';
+
+  @override
+  String get configSearchHint => 'Search params or nodes';
+
+  @override
+  String get configSearchEmpty => 'No matching params';
+
+  @override
+  String get configNodeSelectAll => 'Select all in this node';
+
+  @override
+  String get configNodeClearAll => 'Clear this node';
 }

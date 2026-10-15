@@ -31,6 +31,23 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   // 节点分组的展开/收起状态（用户手动切换）
   final Set<String> _expandedNodeIds = {};
   final Set<String> _collapsedNodeIds = {};
+  // 搜索关键字：只影响列表过滤，不改数据
+  String _keyword = '';
+
+  /// 当前实际显示的参数：按关键字过滤别名 / 参数名 / 节点类名。
+  ///
+  /// 命中参数所在的节点分组整体保留 —— 只过滤"哪些节点该显示"，
+  /// 节点内部不再二次过滤，避免用户勾了参数却看不见。
+  List<WorkflowNode> get _visibleNodes => _keyword.isEmpty
+      ? _extractableNodes
+      : _extractableNodes
+            .where(
+              (n) =>
+                  n.alias.toLowerCase().contains(_keyword) ||
+                  n.key.toLowerCase().contains(_keyword) ||
+                  n.classType.toLowerCase().contains(_keyword),
+            )
+            .toList();
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -345,6 +362,85 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         : l.paramSummaryTypeValue(typeName, valueStr);
   }
 
+  /// 列表上方工具条：左边统计，右边批量展开 / 折叠。
+  ///
+  /// 刻意**不做全局全选** —— 勾参数应当是"逐个看、逐个选"的事，
+  /// 一键全勾会把几十个参数全放出来，运行页直接没法用。
+  /// 全选只放在单个节点卡片内部。
+  Widget _buildToolbar() {
+    final l = AppLocalizations.of(context);
+    final exposedTotal = _extractableNodes.where((n) => n.exposed).length;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              exposedTotal > 0
+                  ? l.configSelectedCount(
+                      exposedTotal,
+                      _extractableNodes.length,
+                    )
+                  : l.configParamCount(_extractableNodes.length),
+              style: TextStyle(
+                fontSize: 11,
+                color: exposedTotal > 0 ? Colors.green.shade700 : Colors.grey,
+              ),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => setState(() {
+              _collapsedNodeIds.clear();
+              _expandedNodeIds.addAll(_extractableNodes.map((n) => n.id));
+            }),
+            icon: const Icon(Icons.unfold_more, size: 18),
+            label: Text(l.configExpandAll),
+          ),
+          TextButton.icon(
+            onPressed: () => setState(() {
+              _expandedNodeIds.clear();
+              _collapsedNodeIds.addAll(_extractableNodes.map((n) => n.id));
+            }),
+            icon: const Icon(Icons.unfold_less, size: 18),
+            label: Text(l.configCollapseAll),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 搜索框：按别名 / 参数名 / 节点类名过滤（只影响显示，不改数据）。
+  Widget _buildSearchField() {
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (v) => setState(() => _keyword = v.trim().toLowerCase()),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: l.configSearchHint,
+          prefixIcon: const Icon(Icons.search, size: 18),
+          suffixIcon: _keyword.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _keyword = '');
+                  },
+                ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
   void _handleSaveMapping() {
     if (_isSnapshotMode) {
       // 只写回快照：此刻原工作流未必还在，不能去改线上的 mapping 配置
@@ -410,6 +506,8 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
               style: const TextStyle(color: Colors.black54, fontSize: 14),
             ),
           ),
+          if (_extractableNodes.isNotEmpty) _buildToolbar(),
+          if (_extractableNodes.isNotEmpty) _buildSearchField(),
           Expanded(
             child: _extractableNodes.isEmpty
                 ? Center(
@@ -426,7 +524,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                     builder: (context) {
                       // 按节点分组展示：同一节点的多个参数合并为一张卡片
                       final groups = <String, List<WorkflowNode>>{};
-                      for (final n in _extractableNodes) {
+                      for (final n in _visibleNodes) {
                         groups.putIfAbsent(n.id, () => []).add(n);
                       }
                       final groupIds = groups.keys.toList();
@@ -442,6 +540,10 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                           final exposedCount = params
                               .where((p) => p.exposed)
                               .length;
+                          // 供卡片头部的「全选 / 取消全选」判断当前是否已全勾
+                          final allExposed =
+                              params.isNotEmpty &&
+                              exposedCount == params.length;
 
                           // 默认展开含已勾选参数的节点，其余收起；用户可手动切换
                           final expanded = _expandedNodeIds.contains(nodeId)
@@ -518,6 +620,29 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                                             color: exposedCount > 0
                                                 ? Colors.green.shade700
                                                 : Colors.grey,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          visualDensity: VisualDensity.compact,
+                                          iconSize: 20,
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          tooltip: allExposed
+                                              ? AppLocalizations.of(context)
+                                                    .configNodeClearAll
+                                              : AppLocalizations.of(context)
+                                                    .configNodeSelectAll,
+                                          onPressed: () => setState(() {
+                                            for (final p in params) {
+                                              p.exposed = !allExposed;
+                                            }
+                                          }),
+                                          icon: Icon(
+                                            allExposed
+                                                ? Icons.deselect
+                                                : Icons.select_all,
+                                            size: 20,
+                                            color: Colors.grey,
                                           ),
                                         ),
                                       ],

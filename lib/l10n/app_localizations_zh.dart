@@ -1077,4 +1077,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get unknownSize => '未知大小';
+
+  @override
+  String get configExpandAll => '一键展开';
+
+  @override
+  String get configCollapseAll => '一键折叠';
+
+  @override
+  String get configSearchHint => '搜索参数或节点';
+
+  @override
+  String get configSearchEmpty => '没有匹配的参数';
+
+  @override
+  String get configNodeSelectAll => '全选本节点';
+
+  @override
+  String get configNodeClearAll => '取消本节点';
 }
