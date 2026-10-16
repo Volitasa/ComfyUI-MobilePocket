@@ -21,6 +21,8 @@
 2. **Parameters become a form** — node parameters are detected automatically; tick what you want to tweak, give it an alias, and the run page renders the right control (text / seed / int / float / toggle / dropdown / image).
 3. **Results land on your phone** — live WebSocket progress and five task states; outputs are downloaded into an on-device gallery (PNG metadata preserved, so you can drop them back into ComfyUI) and can be saved to your album; every history entry can be replayed with "Run again".
 
+**Two things in the pipeline**: picking models that already exist on your server straight from the dropdowns, and running workflows through RunningHub — see [Roadmap](#11-roadmap).
+
 <p align="center">
   <img src="docs/screenshots/en/01-workflows.png" width="23%" />
   &nbsp;
@@ -67,6 +69,7 @@ Want another take? Go back to History, tap **Run again** on that card — the fo
 - [8. Known limitations](#8-known-limitations)
 - [9. Tech stack and project layout](#9-tech-stack-and-project-layout)
 - [10. Development, testing and releases](#10-development-testing-and-releases)
+- [11. Roadmap](#11-roadmap)
 
 ---
 
@@ -637,6 +640,19 @@ Pure logic — parsing, search, language resolution — is extracted into functi
 - Release flow: edit `pubspec.yaml` → commit → `git tag -a vX.Y.Z` → `git push origin main --follow-tags`.
 - Release builds use the real signing key and never fall back to the debug signature (otherwise users can't overwrite-install). The signing config comes from `android/key.properties` locally, and from repository Secrets in CI via `.github/workflows/release.yml`.
 - Pushing a tag makes GitHub Actions build the release APK and upload it to the Release.
+
+---
+
+## 11. Roadmap
+
+Two directions, **unscheduled and not promised** — listed for reference only:
+
+| Direction | What it solves |
+| --- | --- |
+| **Pick models that already exist on your server** | Dropdowns currently offer only the value hard-coded in the workflow, so switching models means going back to the PC and re-saving. Plan: read the real candidate lists (models / LoRA / VAE / samplers, …) from the server's `/object_info` and turn the dropdowns into real option lists |
+| **Run workflows on RunningHub** | Run the same workflows when you have no local GPU, or don't want to keep the machine at home switched on. It offers a ComfyUI-compatible way in; the goal is to treat it as "just another server" and reuse the existing connection and run flow |
+
+Details and ordering are still open.
 
 ---
 
