@@ -2,11 +2,24 @@
 
 [简体中文](README.md) ｜ **English**
 
-**ComfyUI in your pocket.** (The app is installed under the name **ComfyUI Pocket**)
+> **Your ComfyUI server is already running — this app lets you pick parameters, submit jobs and collect results from your phone.**
+> It installs under the name **ComfyUI Pocket**.
 
-Browse the workflows on your ComfyUI server from your phone, turn the parameters you care about into a fillable form, and send a generation job with one tap. Watch the progress live, and get the results automatically downloaded to an on-device gallery and your phone's album — no desktop, no SSH, no memorising node IDs.
+**The only prerequisite**: your phone can reach the machine that runs ComfyUI (same Wi-Fi LAN, or a tunnel / public mapping). As long as the server is up.
 
-> In one sentence: **it's a remote control for ComfyUI — the workflows and the GPU stay on your server, the phone just picks parameters, submits jobs, and collects results.**
+## Connect and go: what you no longer have to do
+
+| The usual hassle | What this app does instead |
+| --- | --- |
+| Converting a canvas-saved workflow into API-format JSON before you can run it on a phone | **Don't convert it.** Workflows on the server — including the UI format the ComfyUI canvas saves — are parsed into a runnable structure inside the app: tap "parse" and run |
+| Sending JSON files over to your phone | **Don't send anything.** Refresh and you get every workflow in the server's `userdata/workflows/` |
+| Installing plugins, opening an SSH session, memorising node IDs | **None of that.** If you saved the workflow on your PC, the phone can see it. Installing [ComfyUI-AutoSaveAPI](https://github.com/Volitasa/ComfyUI-AutoSaveAPI) only adds an extra "ready to run" copy that skips the parse — it is **not required** |
+
+## Core capabilities
+
+1. **Connect and run** — type the server address and the workflow list appears; UI-format workflows are parsed into a runnable structure inside the app; local JSON can be imported too.
+2. **Parameters become a form** — node parameters are detected automatically; tick what you want to tweak, give it an alias, and the run page renders the right control (text / seed / int / float / toggle / dropdown / image).
+3. **Results land on your phone** — live WebSocket progress and five task states; outputs are downloaded into an on-device gallery (PNG metadata preserved, so you can drop them back into ComfyUI) and can be saved to your album; every history entry can be replayed with "Run again".
 
 <p align="center">
   <img src="docs/screenshots/en/01-workflows.png" width="23%" />
@@ -22,11 +35,19 @@ Browse the workflows on your ComfyUI server from your phone, turn the parameters
 
 > Every screenshot in this document was taken from the app actually running on an Android emulator: `docs/screenshots/en` for the English UI, `docs/screenshots/zh` for the Chinese UI.
 
+## Three steps to your first image
+
+1. **Install the APK** → open it and go to **Settings → Server connections → Add**, type the address (e.g. `http://192.168.1.100:8188`) and save. The first connection activates automatically; the badge in the top bar turns green once you're connected.
+2. **Workflows tab** → tap your workflow → tick the parameters you want to tweak on the phone → save. For UI format, tap "parse" first (the first time loads the server's frontend — a few seconds to a dozen).
+3. **Tap "Generate"** → it jumps to History and you watch it go from "Queued" to "Completed" → tap the thumbnail to view it full size and save it to your album.
+
+Want another take? Go back to History, tap **Run again** on that card — the form and every value are already in place.
+
 ---
 
 ## Contents
 
-- [1. Feature overview](#1-feature-overview)
+- [1. Full feature list](#1-full-feature-list)
 - [2. Before you start](#2-before-you-start)
 - [3. Install and connect for the first time](#3-install-and-connect-for-the-first-time)
 - [4. UI tour](#4-ui-tour)
@@ -42,15 +63,16 @@ Browse the workflows on your ComfyUI server from your phone, turn the parameters
   - [5.9 Settings](#59-settings)
   - [5.10 In-app updates](#510-in-app-updates)
 - [6. How the pieces fit together](#6-how-the-pieces-fit-together)
-- [7. End-to-end walkthrough](#7-end-to-end-walkthrough)
-- [8. Troubleshooting](#8-troubleshooting)
-- [9. Known limitations](#9-known-limitations)
-- [10. Tech stack and project layout](#10-tech-stack-and-project-layout)
-- [11. Development, testing and releases](#11-development-testing-and-releases)
+- [7. Troubleshooting](#7-troubleshooting)
+- [8. Known limitations](#8-known-limitations)
+- [9. Tech stack and project layout](#9-tech-stack-and-project-layout)
+- [10. Development, testing and releases](#10-development-testing-and-releases)
 
 ---
 
-## 1. Feature overview
+## 1. Full feature list
+
+The three headline capabilities are at the top of this page; here is everything, with details in [5. Feature guide](#5-feature-guide).
 
 | Feature | What it does |
 | --- | --- |
@@ -70,28 +92,16 @@ Browse the workflows on your ComfyUI server from your phone, turn the parameters
 
 ## 2. Before you start
 
-### 1. A reachable ComfyUI server
+**Only one thing**: a running ComfyUI that your phone can reach. The app talks to it over HTTP and WebSocket and probes with `GET /system_stats` on startup (so the server needs to be up).
 
-The app talks to ComfyUI over HTTP and WebSocket, so your phone must be able to reach that machine (same Wi-Fi LAN, or a tunnel/public mapping).
+The plugin is **optional**: [ComfyUI-AutoSaveAPI](https://github.com/Volitasa/ComfyUI-AutoSaveAPI) additionally exports an `_api.json` when you **save** a workflow — the "ready to run" copy, which skips the in-app parse. **Everything works without it** — workflows you normally save on your PC already live in the server's `userdata/workflows/`, and the app lists and parses them.
 
-On startup the app calls `GET /system_stats` to probe connectivity, so the server needs to be running.
-
-### 2. For "fetch workflows online": install the ComfyUI-AutoSaveAPI plugin
-
-The server-side workflow list comes from ComfyUI's `userdata/workflows/` directory. To have directly-runnable API-format files appear there automatically, install:
-
-- **ComfyUI-AutoSaveAPI**: <https://github.com/Volitasa/ComfyUI-AutoSaveAPI>
-
-> Note: the plugin exports `_api.json` when you **save** a workflow, not when you run one. So the flow is "save the workflow once on your PC → it shows up on your phone".
-
-### 3. Two JSON formats, don't mix them up
+The two JSON formats are good to know about; the app works out which path to take by itself:
 
 | Format | What it looks like | How the app treats it |
 | --- | --- | --- |
-| **API format** (usually `_api.json`) | Keyed by **node ID**, each entry has `class_type` and `inputs` | **Runnable as-is** |
-| **UI format** (a normal `*.json`) | Top level is `nodes` / `links` arrays — what the ComfyUI canvas saves | **Must be parsed** into the API structure first |
-
-Good news: **you don't convert UI format by hand.** The app ships a parser (see [5.2](#52-the-three-sources-of-a-workflow)) — one tap on "parse" and you're done.
+| **API format** (filename ends with `_api.json`) | Keyed by **node ID**, each entry has `class_type` and `inputs` | **Runs directly** (no parsing) |
+| **UI format** (a normal `*.json`) | Top level is `nodes` / `links` arrays — what the ComfyUI canvas saves | **One tap on "parse"** and it runs (see [5.2](#52-the-three-sources-of-a-workflow)) |
 
 ---
 
@@ -190,6 +200,7 @@ flowchart LR
 
 - **API workflows · ready to run**: tap to configure parameters or go straight to the run page.
 - **UI workflows · need parsing**: parse manually the first time. Once parsed they are equivalent to API entries — configurable and runnable.
+- **No plugin needed**: what the ComfyUI canvas normally saves *is* UI format, so one parse is all it takes. With AutoSaveAPI installed the same workflow appears twice — pick the `_api.json` copy to skip the parse step.
 
 Each card shows a status:
 
@@ -511,28 +522,12 @@ So even if that workflow has since changed or been deleted on the server, "run a
 
 ---
 
-## 7. End-to-end walkthrough
-
-1. **On your PC**: build a workflow in ComfyUI (text-to-image, say) and **save it once**. The AutoSaveAPI plugin writes the matching `_api.json` into `userdata/workflows/`.
-2. **On your phone**: Settings → Server connections → Add server, enter the address, test and save.
-3. **Workflows tab → server side**: refresh and your workflow appears under "API workflows · ready to run".
-4. Tap it → the **config panel** opens. Tick the parameters you want to tweak on the phone: positive/negative prompt, seed, steps, CFG, width/height, model name; give them memorable aliases ("Subject", "Canvas width", …). Save.
-5. The **run page** opens: type a prompt, hit "random" for a new seed, adjust steps. Tap **Generate**.
-6. It jumps to **History**: watch it go "Queued" → "Running (KSampler · 62%)" → "Completed", and the thumbnail appears.
-7. Tap the thumbnail for the full-size image → save it to your album (optionally with the workflow embedded).
-8. Want another take? Go back to **History**, tap **Run again** on that card, tweak a line of the prompt and generate — the form and every parameter are already in place.
-9. Cleaning up? **Settings → Workflow snapshots / Workflow storage** shows usage and reference counts.
-
-> If all you have is UI-format JSON: in step 3 it appears under "UI workflows · need parsing" — tap "parse" (the first time loads the ComfyUI frontend, a few seconds to a dozen). Once parsed it behaves exactly like an API workflow.
-
----
-
-## 8. Troubleshooting
+## 7. Troubleshooting
 
 | Symptom | Cause and fix |
 | --- | --- |
 | The badge stays red | Either the HTTP probe or the WebSocket failed. Check the server is running, the address/port is right, and the phone is on the same network. Tap the badge, then "Test connection" on the primary/backup addresses |
-| "No workflows found" on the server side | No JSON files in `userdata/workflows/`. Make sure AutoSaveAPI is installed and that you have **saved** a workflow on the PC (it exports on save, not on run) |
+| "No workflows found" on the server side | No JSON files in `userdata/workflows/`. **Save a workflow once** in ComfyUI on your PC — **no plugin required**; AutoSaveAPI only adds an extra `_api.json` copy |
 | Parsing a UI workflow fails / times out | Parsing loads the whole ComfyUI frontend; on a slow device it can take a dozen seconds. Confirm the phone can open that server's web UI normally, then retry with "Re-parse" |
 | Parsing succeeds but reports "no dynamically editable parameters" | Every parameter is a **link reference** (or its value type can't be mapped to a control). Hit "Re-parse" in the config panel and try again; if it still fails, this workflow genuinely has nothing worth filling in on a phone |
 | A card turned amber saying "content updated" | The workflow content on the server changed, so old parameters may not fit the new structure. Open it and reconfirm the config |
@@ -546,7 +541,7 @@ So even if that workflow has since changed or been deleted on the server, "run a
 
 ---
 
-## 9. Known limitations
+## 8. Known limitations
 
 These are real boundaries of the current version, not bugs:
 
@@ -560,7 +555,7 @@ These are real boundaries of the current version, not bugs:
 
 ---
 
-## 10. Tech stack and project layout
+## 9. Tech stack and project layout
 
 **Tech stack**: Flutter · Riverpod (state) · http · web_socket_channel · shared_preferences · file_picker · webview_flutter · video_player · gal (album) · path_provider · package_info_plus · open_filex · flutter_localizations (i18n)
 
@@ -614,7 +609,7 @@ No persisted data stores display text: task states are stored as enum names (`qu
 
 ---
 
-## 11. Development, testing and releases
+## 10. Development, testing and releases
 
 ```bash
 flutter pub get
