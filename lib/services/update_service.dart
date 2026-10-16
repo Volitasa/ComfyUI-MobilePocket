@@ -54,7 +54,17 @@ class UpdateService {
     required AppLocalizations l10n,
   }) async {
     final hasToken = token != null && token.trim().isNotEmpty;
-    final latest = await _request(latestReleaseUrl, token: token, l10n: l10n);
+    var effective = hasToken ? token.trim() : null;
+    var tokenRejected = false;
+    var latest = await _request(latestReleaseUrl, token: effective, l10n: l10n);
+
+    // 令牌被拒（过期 / 被回收 / 仓库转公开后权限变化）：降级成匿名再试一次。
+    // 仓库若已转为公开，这一跳就能直接拿到结果，用户不必手动清除令牌。
+    if (latest.statusCode == 401 && effective != null) {
+      tokenRejected = true;
+      effective = null;
+      latest = await _request(latestReleaseUrl, token: null, l10n: l10n);
+    }
 
     Map<String, dynamic>? data;
     if (latest.statusCode == 200 && latest.json is Map<String, dynamic>) {
@@ -64,7 +74,7 @@ class UpdateService {
       //           ② 仓库是私有的（GitHub 对无权限访问一律回 404，
       //              不会回 403，以免泄露仓库是否存在）。
       // 退回列表接口再找一次，用它的结果区分这两种情况。
-      final list = await _request(releasesUrl, token: token, l10n: l10n);
+      final list = await _request(releasesUrl, token: effective, l10n: l10n);
       if (list.statusCode == 200 && list.json is List) {
         final items = (list.json as List)
             .whereType<Map<String, dynamic>>()
@@ -72,15 +82,18 @@ class UpdateService {
             .toList();
         data = items.isEmpty ? null : items.first;
       } else if (list.statusCode == 404) {
-        // 列表也 404 —— 基本可以断定是无权访问，而不是「没有发布」
+        // 列表也 404 —— 基本可以断定是无权访问，而不是「没有发布」。
+        // 令牌被拒后降级仍 404，说明仓库确实是私有的，问题仍在令牌上。
         throw UpdateException(
-          hasToken
+          tokenRejected
+              ? l10n.updateTokenInvalid
+              : hasToken
               ? l10n.updateRepoForbiddenWithToken
               : l10n.updateRepoForbidden,
         );
       }
     } else if (latest.statusCode == 401) {
-      // 仓库若已转为公开，清除令牌即可恢复匿名访问，不必重新生成
+      // 401 出现在匿名重试之后：没有令牌可用，只能让用户去配一个
       throw UpdateException(l10n.updateTokenInvalid);
     } else if (latest.statusCode == 403) {
       throw UpdateException(
@@ -236,6 +249,24 @@ class UpdateService {
       throw UpdateException(l10n.updateDownloadInterrupted);
     } catch (_) {
       throw UpdateException(l10n.updateDownloadFailed);
+    }
+
+    // 令牌被拒（过期 / 被回收 / 仓库转公开后权限变化）：改用公开直链重试一次。
+    // 否则会出现「检查更新成功、点下载却失败」——查询那一步已经匿名兜底了。
+    if (useApi &&
+        response.statusCode == 401 &&
+        release.downloadUrl.isNotEmpty) {
+      try {
+        final fallback = http.Request('GET', Uri.parse(release.downloadUrl));
+        fallback.headers['User-Agent'] = '$repoName-App';
+        response = await client.send(fallback).timeout(_timeout);
+      } on TimeoutException {
+        throw UpdateException(l10n.updateDownloadTimeout);
+      } on SocketException {
+        throw UpdateException(l10n.updateDownloadInterrupted);
+      } catch (_) {
+        throw UpdateException(l10n.updateDownloadFailed);
+      }
     }
 
     if (response.statusCode == 404) {

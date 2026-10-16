@@ -102,8 +102,8 @@
   "settingsSnapshotNone": "Created when you run a workflow",
   "settingsSnapshotCount": "{count} snapshots saved",
   "settingsToken": "GitHub access token",
-  "settingsTokenSet": "Configured, private repositories can be checked",
-  "settingsTokenUnset": "Not set. Required to check updates of a private repository",
+  "settingsTokenSet": "Configured",
+  "settingsTokenUnset": "Not set",
   "settingsAbout": "About",
   "settingsAboutSubtitle": "Version info and updates",
 
@@ -316,7 +316,7 @@
 
   "updateRepoForbiddenWithToken": "Repository not accessible: make sure the token has Contents read permission for this repository and has not expired",
   "updateRepoForbidden": "Repository not accessible. If it is private, enter a read-only token in \"Settings → GitHub access token\" and try again",
-  "updateTokenInvalid": "The GitHub token is invalid or expired. Update it in \"Settings → GitHub access token\"; if the repository is public, just clear the token",
+  "updateTokenInvalid": "Token invalid or expired. Update or clear it in \"Settings → GitHub access token\"",
   "updateRateLimitedWithToken": "GitHub rejected the request (insufficient token permission or rate limit). Try again later",
   "updateRateLimited": "GitHub API access is limited (60 anonymous requests per hour). Configure a token to raise the limit",
   "updateHttpFailed": "Update check failed (HTTP {code})",

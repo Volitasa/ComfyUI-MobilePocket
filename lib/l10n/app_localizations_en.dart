@@ -330,12 +330,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsToken => 'GitHub access token';
 
   @override
-  String get settingsTokenSet =>
-      'Configured, private repositories can be checked';
+  String get settingsTokenSet => 'Configured';
 
   @override
-  String get settingsTokenUnset =>
-      'Not set. Required to check updates of a private repository';
+  String get settingsTokenUnset => 'Not set';
 
   @override
   String get settingsAbout => 'About';
@@ -1027,7 +1025,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateTokenInvalid =>
-      'The GitHub token is invalid or expired. Update it in \"Settings → GitHub access token\"; if the repository is public, just clear the token';
+      'Token invalid or expired. Update or clear it in \"Settings → GitHub access token\"';
 
   @override
   String get updateRateLimitedWithToken =>

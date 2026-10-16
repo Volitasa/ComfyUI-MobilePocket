@@ -86,7 +86,7 @@ The three headline capabilities are at the top of this page; here is everything,
 | Local gallery | Outputs are downloaded into the app sandbox with **original PNG metadata preserved** (droppable back into ComfyUI); full-screen viewer and video playback |
 | Save to album | Choose between "original image with workflow" and "plain image with metadata stripped" |
 | Chinese / English UI | Follow the system language or pin it to Chinese or English; persisted data never stores display strings, so switching languages never affects your history |
-| In-app updates | Manually check GitHub Releases, download the APK and hand it to the system installer (works with private repos via a token) |
+| In-app updates | Manually check GitHub Releases, download the APK and hand it to the system installer (works with private and public repos alike) |
 
 ---
 
@@ -435,7 +435,7 @@ The foundation of "run again".
 | **Server connections** | Add, edit and delete servers, test connections, switch the active one |
 | **Workflow storage** | Everything saved on this device, grouped into "local assets / parse cache", with disk usage; local assets can be deleted, parse cache can only be cleared |
 | **Workflow snapshots** | All snapshots, reference counts, source server, manual deletion |
-| **GitHub access token** | The read-only token needed to check updates of a private repository (see below) |
+| **GitHub access token** | Optional. Required for a private repository; a public one works without it (see below) |
 | **About** | Version, check for updates |
 
 **About the UI language**
@@ -459,7 +459,10 @@ The foundation of "run again".
 
 - **Manual only** (no background checks): tap "Check for updates" on the About page, which queries GitHub Releases and compares with the current version.
 - When an update exists it shows the version, package size and release notes (Markdown markers are stripped), then "Download and install" runs a progress bar and hands the APK to the system installer.
-- **Private repository support**: if the repo is private, anonymous requests get a plain 404 from GitHub (not a 403), so you need a read-only token with Contents access. The token is **stored on device only** and never uploaded.
+- **Private and public repositories both work, with no code change**:
+  - With no token the app queries anonymously. If the repo is **public**, updates are found and downloaded straight away.
+  - If the repo is **private**, anonymous requests get a plain 404 from GitHub (not a 403), so you need a read-only token with Contents access. The token is **stored on device only** and never uploaded.
+  - When a token expires or is revoked, the app **falls back to an anonymous retry** automatically — so if the repo switches from private to public, existing users keep getting updates without having to clear the token first (both the lookup and the download fall back).
 
 ---
 
@@ -536,7 +539,7 @@ So even if that workflow has since changed or been deleted on the server, "run a
 | Search can't find an old record | Three possibilities: ① older records stored no "submitted parameter values", so only the workflow name is searchable; ② parameter **aliases** need the snapshot to still exist — if it was deleted in settings, matching degrades to values only; ③ **numbers are not matched**, so searching `7` won't hit `cfg=7` |
 | The config panel list goes empty after typing in search | Search is a **per-parameter filter**: only matching parameters are shown, and no match means "no matching parameter". The keyword must appear in a parameter name, alias or node name |
 | Aliases are still Chinese after switching to English | Aliases are content saved at configuration time — your own data, not translated with the UI language. Just rename them in the config panel |
-| "Repository not accessible" when checking updates | The repo is private; put a read-only PAT in Settings → GitHub access token |
+| "Repository not accessible" when checking updates | The repo is private; put a read-only PAT in Settings → GitHub access token. If the repo is already public and you still see this, the stored token is stale — clear it |
 | Saving an image to the album fails | Album permission is required the first time |
 
 ---

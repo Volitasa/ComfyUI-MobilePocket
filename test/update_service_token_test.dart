@@ -136,6 +136,47 @@ void main() {
       expect((err as UpdateException).message, contains('令牌无效或已过期'));
     });
 
+    test('401 后自动匿名重试：仓库转公开的老用户不必手动清令牌', () async {
+      final rec = _Recorder();
+      final service = _service(rec, (req) async {
+        // 模拟「令牌已被回收，但仓库已公开」：带令牌一律 401，匿名正常
+        if (req.headers.containsKey('Authorization')) {
+          return http.Response('Unauthorized', 401);
+        }
+        return http.Response(_releaseJson(), 200);
+      });
+
+      final release = await service.fetchLatestRelease(
+        token: 'github_pat_revoked',
+        l10n: _l10n,
+      );
+
+      expect(release.version, '1.0.6');
+      // 第一次带令牌被拒，第二次匿名成功
+      expect(rec.urls.length, 2);
+      expect(rec.headers.first['Authorization'], 'Bearer github_pat_revoked');
+      expect(rec.headers.last.containsKey('Authorization'), false);
+    });
+
+    test('401 后匿名重试也 404 → 指向令牌本身，而不是“没有发布版本”', () async {
+      final rec = _Recorder();
+      final service = _service(rec, (req) async {
+        if (req.headers.containsKey('Authorization')) {
+          return http.Response('Unauthorized', 401);
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final err = await service
+          .fetchLatestRelease(token: 'github_pat_revoked', l10n: _l10n)
+          .then<Object?>((r) => r)
+          .catchError((Object e) => e);
+
+      final msg = (err as UpdateException).message;
+      expect(msg, contains('令牌无效或已过期'));
+      expect(msg, isNot(contains('还没有发布')));
+    });
+
     test('403 且未配令牌 → 提到匿名限额与配置令牌', () async {
       final rec = _Recorder();
       final service = _service(

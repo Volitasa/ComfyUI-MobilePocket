@@ -671,13 +671,13 @@ abstract class AppLocalizations {
   /// GitHub 令牌：已配置
   ///
   /// In zh, this message translates to:
-  /// **'已配置，可检查私有仓库的更新'**
+  /// **'已配置'**
   String get settingsTokenSet;
 
   /// GitHub 令牌：未配置
   ///
   /// In zh, this message translates to:
-  /// **'未配置。仓库为私有时必须配置才能检查更新'**
+  /// **'未配置'**
   String get settingsTokenUnset;
 
   /// 设置项：关于
@@ -1865,7 +1865,7 @@ abstract class AppLocalizations {
   /// No description provided for @updateTokenInvalid.
   ///
   /// In zh, this message translates to:
-  /// **'GitHub 令牌无效或已过期。可在「设置 → GitHub 访问令牌」中更新；若仓库已公开，直接清除令牌即可'**
+  /// **'令牌无效或已过期，请到「设置 → GitHub 访问令牌」更新或清除'**
   String get updateTokenInvalid;
 
   /// No description provided for @updateRateLimitedWithToken.

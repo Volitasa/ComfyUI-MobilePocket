@@ -327,10 +327,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsToken => 'GitHub 访问令牌';
 
   @override
-  String get settingsTokenSet => '已配置，可检查私有仓库的更新';
+  String get settingsTokenSet => '已配置';
 
   @override
-  String get settingsTokenUnset => '未配置。仓库为私有时必须配置才能检查更新';
+  String get settingsTokenUnset => '未配置';
 
   @override
   String get settingsAbout => '关于';
@@ -994,8 +994,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '仓库不可访问。若该仓库是私有的，请在「设置 → GitHub 访问令牌」中填入只读令牌后重试';
 
   @override
-  String get updateTokenInvalid =>
-      'GitHub 令牌无效或已过期。可在「设置 → GitHub 访问令牌」中更新；若仓库已公开，直接清除令牌即可';
+  String get updateTokenInvalid => '令牌无效或已过期，请到「设置 → GitHub 访问令牌」更新或清除';
 
   @override
   String get updateRateLimitedWithToken => 'GitHub 拒绝了请求（令牌权限不足或触发限流），请稍后再试';
