@@ -1,10 +1,26 @@
 # ComfyUI MobilePocket
 
-**把 ComfyUI 装进手机口袋。**
+**简体中文** ｜ [English](README_EN.md)
+
+**把 ComfyUI 装进手机口袋。**（应用在手机上的显示名是 **ComfyUI Pocket**）
 
 在手机上浏览服务器里的工作流，把常用参数变成一张可填的表单，点一下就把生图任务下发到 ComfyUI，实时看到进度，出图自动存进本地画廊和手机相册。不用开电脑、不用 SSH、不用记节点 ID。
 
 > 一句话概括：**它是一个 ComfyUI 的"遥控器"——工作流和算力还在你的服务器上，手机只负责挑参数、下任务、收结果。**
+
+<p align="center">
+  <img src="docs/screenshots/zh/01-workflows.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/02-run.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/06-history-search.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/07-gallery.png" width="23%" />
+</p>
+
+<p align="center"><i>工作流列表 · 运行页 · 生成记录搜索 · 本地画廊</i></p>
+
+> 本文所有截图都取自 Android 模拟器上的真实运行界面：`docs/screenshots/zh` 为中文界面，`docs/screenshots/en` 为英文界面。
 
 ---
 
@@ -40,12 +56,14 @@
 | --- | --- |
 | 多服务器连接 | 保存多套服务器（家里内网 / 公司外网），每条可设**主地址 + 备用地址**，主的不通自动回退 |
 | 三种工作流来源 | 服务器 `_api.json` 直接跑；服务器 UI 格式 JSON **在 App 内解析成 API 结构**再跑；本地 JSON 文件导入 |
-| 参数变成表单 | 自动解析节点参数，勾选要暴露的项、起中文别名，运行页生成对应控件（文本/种子/整数/小数/开关/下拉/图片） |
-| 实时进度 | WebSocket 回推，显示当前正在执行的节点与百分比；断线自动重连并主动向服务器对账 |
+| 参数变成表单 | 按**数据化规则表**识别节点参数，勾选要暴露的项、起别名，运行页按类型生成控件（文本/种子/整数/小数/开关/下拉/图片）；配置页支持批量展开折叠、节点内全选、按参数搜索 |
+| 实时进度 | WebSocket 回推，显示当前正在执行的节点与百分比；断线自动重连并主动向服务器对账，**回到前台也会自动补齐进度** |
 | 五态任务管理 | 排队中 / 生成中 / 已完成 / 已失败 / 已中断，失败时展示服务器返回的具体错误原因 |
 | 再次运行 | 每次运行自动固化快照，任何一条历史记录都能凭快照还原当时的表单与参数，一键重跑 |
+| 记录搜索与筛选 | 生成记录可按工作流名 / 提示词 / 参数别名搜索，按 5 种状态筛选，并显示"为什么匹配"的命中摘要 |
 | 本地画廊 | 出图自动下载到 App 沙盒，**保留原始 PNG 元数据**（可拖回 ComfyUI 复现），支持大图查看与视频播放 |
 | 保存到相册 | 可选"带工作流原图"或"剔除元数据的普通图片" |
+| 中英双语界面 | 界面语言可跟随系统或手动指定中文 / 英文；持久化数据不存展示文案，切语言不影响历史记录 |
 | 应用内更新 | 手动检查 GitHub Releases，下载 APK 并唤起系统安装（支持私有仓库令牌） |
 
 ---
@@ -99,11 +117,23 @@ App 启动时会请求 `GET /system_stats` 探测连通性，所以服务器需�
 | Tab | 作用 |
 | --- | --- |
 | **工作流** | 挑工作流、配参数、进运行页。顶部有「服务器 / 本地」两段切换 |
-| **生成记录** | 所有下发过的任务，看状态、看结果、再次运行、删除 |
+| **生成记录** | 所有下发过的任务，看状态、看结果、搜索筛选、再次运行、删除 |
 | **画廊** | 所有已下载到本机的生成结果，网格浏览 |
-| **设置** | 服务器连接、工作流存储、工作流快照、GitHub 令牌、关于与检查更新 |
+| **设置** | 界面语言、服务器连接、工作流存储、工作流快照、GitHub 令牌、关于与检查更新 |
 
 顶部常驻 **连接状态徽标**（服务器名 + 状态圆点），点它直达服务器配置页。
+
+<p align="center">
+  <img src="docs/screenshots/zh/01-workflows.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/05-history.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/07-gallery.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/10-settings.png" width="23%" />
+</p>
+
+<p align="center"><i>四个 Tab 依次为：工作流 / 生成记录 / 画廊 / 设置</i></p>
 
 ---
 
@@ -128,6 +158,12 @@ App 启动时会请求 `GET /system_stats` 探测连通性，所以服务器需�
 | 删除服务器 | 断开连接，并**连带清理该服务器名下的解析缓存**（那些缓存再也无从校验） |
 | 断线 | WebSocket 每 3 秒尝试重连，只要连接配置仍有效就一直重试 |
 | 重连成功 | 自动重新拉取工作流列表，并对账所有未终结的任务 |
+
+<p align="center">
+  <img src="docs/screenshots/zh/11-servers.png" width="45%" />
+</p>
+
+<p align="center"><i>服务器配置：点卡片启用，铅笔编辑，垃圾桶删除</i></p>
 
 ### 5.2 工作流的三条来源
 
@@ -176,26 +212,66 @@ flowchart LR
 
 服务器上的工作流可以随时另存一份到本机，变成你的私人资产。用途：服务器那份被改坏或被删了，你手里还有一份。
 
+<p align="center">
+  <img src="docs/screenshots/zh/01-workflows.png" width="45%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/14-local.png" width="45%" />
+</p>
+
+<p align="center"><i>左：服务器段（按 API / UI 格式分组）　右：本地段（自己的资产 + 导入入口）</i></p>
+
 ### 5.3 参数配置面板
 
 把节点参数挑出来、变成手机上的表单。进入方式：首页点击一个**未配置**的工作流，或在任何卡片菜单里选「重新配置节点」。
 
 **它做了什么**
 
-1. 遍历工作流的每个节点，识别哪些参数值得暴露。
-2. 按参数值推断类型：整数 / 小数 / 文本 / 下拉枚举 / 开关 / 种子 / 图片。
+1. 遍历工作流的每个节点，按**内置规则表**判断该节点有哪些参数值得暴露。
+2. 定类型：优先看规则表里的强制类型，其次按参数名/参数值推断，得到整数 / 小数 / 文本 / 下拉枚举 / 开关 / 种子 / 图片。
 3. 跳过**连线引用**（形如 `["节点id", 0]` 的值）——那不是给你填的。
 4. 按节点分组展示，你勾选需要的项、起一个好记的别名，保存即可。
 
-**识别范围**
+**识别范围**：规则表按「用途」分组，而不是罗列类名（同一个功能在不同机器上的类名不一样）：
 
-- 内置白名单覆盖 16 类常用节点：KSampler、KSamplerAdvanced、CLIPTextEncode、EmptyLatentImage、LoadImage、PrimitiveNode、CheckpointLoaderSimple、UNETLoader、CLIPLoader、VAELoader、LoraLoader、LoraLoaderModelOnly，以及若干第三方文本节点。
-- **兜底规则**：任何节点只要含有字符串类型的 `text` 或 `value` 参数，都会被识别为文本节点——社区里五花八门的提示词节点因此也能覆盖。
-- 高频参数（种子、提示词、步数、CFG、采样器、调度器、宽高、生成数量、各类模型名等）**默认勾选**，其余需你手动勾。
+| 分组 | 覆盖的节点 |
+| --- | --- |
+| 采样器 | `KSampler`、`KSamplerAdvanced`、`SamplerCustom(Advanced)`、`BasicScheduler`、`KSamplerSelect` |
+| 文本 / 提示词 | `CLIPTextEncode`、`Text Multiline`、`Text box`、`String Input`、`Text Input`、`PrimitiveStringMultiline`、`Text Concatenate` |
+| 尺寸 / 放大 | `EmptyLatentImage`、`EmptySD3LatentImage`、`EmptyFluxLatentImage`、`LatentUpscale(By)`、`ImageScaleBy`、`ImageUpscaleWithModel`、`UpscaleModelLoader` |
+| 模型加载 | `CheckpointLoaderSimple`、`UNETLoader`/`UnetLoaderGGUF*`、`CLIPLoader`/`CLIPLoaderGGUF`、`VAELoader`、`CLIPVisionLoader` |
+| LoRA / 补丁 | `LoraLoader`、`LoraLoaderModelOnly`、`ModelPatchLoader` |
+| ControlNet | `ControlNetLoader`、`ControlNetApplyAdvanced`、`SetUnionControlNetType` |
+| IPAdapter | `IPAdapter`、`IPAdapterFaceID`、`IPAdapterNoise`、`IPAdapterUnifiedLoaderFaceID`、`IPAdapterInsightFaceLoader` |
+| 换脸 | `ReActorFaceSwap` |
+| 去背 / 掩码合成 | `RMBG`、`FeatherMask`、`ImageCompositeMasked` |
+| ControlNet 预处理器 | `DWPreprocessor`、`DepthAnythingV2Preprocessor`、`DensePosePreprocessor`、`CannyEdgePreprocessor`、`TilePreprocessor`、`HEDPreprocessor` |
 
-**别名默认值**：文本类参数优先采用你在 ComfyUI 里给节点起的标题（例如"基础设定"）；结构化参数用内置中文名（"采样步数""CFG 强度""随机种子"）。
+- **收录的节点会收窄到该暴露的那几个**：规则里可以写死候选参数名（例如 ControlNet 预处理器只留 `resolution`，`RMBG` 只留模型/灵敏度/处理分辨率），避免一个节点几十个参数把运行页淹没。
+- **没收录的节点不会被丢掉**：兜底规则会把它**所有能填的参数**都列出来（连线引用自动跳过）——社区里各种自定义节点、`LoadImage` 的图片上传框都靠这条兜底覆盖，不用改一行代码。
+- **代价是兜底不区分节点复杂度**：参数极多的节点（视频合成类、`ModelMerge*`）没有专门的收窄规则，会一次性列出全部参数，需要你在配置面板里手动取消勾选。
+- **强制类型**：`denoise`、`strength_*`、`mask_blur` 等在 JSON 里常常写着整数（`"denoise": 1`），但语义是小数的参数会被强制成小数，否则手机端只能输入整数。
+- **默认勾选**：规则自带的默认项（如 `ControlNetApplyAdvanced` 的 `strength`），加上一张高频参数表（种子、提示词、图片、步数、CFG、采样器、调度器、宽高、生成数量、各类模型名）。
+
+**工具条与批量操作**（配置项多的时候很好用）
+
+| 控件 | 作用 |
+| --- | --- |
+| 左上角计数（如 `4/18 项已选`） | 一眼看出暴露了多少参数 |
+| 一键展开 / 一键折叠 | 全部节点的展开状态，**不动勾选状态** |
+| 卡片头部的全选 / 取消全选图标 | 只作用**本卡片**，与展开热区分开 |
+| 搜索框 | 按参数名、别名或节点名过滤；**命中哪个参数就只显示哪个参数**，并自动展开命中的分组 |
+
+**别名默认值**：文本类参数优先采用你在 ComfyUI 里给节点起的标题（例如"基础设定"）；结构化参数用内置名（"采样步数""CFG 强度""随机种子"）。别名是**你自己保存下来的内容**，不随界面语言翻译。
 
 **「重新解析」按钮**：服务器工作流更新后，点它会放弃旧配置、按新结构重新提取参数（旧的勾选状态与别名会尽量保留）。
+
+<p align="center">
+  <img src="docs/screenshots/zh/03-config.png" width="45%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/04-config-search.png" width="45%" />
+</p>
+
+<p align="center"><i>左：配置面板全貌（计数 / 一键展开折叠 / 搜索框 / 卡片全选）　右：搜索 "seed" 后只显示命中的参数</i></p>
 
 > 配置保存后自动进入运行页；运行页右上角齿轮可随时回到配置面板，两者互相替换、不堆叠页面。
 
@@ -225,6 +301,14 @@ flowchart LR
 
 **失败会明确告诉你原因**，而不是一句"提交失败"：网络超时、HTTP 错误码，以及服务器返回的 `node_errors`（会列出出错的节点 ID）。
 
+**数值填错也不会静默变空**：提交前逐个 `num.tryParse`，解析失败时回退成工作流里的原值，而不是把 `null` 塞给服务器。
+
+<p align="center">
+  <img src="docs/screenshots/zh/02-run.png" width="45%" />
+</p>
+
+<p align="center"><i>运行页：按类型渲染控件，底部固定「立即生成」</i></p>
+
 ### 5.5 任务跟踪
 
 任务共五种状态，进度通过 WebSocket 实时回推：
@@ -253,9 +337,30 @@ stateDiagram-v2
 
 **崩溃或断线后不会卡死**：重新连接时 App 会主动向 `/history` 与 `/queue` 查询，把所有卡在"排队中/生成中"的任务纠正成真实终态。既不在历史也不在队列的，判定为"已中断（服务器可能已重启）"，避免永久转圈。
 
+**切到别的 App 再回来，进度也不会停在旧值**：Android 可能在后台静默掐断 WebSocket（半开连接，不触发断线回调，自动重连不会启动）。回到前台时 App 会重建连接并对账一次——只在确实存在"进行中"记录时才发请求，空闲时不会打扰服务器。
+
 ### 5.6 生成记录与再次运行
 
 每条记录是一张卡片：左侧状态色条，标题 + 状态 + 节点信息 + 时间，右侧缩略图（多图会显示角标数字）。底部两个操作：**再次运行** / **删除**。
+
+**搜索与状态筛选**
+
+- 搜索框在列表上方通栏，**实时过滤**（记录上限 50 条，不需要防抖）。
+- 匹配范围：工作流的**展示名** + 本次运行**填入的参数值** + 参数**别名**（别名要能通过快照反查，快照被删就自动降级成只匹配值）。
+- 多个关键词按空格分词，要求**全部命中且落在同一个字段**——避免"正面提示词里有猫、负向里有窗台"被误判成同一条。
+- **数值不参与匹配**：搜 `7` 不会因为某条记录里 `cfg=7` 而命中，否则全是噪音。
+- 大小写不敏感；关键词为空时原样返回全部。
+- 命中时在卡片上显示**命中摘要**，直接告诉你为什么匹配（例如 `CLIP文本编码: …human…`）。靠工作流名命中的不再重复展示摘要。
+- 状态筛选条 5 项：全部 / 进行中（排队 + 生成合并） / 已完成 / 已失败 / 已中断，可与搜索叠加。
+- 空态分两条文案：「没有匹配的记录」和「本来就没有记录」，不会让人误以为记录丢了。
+
+<p align="center">
+  <img src="docs/screenshots/zh/05-history.png" width="45%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/06-history-search.png" width="45%" />
+</p>
+
+<p align="center"><i>左：默认视图（状态筛选条）　右：搜 "human" 命中提示词并显示摘要</i></p>
 
 **再次运行**——这是本 App 最实用的能力之一：
 
@@ -283,6 +388,12 @@ stateDiagram-v2
 | 改配置会多出快照吗 | 不会。快照按**工作流内容**去重，改暴露配置不会让已有记录引用失效 |
 | 怎么清理 | 设置 → 工作流快照，显示每份快照被多少条记录引用，可手动删除 |
 
+<p align="center">
+  <img src="docs/screenshots/zh/12-snapshots.png" width="45%" />
+</p>
+
+<p align="center"><i>快照列表：固化时间、体积、来源服务器、被多少条记录引用</i></p>
+
 ### 5.8 画廊与保存到相册
 
 **画廊**：独立 Tab，三列网格浏览所有已下载到本机的生成结果。点开是大图查看器，支持双指缩放、左右滑动切换、删除单张。
@@ -295,15 +406,43 @@ stateDiagram-v2
 
 **自动下载**：生成成功后，App 会把输出媒体下载到本机画廊目录，**保留原始 PNG 元数据**，所以离线也能看图、也能保存到相册。
 
+<p align="center">
+  <img src="docs/screenshots/zh/07-gallery.png" width="30%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/08-viewer.png" width="30%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/09-save-as.png" width="30%" />
+</p>
+
+<p align="center"><i>画廊网格 → 大图查看器 → 保存到相册时的两种选择</i></p>
+
 ### 5.9 设置中心
 
 | 入口 | 作用 |
 | --- | --- |
+| **界面语言** | 跟随系统 / 简体中文 / English，选择记在本地 |
 | **服务器连接** | 增删改服务器、测试连接、切换启用 |
 | **工作流存储** | 汇总本机保存的所有工作流，按「本地资产 / 解析缓存」分组，显示占用空间；本地资产可删除，解析缓存只能清除 |
 | **工作流快照** | 查看所有快照、被引用次数、来源服务器，手动删除 |
 | **GitHub 访问令牌** | 私有仓库更新检查所需的只读令牌（见下） |
 | **关于** | 版本号、检查更新 |
+
+**关于界面语言**
+
+- 默认跟随系统；系统语言不是中文或英文时回退**中文**，也可以在设置里手动锁定。
+- 持久化数据里**不存任何界面文案**：任务状态存枚举名（`queued`/`running`/`completed`/`failed`/`interrupted`），节点名、服务端错误原文这类动态内容单独存，旧版本残留的中文数据在读取时自动迁移。
+- 因此切换语言不会影响历史记录：标题会按当前语言重新显示，参数值、图片、快照全部原样。
+- 唯一不翻译的是**你自己命名/配置的内容**：工作流标题、参数别名、模型名与节点名（ComfyUI 里本来就是英文）。
+
+<p align="center">
+  <img src="docs/screenshots/zh/10-settings.png" width="30%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/13-language.png" width="30%" />
+  &nbsp;
+  <img src="docs/screenshots/en/10-settings.png" width="30%" />
+</p>
+
+<p align="center"><i>设置中心 → 语言选择 → 切到英文后的同一个页面</i></p>
 
 ### 5.10 应用内更新
 
@@ -395,10 +534,13 @@ flowchart TD
 | 顶部徽标一直是红的 | HTTP 探测或 WebSocket 其一未通。检查服务器是否启动、地址端口是否正确、手机与服务器是否在同一网络。点徽标进配置页，用"测试连接"逐个验证主/备地址 |
 | 服务器段提示"未找到工作流" | `userdata/workflows/` 下没有 JSON 文件。确认 AutoSaveAPI 已安装，且在电脑上**保存过**工作流（它是保存时导出，不是运行时） |
 | UI 工作流解析失败 / 超时 | 解析要加载完整的 ComfyUI 前端，慢设备上可能要十几秒。确认手机能正常打开该服务器的网页版 UI；仍失败可点"重新解析"再试 |
-| 解析成功却提示"没有可动态修改的参数" | 该工作流的节点都不在识别范围内，或参数全是连线引用。可在配置面板点右上角「重新解析」重试；复杂自定义节点建议用 PrimitiveNode 中转 |
+| 解析成功却提示"没有可动态修改的参数" | 这个工作流的参数**全是连线引用**（或值的类型无法识别成可填控件）。点配置面板右上角「重新解析」再试；仍不行说明它确实没有适合在手机上填的参数 |
 | 卡片变黄提示"内容已更新" | 服务器上的工作流内容变了，旧参数可能与新结构对不上。点进去重新确认配置 |
 | 提交时报 HTTP 400 并列出错误节点 | 服务器校验不通过（常见：模型名不存在、节点类型缺失）。按提示的节点 ID 回电脑检查该节点的输入 |
-| 任务一直卡在"生成中" | 断线期间错过了终态事件。点生成记录页右上角的刷新按钮手动对账（重连时也会自动对账） |
+| 任务一直卡在"生成中" | 断线/后台期间错过了终态事件。点生成记录页右上角的刷新按钮手动对账（重连成功、从后台回到前台时也会自动对账） |
+| 搜索搜不到某条旧记录 | 三种可能：① 更早版本的记录没有保存"本次填入的参数"，只有工作流名可搜；② 参数**别名**要靠快照反查，快照在设置页被删过就自动降级为只匹配值；③ **数值不参与匹配**，搜 `7` 不会命中 `cfg=7` |
+| 配置页搜索框输入后列表空了 | 搜索是**按参数过滤**的：命中哪个参数就只显示哪个参数，没命中就显示"没有匹配的参数"。关键词必须出现在参数名、别名或节点名里 |
+| 切到英文后参数别名还是中文 | 别名是配置时保存下来的内容，属于你的自定义数据，不随界面语言翻译。直接在配置面板改成想要的名字即可 |
 | 检查更新提示"仓库不可访问" | 仓库是私有的，需在设置 → GitHub 访问令牌填入只读 PAT |
 | 保存图片到相册失败 | 首次需要授予相册权限 |
 
@@ -409,8 +551,10 @@ flowchart TD
 以下为当前版本的真实边界，不是 bug：
 
 - **下拉枚举目前只有工作流里写死的当前值**：例如模型名下拉框只有当前那个选项，暂时无法在手机上切换到服务器上的其它模型。要切换请在电脑上改好工作流重新保存（后续计划接入 `/object_info` 拉取真实选项）。
-- **数值参数没有 min/max/step**：整数/小数是自由输入框，不做范围校验。
+- **数值参数没有 min/max/step**：整数/小数是自由输入框，不做范围校验；填了非数字会回退成工作流原值（不会提交空值）。
+- **参数极多的节点没有收窄规则**：视频合成类、`ModelMerge*` 这类单节点 30~66 个参数的节点只有兜底、没有专门的收窄名单，会一次性把所有可填参数列进配置面板，需要手动取消勾选。
 - **图片参数只记录服务器上的文件名**，若服务器清理了 input 目录，历史记录里的图片引用可能失效。
+- **搜索只覆盖最近 50 条记录**：这是生成记录本身的上限，搜索是纯本地过滤、没有索引；记录量级大幅增长后需要重新设计。
 - **主要面向 Android**：应用内更新、相册保存、APK 安装均按 Android 实现；其它平台可编译但未做完整验证。
 - **不做后台自动检查更新**，只在关于页手动触发。
 
@@ -447,12 +591,14 @@ lib/
 │   └── update_provider / github_token_provider
 ├── services/
 │   ├── workflow_api_converter # UI→API 转换的脚本与结果校验（纯函数，可单测）
+│   ├── workflow_node_parser   # 节点识别规则表 + 参数类型判定（纯函数，可单测）
 │   ├── gallery_store          # 本地画廊存储
 │   ├── media_saver            # 统一保存到相册入口
 │   ├── png_metadata_stripper  # PNG 元数据剔除
 │   └── update_service         # GitHub Releases 查询与下载
 ├── utils/
-│   └── task_display.dart     # 任务状态/阶段 → 按当前语言生成展示文案
+│   ├── task_display.dart     # 任务状态/阶段 → 按当前语言生成展示文案
+│   └── history_search.dart   # 生成记录的关键词搜索与状态筛选（纯函数，可单测）
 └── ui/
     ├── main_screen.dart      # 底部导航壳
     ├── home/                 # 工作流：服务器段 / 本地段
@@ -464,7 +610,7 @@ lib/
 
 **多语言**：文案写在 `lib/l10n/*.arb`，`flutter pub get` 时由 `flutter gen-l10n` 生成 `AppLocalizations`（配置见 `l10n.yaml`）。默认跟随系统，非中英文的系统语言回退中文，用户可在「设置 → 界面语言」里手动选择，选择记在 `comfy_ui_locale`。
 
-持久化数据里不存任何展示文案：任务状态存枚举名（`queued`/`running`/`completed`/`failed`/`interrupted`），阶段与动态内容（节点名、服务端错误原文）分开存，旧版本的中文数据在读取时迁移。
+持久化数据里不存任何展示文案：任务状态存枚举名（`queued`/`running`/`completed`/`failed`/`interrupted`），阶段与动态内容（节点名、服务端错误原文）分开存，旧版本的中文数据在读取时迁移。英文界面的实拍截图见 `docs/screenshots/en`。
 
 ---
 
@@ -474,8 +620,18 @@ lib/
 flutter pub get
 flutter run          # 开发运行
 flutter analyze      # 静态检查，提交前应零告警
-flutter test         # 单元测试与组件测试
+flutter test         # 单元测试与组件测试（当前 176 个用例全绿）
 ```
+
+解析、搜索、语言策略这类纯逻辑都抽成了不依赖 `BuildContext` 的纯函数（`workflow_node_parser` / `history_search` / `task_display`），可以直接单测；复杂界面走 widget 测试。
+
+**仓库里的文档与图片**
+
+| 路径 | 内容 |
+| --- | --- |
+| `README.md` / `README_EN.md` | 中文 / 英文说明（页首可互相切换） |
+| `docs/screenshots/zh`、`docs/screenshots/en` | 实机截图（Android 模拟器） |
+| `design/app_icon_1024.png` | 应用图标源文件 |
 
 **发布约定**
 

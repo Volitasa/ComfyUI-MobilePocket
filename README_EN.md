@@ -1,0 +1,647 @@
+# ComfyUI MobilePocket
+
+[简体中文](README.md) ｜ **English**
+
+**ComfyUI in your pocket.** (The app is installed under the name **ComfyUI Pocket**)
+
+Browse the workflows on your ComfyUI server from your phone, turn the parameters you care about into a fillable form, and send a generation job with one tap. Watch the progress live, and get the results automatically downloaded to an on-device gallery and your phone's album — no desktop, no SSH, no memorising node IDs.
+
+> In one sentence: **it's a remote control for ComfyUI — the workflows and the GPU stay on your server, the phone just picks parameters, submits jobs, and collects results.**
+
+<p align="center">
+  <img src="docs/screenshots/en/01-workflows.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/en/02-run.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/en/06-history-search.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/en/07-gallery.png" width="23%" />
+</p>
+
+<p align="center"><i>Workflows · Run page · History search · Local gallery</i></p>
+
+> Every screenshot in this document was taken from the app actually running on an Android emulator: `docs/screenshots/en` for the English UI, `docs/screenshots/zh` for the Chinese UI.
+
+---
+
+## Contents
+
+- [1. Feature overview](#1-feature-overview)
+- [2. Before you start](#2-before-you-start)
+- [3. Install and connect for the first time](#3-install-and-connect-for-the-first-time)
+- [4. UI tour](#4-ui-tour)
+- [5. Feature guide](#5-feature-guide)
+  - [5.1 Connection management](#51-connection-management)
+  - [5.2 The three sources of a workflow](#52-the-three-sources-of-a-workflow)
+  - [5.3 Parameter configuration panel](#53-parameter-configuration-panel)
+  - [5.4 Run page](#54-run-page)
+  - [5.5 Task tracking](#55-task-tracking)
+  - [5.6 History and run-again](#56-history-and-run-again)
+  - [5.7 Workflow snapshots](#57-workflow-snapshots)
+  - [5.8 Gallery and saving to your album](#58-gallery-and-saving-to-your-album)
+  - [5.9 Settings](#59-settings)
+  - [5.10 In-app updates](#510-in-app-updates)
+- [6. How the pieces fit together](#6-how-the-pieces-fit-together)
+- [7. End-to-end walkthrough](#7-end-to-end-walkthrough)
+- [8. Troubleshooting](#8-troubleshooting)
+- [9. Known limitations](#9-known-limitations)
+- [10. Tech stack and project layout](#10-tech-stack-and-project-layout)
+- [11. Development, testing and releases](#11-development-testing-and-releases)
+
+---
+
+## 1. Feature overview
+
+| Feature | What it does |
+| --- | --- |
+| Multiple servers | Save any number of servers (home LAN / office), each with a **primary + backup address**; falls back automatically when the primary is unreachable |
+| Three workflow sources | Server `_api.json` runs directly; server UI-format JSON is **parsed into the API structure inside the app**; local JSON files can be imported |
+| Parameters become a form | Node parameters are recognised through a **data-driven rule table**; tick what to expose, give it an alias, and the run page renders the right control (text / seed / int / float / toggle / dropdown / image). The config panel supports expand-all/collapse-all, per-node select-all and search by parameter |
+| Live progress | Progress is pushed over WebSocket, showing the node currently executing plus a percentage; reconnects automatically and reconciles with the server, **including when the app returns to the foreground** |
+| Five task states | Queued / Running / Completed / Failed / Interrupted, with the server's actual error message shown on failure |
+| Run again | Every run freezes a snapshot, so any history entry can restore the exact form and values it was run with — one tap to run it again |
+| History search & filter | Search history by workflow name, prompt text or parameter alias; filter by 5 statuses; each hit explains *why* it matched |
+| Local gallery | Outputs are downloaded into the app sandbox with **original PNG metadata preserved** (droppable back into ComfyUI); full-screen viewer and video playback |
+| Save to album | Choose between "original image with workflow" and "plain image with metadata stripped" |
+| Chinese / English UI | Follow the system language or pin it to Chinese or English; persisted data never stores display strings, so switching languages never affects your history |
+| In-app updates | Manually check GitHub Releases, download the APK and hand it to the system installer (works with private repos via a token) |
+
+---
+
+## 2. Before you start
+
+### 1. A reachable ComfyUI server
+
+The app talks to ComfyUI over HTTP and WebSocket, so your phone must be able to reach that machine (same Wi-Fi LAN, or a tunnel/public mapping).
+
+On startup the app calls `GET /system_stats` to probe connectivity, so the server needs to be running.
+
+### 2. For "fetch workflows online": install the ComfyUI-AutoSaveAPI plugin
+
+The server-side workflow list comes from ComfyUI's `userdata/workflows/` directory. To have directly-runnable API-format files appear there automatically, install:
+
+- **ComfyUI-AutoSaveAPI**: <https://github.com/Volitasa/ComfyUI-AutoSaveAPI>
+
+> Note: the plugin exports `_api.json` when you **save** a workflow, not when you run one. So the flow is "save the workflow once on your PC → it shows up on your phone".
+
+### 3. Two JSON formats, don't mix them up
+
+| Format | What it looks like | How the app treats it |
+| --- | --- | --- |
+| **API format** (usually `_api.json`) | Keyed by **node ID**, each entry has `class_type` and `inputs` | **Runnable as-is** |
+| **UI format** (a normal `*.json`) | Top level is `nodes` / `links` arrays — what the ComfyUI canvas saves | **Must be parsed** into the API structure first |
+
+Good news: **you don't convert UI format by hand.** The app ships a parser (see [5.2](#52-the-three-sources-of-a-workflow)) — one tap on "parse" and you're done.
+
+---
+
+## 3. Install and connect for the first time
+
+1. Download the latest APK and install it (Android will ask you to allow installs from unknown sources).
+2. Open the app, go to **Settings → Server connections → Add server**.
+3. Fill in:
+   - **Name**: for your own reference, e.g. "Home 4090"
+   - **Primary address**: e.g. `http://192.168.1.100:8188`
+   - **Backup address** (optional): e.g. a tunnel address. Tried automatically when the primary fails
+4. Tap **Test connection**, then **Save**. The first connection becomes active automatically.
+5. Back on the **Workflows** tab the status badge turns green once connected (it requires both a successful HTTP probe **and** an established WebSocket).
+
+> Tip: on every launch the app first retries the last address that worked (fast path), and only falls back to the full primary/backup probing when that fails — so day-to-day opening feels instant.
+
+---
+
+## 4. UI tour
+
+Four tabs at the bottom:
+
+| Tab | What it's for |
+| --- | --- |
+| **Workflows** | Pick a workflow, configure parameters, open the run page. The top has a "Server / Local" switch |
+| **History** | Every job you submitted: status, results, search, filters, run again, delete |
+| **Gallery** | Everything downloaded to this device, in a grid |
+| **Settings** | Language, server connections, workflow storage, snapshots, GitHub token, about & updates |
+
+A **connection status badge** (server name + status dot) sits in the top bar; tapping it jumps straight to the server config page.
+
+<p align="center">
+  <img src="docs/screenshots/en/01-workflows.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/en/05-history.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/en/07-gallery.png" width="23%" />
+  &nbsp;
+  <img src="docs/screenshots/en/10-settings.png" width="23%" />
+</p>
+
+<p align="center"><i>The four tabs, left to right: Workflows / History / Gallery / Settings</i></p>
+
+---
+
+## 5. Feature guide
+
+### 5.1 Connection management
+
+Any number of server profiles, each with a primary and an optional backup address; the primary failing falls back to the backup.
+
+**What you can do**
+
+- Save as many server profiles as you like; exactly one is active at a time.
+- Each profile has a primary and a backup address, probed in order, first one that answers wins.
+- "Test connection" works on a profile without changing which one is active.
+- Tap a card to make it active; the app re-probes and refreshes the workflow list.
+
+**Key behaviours**
+
+| Action | What happens |
+| --- | --- |
+| Switching servers | Clears the workflow list and the current workflow cache; **does not** touch history, gallery or local workflows |
+| Deleting a server | Disconnects, and **also cleans up the parse cache belonging to that server** (those entries could never be validated again) |
+| Disconnected | WebSocket retries every 3 seconds for as long as the profile is still active |
+| Reconnect succeeds | Re-fetches the workflow list and reconciles every non-final task |
+
+<p align="center">
+  <img src="docs/screenshots/en/11-servers.png" width="45%" />
+</p>
+
+<p align="center"><i>Server config: tap a card to activate, pencil to edit, bin to delete</i></p>
+
+### 5.2 The three sources of a workflow
+
+This is the **first cornerstone** of the whole app. Workflows come from three places; they have different origins, so they support different operations:
+
+```mermaid
+flowchart LR
+    A["Server _api.json<br/>just refresh"] --> D["Normalised to an API prompt<br/>node id → class_type + inputs"]
+    B["Server UI JSON<br/>needs parsing"] -->|"WebView reuses the ComfyUI frontend"| D
+    C["Local imported JSON<br/>your own file"] --> D
+    D --> E["Config panel: tick the parameters to expose"]
+    E --> F["Run page: fill in → POST /prompt"]
+```
+
+| Source | Where it lives | Regenerable? | Available actions |
+| --- | --- | --- | --- |
+| Server `_api.json` | Server only; the app stores just the parameter config and a content hash | Yes (refresh) | Refresh / reconfigure nodes / **save to local library** |
+| Parsed server UI JSON | Parse result cached on device (key: server + filename) | Yes (parse again) | Parse / re-parse / **clear parse cache** (never "delete") |
+| Local import | Stored in full on device | **No** (delete means gone) | Rename / reconfigure nodes / **delete** |
+
+> Design principle: **deletable ⇔ re-obtainable from the source.** If the source can give it back, you don't get a "delete", you get a "re-sync". Only things that would be gone forever get full create/update/delete.
+
+#### Server side: grouped by format
+
+- **API workflows · ready to run**: tap to configure parameters or go straight to the run page.
+- **UI workflows · need parsing**: parse manually the first time. Once parsed they are equivalent to API entries — configurable and runnable.
+
+Each card shows a status:
+
+| Status | Meaning | Visual |
+| --- | --- | --- |
+| Not configured / not parsed yet | No parameter config saved | Grey subtitle |
+| N parameters configured | Ready; tapping goes to the run page | Normal |
+| Content updated, please reconfirm | The workflow content on the server changed, old parameters may no longer fit | Card turns amber |
+| Server has an update (UI workflow) | The UI JSON changed, you can re-parse | Card turns amber |
+
+> **How does it know the server changed?** Every configured workflow stores a content hash. Refreshing re-fetches the content and compares, so server-side edits are detected instead of you silently running against stale parameters.
+
+#### Local side: your own assets
+
+- Tap **Import workflow JSON** to pick an API-format JSON from your phone (importing the same file twice reuses the same config instead of duplicating).
+- The menu offers **rename**, **reconfigure nodes** and **delete** (deleting also drops its parameter config).
+- Local workflows are **independent of any server** — they may or may not run on the currently connected server (models/plugins may differ), and the app makes no promise about that.
+
+#### "Save to local library"
+
+Any server workflow can be saved to the device at any time, becoming your private asset — for example when the server copy gets broken or deleted, you still have one.
+
+<p align="center">
+  <img src="docs/screenshots/en/01-workflows.png" width="45%" />
+  &nbsp;
+  <img src="docs/screenshots/en/14-local.png" width="45%" />
+</p>
+
+<p align="center"><i>Left: server side (grouped by API / UI format)　Right: local side (your assets + import entry)</i></p>
+
+### 5.3 Parameter configuration panel
+
+Pull node parameters out of the workflow and turn them into a phone form. Open it by tapping a **not-yet-configured** workflow, or choosing "reconfigure nodes" from any card menu.
+
+**What it does**
+
+1. Walks every node in the workflow and asks the **built-in rule table** which parameters are worth exposing.
+2. Decides the type: forced types from the rule table first, then name/value inference — int / float / text / enum dropdown / toggle / seed / image.
+3. Skips **link references** (values shaped like `["nodeId", 0]`) — those aren't yours to fill in.
+4. Groups everything by node; you tick what you need, give it a memorable alias, and save.
+
+**What's covered**: the rule table is grouped by *purpose*, not by class name (the same feature has different class names on different machines):
+
+| Group | Covered nodes |
+| --- | --- |
+| Samplers | `KSampler`, `KSamplerAdvanced`, `SamplerCustom(Advanced)`, `BasicScheduler`, `KSamplerSelect` |
+| Text / prompts | `CLIPTextEncode`, `Text Multiline`, `Text box`, `String Input`, `Text Input`, `PrimitiveStringMultiline`, `Text Concatenate` |
+| Size / upscale | `EmptyLatentImage`, `EmptySD3LatentImage`, `EmptyFluxLatentImage`, `LatentUpscale(By)`, `ImageScaleBy`, `ImageUpscaleWithModel`, `UpscaleModelLoader` |
+| Model loaders | `CheckpointLoaderSimple`, `UNETLoader`/`UnetLoaderGGUF*`, `CLIPLoader`/`CLIPLoaderGGUF`, `VAELoader`, `CLIPVisionLoader` |
+| LoRA / patches | `LoraLoader`, `LoraLoaderModelOnly`, `ModelPatchLoader` |
+| ControlNet | `ControlNetLoader`, `ControlNetApplyAdvanced`, `SetUnionControlNetType` |
+| IPAdapter | `IPAdapter`, `IPAdapterFaceID`, `IPAdapterNoise`, `IPAdapterUnifiedLoaderFaceID`, `IPAdapterInsightFaceLoader` |
+| Face swap | `ReActorFaceSwap` |
+| Matting / mask compositing | `RMBG`, `FeatherMask`, `ImageCompositeMasked` |
+| ControlNet preprocessors | `DWPreprocessor`, `DepthAnythingV2Preprocessor`, `DensePosePreprocessor`, `CannyEdgePreprocessor`, `TilePreprocessor`, `HEDPreprocessor` |
+
+- **Covered nodes are narrowed to the few worth exposing**: a rule can list explicit candidate keys (e.g. ControlNet preprocessors keep only `resolution`, `RMBG` keeps model/sensitivity/process resolution), so a node with dozens of parameters doesn't flood the run page.
+- **Uncovered nodes are not dropped**: the fallback rule lists **every fillable parameter** on the node (link references are skipped automatically) — that's what covers arbitrary community nodes and `LoadImage`'s image upload box without touching a line of code.
+- **The trade-off is that the fallback ignores node complexity**: nodes with a huge parameter count (video-combine nodes, `ModelMerge*`) have no narrowing rule, so all their parameters show up at once — untick what you don't want in the config panel.
+- **Forced types**: parameters like `denoise`, `strength_*`, `mask_blur` are often integers in the JSON (`"denoise": 1`) but semantically fractional; they're forced to float, otherwise the phone keyboard can't type `0.5`.
+- **Default ticked**: the rule's own defaults (e.g. `strength` on `ControlNetApplyAdvanced`) plus a high-frequency list (seed, prompt text, image, steps, CFG, sampler, scheduler, width/height, batch size, model names).
+
+**Toolbar and bulk actions** (handy when there's a lot to configure)
+
+| Control | What it does |
+| --- | --- |
+| Counter at the left (e.g. `4/18 selected`) | How many parameters are exposed at a glance |
+| Expand all / Collapse all | Expand state for every node, **without touching selections** |
+| Select all / Clear selection icon in a card header | Applies to **that card only**, separate from the expand hotspot |
+| Search box | Filters by parameter name, alias or node name; **only the matching parameters are shown**, and matching groups auto-expand |
+
+**Default aliases**: text parameters prefer the node title you gave it in ComfyUI (e.g. "Base settings"); structured parameters use the built-in name ("Steps", "CFG scale", "Seed"). Aliases are **content you saved**, so they are never translated when you switch the UI language.
+
+**The "Re-parse" button**: after the server workflow changes, re-parsing drops the old config and re-extracts parameters from the new structure (your previous selections and aliases are preserved where possible).
+
+<p align="center">
+  <img src="docs/screenshots/en/03-config.png" width="45%" />
+  &nbsp;
+  <img src="docs/screenshots/en/04-config-search.png" width="45%" />
+</p>
+
+<p align="center"><i>Left: the config panel (counter / expand-collapse / search / per-card select-all)　Right: searching "seed" and seeing only the matching parameter</i></p>
+
+> Saving the config takes you to the run page; the gear icon in the run page's top-right brings you back to the config panel. The two replace each other rather than stacking up routes.
+
+### 5.4 Run page
+
+Fill in the parameters and submit. Controls are rendered according to the configured type:
+
+| Type | Control | Notes |
+| --- | --- | --- |
+| Text | Multi-line field | Prompts etc. |
+| Seed | Number field + **random button** | Keeps the workflow's own value; never randomises behind your back |
+| Int | Number field | Steps, width/height, batch size |
+| Float | Number field | CFG, denoise |
+| Toggle | Switch | Boolean parameters |
+| Enum | Dropdown | Sampler, scheduler, model names, … |
+| Image | Pick image button + preview | A newly picked image is uploaded to the server before running; leaving it alone keeps the image already in the workflow |
+
+Parameters stay grouped by node and are expanded by default.
+
+**What "Generate" does**
+
+1. Validates that the current workflow data is ready and belongs to the right entry (so you can't submit the wrong workflow).
+2. If an image parameter has a newly picked file, uploads it with `POST /upload/image` first.
+3. Deep-copies the workflow JSON and writes the form values back into the corresponding nodes' `inputs`.
+4. Submits with `POST /prompt`.
+5. On success: **freezes a workflow snapshot**, writes a history entry, and switches to the **History** tab.
+
+**Failures tell you why**, instead of a generic "submit failed": network timeouts, HTTP status codes, and the server's `node_errors` (which lists the offending node IDs).
+
+**A mistyped number won't silently become empty**: each value goes through `num.tryParse`; if it fails to parse, the app falls back to the workflow's original value rather than submitting `null`.
+
+<p align="center">
+  <img src="docs/screenshots/en/02-run.png" width="45%" />
+</p>
+
+<p align="center"><i>Run page: controls rendered by type, with "Generate" pinned at the bottom</i></p>
+
+### 5.5 Task tracking
+
+Tasks have five states, with progress pushed live over WebSocket:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Queued
+    Queued --> Running: execution starts
+    Running --> Completed: outputs arrive
+    Running --> Failed: execution error
+    Running --> Interrupted: cancelled
+    Completed --> [*]
+    Failed --> [*]
+    Interrupted --> [*]
+```
+
+| State | Triggered by | Display |
+| --- | --- | --- |
+| Queued | Just submitted, not picked up yet | Amber + "Waiting…" |
+| Running | An execution event arrived | Amber + current node name + percentage bar |
+| Completed | Output received | Green + thumbnail |
+| Failed | Server returned an error | Red + **the actual error reason** |
+| Interrupted | Cancelled, or the server doesn't know the task | Grey |
+
+**Where progress comes from**: a WebSocket (`ws://<server>/ws?clientId=…`) pushes events in real time, including which node is running and the percentage. Node names prefer the title you saved in the config panel over a bare node ID.
+
+**It survives crashes and disconnects**: on reconnect the app queries `/history` and `/queue` and corrects every task still marked queued/running into its real final state. Tasks found in neither are treated as "interrupted (the server may have restarted)" instead of spinning forever.
+
+**Returning from the background doesn't leave stale progress**: Android may silently kill a backgrounded WebSocket (a half-open connection that never fires the disconnect callback, so auto-reconnect never starts). When the app comes back to the foreground it rebuilds the connection and reconciles once — and only if there actually is a pending task, so an idle app never bothers the server.
+
+### 5.6 History and run-again
+
+Each entry is a card: a status colour bar on the left, title + status + node info + time, a thumbnail on the right (multiple images show a count badge). Two actions at the bottom: **Run again** / **Delete**.
+
+**Search and status filter**
+
+- The search box spans the list above the cards and filters **live** (the history cap is 50 entries, so no debouncing needed).
+- It matches the workflow's **display name** + the **parameter values submitted in that run** + parameter **aliases** (aliases require the snapshot to still exist; if it was deleted, matching degrades to values only).
+- Multiple keywords are split on spaces; **all of them must hit the same field** — this avoids a record matching merely because "cat" is in the positive prompt and "windowsill" in the negative one.
+- **Numbers are not matched**: searching `7` won't hit a record just because `cfg=7`, which would only add noise.
+- Case-insensitive; an empty keyword returns everything unchanged.
+- On a hit, the card shows a **match summary** explaining why (e.g. `CLIP text encode: …human…`). Matches by workflow name don't repeat the name.
+- The status filter has 5 options: All / Running (queued + running merged) / Completed / Failed / Interrupted, and combines with the search.
+- Two distinct empty states: "no matching records" vs "no records yet", so you never think your history was lost.
+
+<p align="center">
+  <img src="docs/screenshots/en/05-history.png" width="45%" />
+  &nbsp;
+  <img src="docs/screenshots/en/06-history-search.png" width="45%" />
+</p>
+
+<p align="center"><i>Left: default view with the status filter row　Right: searching "human" hits the prompt and shows a summary</i></p>
+
+**Run again** — one of the most useful things this app does:
+
+- Every run freezes a **snapshot** (the workflow JSON plus the parameter config at the time), so any history entry can reconstruct the form it was run with.
+- Tapping "Run again" rebuilds the form from the snapshot and **pre-fills the values you typed then** (prompt, seed, … — never randomised behind your back).
+- If you later changed the exposed config so some old parameters no longer exist in the current form, it says exactly "N parameters could not be applied due to config changes" instead of dropping them silently.
+- If the currently connected server **isn't** the one the job ran on, it warns first (models/plugins may differ and you may get "model not found"), and lets you decide.
+
+**Delete** asks which kind you want:
+
+- **Record only**: keep the images in the gallery.
+- **Record and gallery images**: also remove the images already downloaded to this device (irreversible).
+
+> Deleting a record does **not** delete its snapshot — a snapshot may be referenced by other records. Snapshot cleanup is manual, on the settings page.
+
+### 5.7 Workflow snapshots
+
+The foundation of "run again".
+
+| Question | Answer |
+| --- | --- |
+| What is a snapshot | The "original workflow JSON + the node exposure config at that time" frozen by a run |
+| Why bother | Decoupling from the server — even if that file is deleted or edited on the server, history entries can still re-run from the snapshot |
+| When is it created | On every successful submission (reused as-is when the content is unchanged, with only the latest config synced) |
+| Does changing the config create more | No. Snapshots are de-duplicated by **workflow content**, so editing the exposure config never invalidates existing records |
+| How to clean up | Settings → Workflow snapshots; each entry shows how many records reference it, and can be deleted manually |
+
+<p align="center">
+  <img src="docs/screenshots/en/12-snapshots.png" width="45%" />
+</p>
+
+<p align="center"><i>Snapshot list: freeze time, size, source server and reference count</i></p>
+
+### 5.8 Gallery and saving to your album
+
+**Gallery**: a dedicated tab, a three-column grid of everything downloaded to this device. Tapping opens a full-screen viewer with pinch zoom, swipe between items, and per-image delete.
+
+**Saving logic**:
+
+- Images are read from the already-downloaded local file first (no re-download).
+- For PNGs it asks first: **original image with workflow** (keeps the ComfyUI metadata, so you can drop it back into ComfyUI to reproduce) or **plain image (info stripped)**.
+- Videos (mp4/webm/mov) are written to a temp file and then saved to the album.
+
+**Automatic download**: after a successful generation the app downloads the output media into the local gallery directory with **the original PNG metadata preserved**, so you can view and save it even offline.
+
+<p align="center">
+  <img src="docs/screenshots/en/07-gallery.png" width="30%" />
+  &nbsp;
+  <img src="docs/screenshots/en/08-viewer.png" width="30%" />
+  &nbsp;
+  <img src="docs/screenshots/en/09-save-as.png" width="30%" />
+</p>
+
+<p align="center"><i>Gallery grid → full-screen viewer → the two choices when saving to the album</i></p>
+
+### 5.9 Settings
+
+| Entry | Purpose |
+| --- | --- |
+| **Language** | Follow system / Chinese (Simplified) / English; the choice is stored locally |
+| **Server connections** | Add, edit and delete servers, test connections, switch the active one |
+| **Workflow storage** | Everything saved on this device, grouped into "local assets / parse cache", with disk usage; local assets can be deleted, parse cache can only be cleared |
+| **Workflow snapshots** | All snapshots, reference counts, source server, manual deletion |
+| **GitHub access token** | The read-only token needed to check updates of a private repository (see below) |
+| **About** | Version, check for updates |
+
+**About the UI language**
+
+- Defaults to following the system; a system language that is neither Chinese nor English falls back to **Chinese**, and you can also pin it manually in Settings.
+- Persisted data **never stores any display text**: task states are stored as enum names (`queued`/`running`/`completed`/`failed`/`interrupted`), while dynamic content (node names, raw server errors) is stored separately; leftovers from older versions in Chinese are migrated on read.
+- As a result, switching languages never affects your history: titles are re-rendered in the current language while parameter values, images and snapshots stay exactly as they were.
+- The only things not translated are **content you named or configured yourself**: workflow titles, parameter aliases, model names and node names (which are English in ComfyUI anyway).
+
+<p align="center">
+  <img src="docs/screenshots/en/10-settings.png" width="30%" />
+  &nbsp;
+  <img src="docs/screenshots/en/13-language.png" width="30%" />
+  &nbsp;
+  <img src="docs/screenshots/zh/10-settings.png" width="30%" />
+</p>
+
+<p align="center"><i>Settings → language picker → the same page after switching to Chinese</i></p>
+
+### 5.10 In-app updates
+
+- **Manual only** (no background checks): tap "Check for updates" on the About page, which queries GitHub Releases and compares with the current version.
+- When an update exists it shows the version, package size and release notes (Markdown markers are stripped), then "Download and install" runs a progress bar and hands the APK to the system installer.
+- **Private repository support**: if the repo is private, anonymous requests get a plain 404 from GitHub (not a 403), so you need a read-only token with Contents access. The token is **stored on device only** and never uploaded.
+
+---
+
+## 6. How the pieces fit together
+
+### How the data flows
+
+```mermaid
+flowchart TD
+    subgraph S["Sources (three)"]
+        A1["Server _api.json"]
+        A2["Server UI JSON"]
+        A3["Local imported JSON"]
+    end
+    P["Normalise: everything becomes an API prompt"]
+    A1 --> P
+    A2 -->|"WebView parser"| P
+    A3 --> P
+    P --> C["Config panel: tick exposures + set aliases"]
+    C -->|"save config"| R["Run page: form rendered by type"]
+    R -->|"POST /prompt"| T["Task manager"]
+    T -->|"WebSocket events"| H["History (five states)"]
+    T -->|"auto download"| G["Local gallery"]
+    R -->|"frozen per run"| SN["Workflow snapshot"]
+    SN -.->|"restore form + prefill"| R
+    H -.->|"via snapshot"| SN
+    G -->|"save"| AL["Phone album"]
+```
+
+### Three sources → one pipeline
+
+All three paths normalise into **the same structure** (node ID → `{class_type, inputs}`), so the config panel and the run page need only **one** implementation instead of one per source. That's also why UI format must be parsed rather than run directly.
+
+### Snapshots decouple "running" from "history"
+
+```
+one run ──▶ history entry (stores only snapshotId + params)
+        └──▶ snapshot   (stores workflowJson + mappingConfig)
+
+delete a record ──▶ the snapshot survives (other records may reference it)
+run again       ──▶ restore the form from the snapshot + prefill from the record's params
+```
+
+So even if that workflow has since changed or been deleted on the server, "run again" still works — **your history never rots because the server moved on**.
+
+### Three kinds of ownership, three lifecycles
+
+| | Server workflows | Parse cache | Local assets | Snapshots | History | Gallery images |
+| --- | --- | --- | --- | --- | --- | --- |
+| Lives on | Server | Device | Device | Device | Device | Device files |
+| Invalidated by server changes | Yes | Yes (prompts a re-parse) | No | **No** | No | No |
+| Deletable | Not offered | "Clear" only | Yes | Yes | Yes | Yes |
+| Limit | None | None | None | None (usage shown in settings) | Latest 50 | None |
+
+### Behaviour at the edges, with multiple servers
+
+- Switching servers clears the workflow list (local entries, gallery and local workflows are unaffected).
+- Each task records **which server it belongs to**; reconciliation only touches tasks of the current server, so it never mislabels a job still running elsewhere as "interrupted".
+- Running again against a different server warns you first and lets you decide.
+
+---
+
+## 7. End-to-end walkthrough
+
+1. **On your PC**: build a workflow in ComfyUI (text-to-image, say) and **save it once**. The AutoSaveAPI plugin writes the matching `_api.json` into `userdata/workflows/`.
+2. **On your phone**: Settings → Server connections → Add server, enter the address, test and save.
+3. **Workflows tab → server side**: refresh and your workflow appears under "API workflows · ready to run".
+4. Tap it → the **config panel** opens. Tick the parameters you want to tweak on the phone: positive/negative prompt, seed, steps, CFG, width/height, model name; give them memorable aliases ("Subject", "Canvas width", …). Save.
+5. The **run page** opens: type a prompt, hit "random" for a new seed, adjust steps. Tap **Generate**.
+6. It jumps to **History**: watch it go "Queued" → "Running (KSampler · 62%)" → "Completed", and the thumbnail appears.
+7. Tap the thumbnail for the full-size image → save it to your album (optionally with the workflow embedded).
+8. Want another take? Go back to **History**, tap **Run again** on that card, tweak a line of the prompt and generate — the form and every parameter are already in place.
+9. Cleaning up? **Settings → Workflow snapshots / Workflow storage** shows usage and reference counts.
+
+> If all you have is UI-format JSON: in step 3 it appears under "UI workflows · need parsing" — tap "parse" (the first time loads the ComfyUI frontend, a few seconds to a dozen). Once parsed it behaves exactly like an API workflow.
+
+---
+
+## 8. Troubleshooting
+
+| Symptom | Cause and fix |
+| --- | --- |
+| The badge stays red | Either the HTTP probe or the WebSocket failed. Check the server is running, the address/port is right, and the phone is on the same network. Tap the badge, then "Test connection" on the primary/backup addresses |
+| "No workflows found" on the server side | No JSON files in `userdata/workflows/`. Make sure AutoSaveAPI is installed and that you have **saved** a workflow on the PC (it exports on save, not on run) |
+| Parsing a UI workflow fails / times out | Parsing loads the whole ComfyUI frontend; on a slow device it can take a dozen seconds. Confirm the phone can open that server's web UI normally, then retry with "Re-parse" |
+| Parsing succeeds but reports "no dynamically editable parameters" | Every parameter is a **link reference** (or its value type can't be mapped to a control). Hit "Re-parse" in the config panel and try again; if it still fails, this workflow genuinely has nothing worth filling in on a phone |
+| A card turned amber saying "content updated" | The workflow content on the server changed, so old parameters may not fit the new structure. Open it and reconfirm the config |
+| Submitting returns HTTP 400 listing nodes | Server-side validation failed (commonly a missing model name or node type). Check the listed node IDs on your PC |
+| A task is stuck at "Running" | A final event was missed while offline or backgrounded. Tap refresh in the History top bar to reconcile (reconnecting and returning to the foreground also reconcile) |
+| Search can't find an old record | Three possibilities: ① older records stored no "submitted parameter values", so only the workflow name is searchable; ② parameter **aliases** need the snapshot to still exist — if it was deleted in settings, matching degrades to values only; ③ **numbers are not matched**, so searching `7` won't hit `cfg=7` |
+| The config panel list goes empty after typing in search | Search is a **per-parameter filter**: only matching parameters are shown, and no match means "no matching parameter". The keyword must appear in a parameter name, alias or node name |
+| Aliases are still Chinese after switching to English | Aliases are content saved at configuration time — your own data, not translated with the UI language. Just rename them in the config panel |
+| "Repository not accessible" when checking updates | The repo is private; put a read-only PAT in Settings → GitHub access token |
+| Saving an image to the album fails | Album permission is required the first time |
+
+---
+
+## 9. Known limitations
+
+These are real boundaries of the current version, not bugs:
+
+- **Enum dropdowns only contain the value hard-coded in the workflow**: the model-name dropdown, for instance, offers only the current one — you can't switch to another model available on the server from the phone yet. Change it on the PC, re-save the workflow (pulling real options from `/object_info` is planned).
+- **Numeric parameters have no min/max/step**: integers and floats are free-text fields with no range validation; a non-numeric entry falls back to the workflow's original value (it never submits an empty value).
+- **Nodes with a huge parameter count have no narrowing rule**: video-combine nodes and `ModelMerge*` (30–66 parameters on a single node) only get the fallback, so every fillable parameter is listed in the config panel at once and you have to untick the ones you don't want.
+- **Image parameters record only the server-side filename**, so if the server cleans out its input directory, image references in old records can break.
+- **Search covers the latest 50 records only**: that's the history cap itself, and search is a plain local filter with no index; a much larger history would need a redesign.
+- **Primarily Android**: in-app updates, album saving and APK installation are all Android implementations; other platforms compile but aren't fully verified.
+- **No background update checks**; it's manual, on the About page.
+
+---
+
+## 10. Tech stack and project layout
+
+**Tech stack**: Flutter · Riverpod (state) · http · web_socket_channel · shared_preferences · file_picker · webview_flutter · video_player · gal (album) · path_provider · package_info_plus · open_filex · flutter_localizations (i18n)
+
+```
+lib/
+├── main.dart                 # Entry point: injects SharedPreferences, wires up localisation
+├── theme.dart                # Semantic colours (primary/success/error/warning/neutral)
+├── utils.dart                # Param type inference, hashing, display names, provider write scheduling
+├── l10n/                     # String sources (app_zh.arb is the template, app_en.arb the English one)
+├── models/                   # Data models
+│   ├── workflow_node.dart    # Node parameter config (type/alias/options/current value)
+│   ├── task_history.dart     # History entry (status enum + phase + snapshot ref + param snapshot)
+│   ├── task_status.dart      # Task status/phase enums and migration of legacy Chinese data
+│   ├── workflow_snapshot.dart# Workflow snapshot
+│   ├── local_workflow.dart   # Local asset
+│   ├── parsed_workflow.dart  # UI-workflow parse cache
+│   ├── workflow_entry.dart   # Shared view for display names
+│   └── release_info.dart     # GitHub Release info
+├── providers/                # Riverpod state layer
+│   ├── shared_preferences_provider # SharedPreferences injection point
+│   ├── locale_provider       # UI language preference and resolution rules
+│   ├── connection_provider   # Multiple servers + primary/backup probing (structured results)
+│   ├── workflow_provider     # Workflow list, content, content-hash validation
+│   ├── task_manager          # Submission, history persistence, reconciliation, gallery download
+│   ├── ws_event_provider     # WebSocket channel and auto-reconnect
+│   ├── snapshot_provider     # Snapshots
+│   ├── local_workflow_provider / parsed_workflow_provider
+│   └── update_provider / github_token_provider
+├── services/
+│   ├── workflow_api_converter # UI→API conversion script and result validation (pure, unit-testable)
+│   ├── workflow_node_parser   # Node recognition rule table + param type resolution (pure, unit-testable)
+│   ├── gallery_store          # Local gallery storage
+│   ├── media_saver            # Single entry point for saving to the album
+│   ├── png_metadata_stripper  # Strips PNG metadata
+│   └── update_service         # GitHub Releases lookup and download
+├── utils/
+│   ├── task_display.dart     # Task status/phase → display text in the current language
+│   └── history_search.dart   # History keyword search and status filter (pure, unit-testable)
+└── ui/
+    ├── main_screen.dart      # Bottom navigation shell
+    ├── home/                 # Workflows: server side / local side
+    ├── builder/              # Config panel / run page / WebView parse page
+    ├── gallery/              # History / gallery / media viewer
+    ├── settings/             # Settings hub (including language) and sub-pages
+    └── widgets/              # Connection status badge
+```
+
+**Localisation**: strings live in `lib/l10n/*.arb` and `flutter gen-l10n` produces `AppLocalizations` on `flutter pub get` (see `l10n.yaml`). The default is to follow the system; a system language that is neither Chinese nor English falls back to Chinese, and the user can pin the language under "Settings → Language", stored in `comfy_ui_locale`.
+
+No persisted data stores display text: task states are stored as enum names (`queued`/`running`/`completed`/`failed`/`interrupted`), while phases and dynamic content (node names, raw server errors) are stored separately; legacy Chinese data from older versions is migrated on read. Real screenshots of the English UI are in `docs/screenshots/en`.
+
+---
+
+## 11. Development, testing and releases
+
+```bash
+flutter pub get
+flutter run          # develop
+flutter analyze      # static analysis; should be clean before committing
+flutter test         # unit and widget tests (currently 176 cases, all green)
+```
+
+Pure logic — parsing, search, language resolution — is extracted into functions that don't depend on `BuildContext` (`workflow_node_parser` / `history_search` / `task_display`), so it can be unit-tested directly; complex screens get widget tests.
+
+**Docs and images in this repository**
+
+| Path | Contents |
+| --- | --- |
+| `README.md` / `README_EN.md` | Chinese / English docs (cross-linked at the top) |
+| `docs/screenshots/zh`, `docs/screenshots/en` | Real device screenshots (Android emulator) |
+| `design/app_icon_1024.png` | App icon source |
+
+**Release conventions**
+
+- The version number is the APK's `versionName`, from `version: X.Y.Z+N` in `pubspec.yaml`, and **must match the git tag** (e.g. `v1.1.0`) or in-app updates will misjudge.
+- Release flow: edit `pubspec.yaml` → commit → `git tag -a vX.Y.Z` → `git push origin main --follow-tags`.
+- Release builds use the real signing key and never fall back to the debug signature (otherwise users can't overwrite-install). The signing config comes from `android/key.properties` locally, and from repository Secrets in CI via `.github/workflows/release.yml`.
+- Pushing a tag makes GitHub Actions build the release APK and upload it to the Release.
+
+---
+
+## Icon
+
+The app uses a custom icon generated to the Android adaptive-icon spec: the background layer fills the full 108dp canvas and the foreground sits inside the central 72dp safe circle, so it never shows a bleed or gets cropped under circular, rounded-square or teardrop launcher masks. Source file: `design/app_icon_1024.png`.
