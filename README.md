@@ -1,9 +1,45 @@
-# ComfyUI MobilePocket
+<p align="center">
+  <img src="docs/screenshots/zh/01-workflows.png" width="23%" alt="工作流列表" />
+  &nbsp;
+  <img src="docs/screenshots/zh/03-config.png" width="23%" alt="参数配置" />
+  &nbsp;
+  <img src="docs/screenshots/zh/02-run.png" width="23%" alt="运行页" />
+  &nbsp;
+  <img src="docs/screenshots/zh/07-gallery.png" width="23%" alt="本地画廊" />
+</p>
 
-**简体中文** ｜ [English](README_EN.md)
+<div align="center">
 
-> **你的 ComfyUI 已经在跑了 —— 这个 App 让你在手机上挑参数、下任务、收结果。**
-> 应用安装后在手机桌面上的名字是 **ComfyUI Pocket**。
+<h1>ComfyUI Pocket</h1>
+
+<p><strong>你的 ComfyUI 已经在跑了 —— 这个 App 让你在手机上挑参数、下任务、收结果。</strong></p>
+
+<p>连上服务器就能浏览工作流、把常用参数变成一张表单、一键下发生图任务、实时看进度，出图自动回到手机相册。</p>
+
+<p>
+  <a href="https://github.com/Volitasa/ComfyUI-MobilePocket/releases/latest"><b>⬇️ 下载 APK</b></a>
+  ·
+  <a href="#三步上手"><b>🚀 三步上手</b></a>
+  ·
+  <a href="#七常见问题与排查"><b>❓ 常见问题</b></a>
+  ·
+  <a href="#十一未来计划"><b>🗺️ 未来计划</b></a>
+</p>
+
+<p><b>简体中文</b> ｜ <a href="README_EN.md">English</a></p>
+
+<p>
+  <img src="https://img.shields.io/badge/version-1.2.2-2ea043?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/platform-Android-3ddc84?style=flat-square&logo=android&logoColor=white" alt="platform">
+  <img src="https://img.shields.io/badge/Flutter-3.x-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Flutter">
+  <img src="https://img.shields.io/badge/ComfyUI-compatible-8957e5?style=flat-square" alt="ComfyUI">
+</p>
+
+</div>
+
+<p align="center"><i>Android 模拟器实拍：工作流列表 → 参数配置 → 任务进度 → 本地画廊</i></p>
+
+> 本文所有截图都取自 Android 模拟器上的真实运行界面：`docs/screenshots/zh` 为中文界面，`docs/screenshots/en` 为英文界面。
 
 **唯一前提**：手机能访问到那台跑着 ComfyUI 的机器（同一局域网 Wi-Fi，或已做内网穿透 / 公网映射）。服务器开着就行。
 
@@ -22,20 +58,6 @@
 3. **出图回到手机** —— WebSocket 实时进度 + 五态任务管理；出图自动下载进本地画廊（保留 PNG 元数据，可拖回 ComfyUI 复现），可存进手机相册；每条记录都能「再次运行」还原当时的参数。
 
 **正在做的两件事**：让下拉框能直接选服务器上已有的模型、以及接入 RunningHub 云端工作流 —— 详见 [未来计划](#十一未来计划)。
-
-<p align="center">
-  <img src="docs/screenshots/zh/01-workflows.png" width="23%" />
-  &nbsp;
-  <img src="docs/screenshots/zh/02-run.png" width="23%" />
-  &nbsp;
-  <img src="docs/screenshots/zh/06-history-search.png" width="23%" />
-  &nbsp;
-  <img src="docs/screenshots/zh/07-gallery.png" width="23%" />
-</p>
-
-<p align="center"><i>工作流列表 · 运行页 · 生成记录搜索 · 本地画廊</i></p>
-
-> 本文所有截图都取自 Android 模拟器上的真实运行界面：`docs/screenshots/zh` 为中文界面，`docs/screenshots/en` 为英文界面。
 
 ## 三步上手
 

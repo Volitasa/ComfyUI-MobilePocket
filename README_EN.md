@@ -1,9 +1,45 @@
-# ComfyUI MobilePocket
+<p align="center">
+  <img src="docs/screenshots/en/01-workflows.png" width="23%" alt="Workflow list" />
+  &nbsp;
+  <img src="docs/screenshots/en/03-config.png" width="23%" alt="Parameter form" />
+  &nbsp;
+  <img src="docs/screenshots/en/02-run.png" width="23%" alt="Run page" />
+  &nbsp;
+  <img src="docs/screenshots/en/07-gallery.png" width="23%" alt="Local gallery" />
+</p>
 
-[简体中文](README.md) ｜ **English**
+<div align="center">
 
-> **Your ComfyUI server is already running — this app lets you pick parameters, submit jobs and collect results from your phone.**
-> It installs under the name **ComfyUI Pocket**.
+<h1>ComfyUI Pocket</h1>
+
+<p><strong>Your ComfyUI server is already running — this app lets you pick parameters, submit jobs and collect results from your phone.</strong></p>
+
+<p>Connect to your server, browse its workflows, turn the parameters you care about into a form, submit a job with one tap, watch the progress live and get the results back in your phone's album.</p>
+
+<p>
+  <a href="https://github.com/Volitasa/ComfyUI-MobilePocket/releases/latest"><b>⬇️ Download APK</b></a>
+  ·
+  <a href="#three-steps-to-your-first-image"><b>🚀 Quick start</b></a>
+  ·
+  <a href="#7-troubleshooting"><b>❓ Troubleshooting</b></a>
+  ·
+  <a href="#11-roadmap"><b>🗺️ Roadmap</b></a>
+</p>
+
+<p><a href="README.md">简体中文</a> ｜ <b>English</b></p>
+
+<p>
+  <img src="https://img.shields.io/badge/version-1.2.2-2ea043?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/platform-Android-3ddc84?style=flat-square&logo=android&logoColor=white" alt="platform">
+  <img src="https://img.shields.io/badge/Flutter-3.x-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Flutter">
+  <img src="https://img.shields.io/badge/ComfyUI-compatible-8957e5?style=flat-square" alt="ComfyUI">
+</p>
+
+</div>
+
+<p align="center"><i>Captured on an Android emulator: workflow list → parameter form → job progress → local gallery</i></p>
+
+> Every screenshot in this document was taken from the app actually running on an Android emulator: `docs/screenshots/en` for the English UI, `docs/screenshots/zh` for the Chinese UI.
 
 **The only prerequisite**: your phone can reach the machine that runs ComfyUI (same Wi-Fi LAN, or a tunnel / public mapping). As long as the server is up.
 
@@ -22,20 +58,6 @@
 3. **Results land on your phone** — live WebSocket progress and five task states; outputs are downloaded into an on-device gallery (PNG metadata preserved, so you can drop them back into ComfyUI) and can be saved to your album; every history entry can be replayed with "Run again".
 
 **Two things in the pipeline**: picking models that already exist on your server straight from the dropdowns, and running workflows through RunningHub — see [Roadmap](#11-roadmap).
-
-<p align="center">
-  <img src="docs/screenshots/en/01-workflows.png" width="23%" />
-  &nbsp;
-  <img src="docs/screenshots/en/02-run.png" width="23%" />
-  &nbsp;
-  <img src="docs/screenshots/en/06-history-search.png" width="23%" />
-  &nbsp;
-  <img src="docs/screenshots/en/07-gallery.png" width="23%" />
-</p>
-
-<p align="center"><i>Workflows · Run page · History search · Local gallery</i></p>
-
-> Every screenshot in this document was taken from the app actually running on an Android emulator: `docs/screenshots/en` for the English UI, `docs/screenshots/zh` for the Chinese UI.
 
 ## Three steps to your first image
 
