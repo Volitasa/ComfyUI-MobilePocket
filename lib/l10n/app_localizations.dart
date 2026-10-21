@@ -1094,6 +1094,30 @@ abstract class AppLocalizations {
   /// **'范围 {min} – {max}'**
   String runNumberRange(String min, String max);
 
+  /// 运行页尺寸卡：比例预设标题
+  ///
+  /// In zh, this message translates to:
+  /// **'画面比例'**
+  String get runSizeRatio;
+
+  /// 运行页尺寸卡：长边档位标题
+  ///
+  /// In zh, this message translates to:
+  /// **'长边'**
+  String get runSizeLongEdge;
+
+  /// 运行页尺寸卡：自定义宽高入口
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义宽高'**
+  String get runSizeCustom;
+
+  /// 运行页：放弃本地改图，恢复工作流自带的服务器图片
+  ///
+  /// In zh, this message translates to:
+  /// **'用原图'**
+  String get runUseServerImage;
+
   /// 运行页：开关打开
   ///
   /// In zh, this message translates to:

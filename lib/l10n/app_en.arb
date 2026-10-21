@@ -184,6 +184,14 @@
       "max": { "type": "String" }
     }
   },
+  "runSizeRatio": "Aspect ratio",
+  "@runSizeRatio": { "description": "Run page size card: ratio presets" },
+  "runSizeLongEdge": "Long edge",
+  "@runSizeLongEdge": { "description": "Run page size card: long edge presets" },
+  "runSizeCustom": "Custom size",
+  "@runSizeCustom": { "description": "Run page size card: custom width/height" },
+  "runUseServerImage": "Use original",
+  "@runUseServerImage": { "description": "Run page: drop the picked image and use the workflow one" },
   "runBoolOn": "On",
   "runBoolOff": "Off",
   "runUsingServerImage": "Using image: {name}",

@@ -572,6 +572,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get runSizeRatio => 'Aspect ratio';
+
+  @override
+  String get runSizeLongEdge => 'Long edge';
+
+  @override
+  String get runSizeCustom => 'Custom size';
+
+  @override
+  String get runUseServerImage => 'Use original';
+
+  @override
   String get runBoolOn => 'On';
 
   @override

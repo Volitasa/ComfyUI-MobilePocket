@@ -17,6 +17,8 @@ import '../../providers/object_info_provider.dart';
 import '../../services/object_info_service.dart';
 import '../../utils.dart';
 import '../main_screen.dart';
+import 'param_widgets/param_card_registry.dart';
+import 'param_widgets/latent_size_card.dart';
 import 'workflow_view.dart';
 
 class RunView extends ConsumerStatefulWidget {
@@ -848,7 +850,7 @@ class _RunViewState extends ConsumerState<RunView> {
                               child: Column(
                                 children: [
                                   const Divider(height: 1),
-                                  ..._buildParamFields(params),
+                                  ..._buildParamBody(params),
                                 ],
                               ),
                             ),
@@ -900,6 +902,23 @@ class _RunViewState extends ConsumerState<RunView> {
         ],
       ),
     );
+  }
+
+  /// 卡内主体：命中自定义卡就用自定义卡，否则走通用参数块。
+  List<Widget> _buildParamBody(List<WorkflowNode> params) {
+    final match = matchParamCard(params);
+    if (match != null && match.kind == ParamCardKind.latentSize) {
+      return [
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: LatentSizeCard(
+            params: match.params,
+            controllerOf: (node) => _controllers[nodeParamKey(node.id, node.key)],
+          ),
+        ),
+      ];
+    }
+    return _buildParamFields(params);
   }
 
   /// 同一节点内的参数块序列。
@@ -1118,22 +1137,34 @@ class _RunViewState extends ConsumerState<RunView> {
           ],
         );
       case ParamType.image:
+        // 图片卡：缩略图 96 + 两个按钮并排，不再把按钮压在图下面
         final hasImage = _formData[k] != null;
         final serverImage = _widgetValues[k] as String?;
+        final l = AppLocalizations.of(context);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 工作流自带的服务器图片：显示预览（从服务器 /view 拉取）
-            if (serverImage != null && serverImage.isNotEmpty && !hasImage) ...[
+            if (hasImage)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  _formData[k]['bytes'],
+                  height: 96,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              )
+            else if (serverImage != null && serverImage.isNotEmpty) ...[
+              // 工作流自带的服务器图片：从 /view 拉预览
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
                   _serverImageUrl(serverImage),
-                  height: 120,
+                  height: 96,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => Container(
-                    height: 120,
+                    height: 96,
                     width: double.infinity,
                     color: Colors.grey.shade100,
                     child: const Center(
@@ -1144,33 +1175,35 @@ class _RunViewState extends ConsumerState<RunView> {
               ),
               const SizedBox(height: 4),
               Text(
-                AppLocalizations.of(context).runUsingServerImage(serverImage),
+                l.runUsingServerImage(serverImage),
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 8),
             ],
-            OutlinedButton.icon(
-              onPressed: () => _pickImage(k),
-              icon: const Icon(Icons.image),
-              label: Text(
-                hasImage
-                    ? AppLocalizations.of(context).runChangeImage
-                    : AppLocalizations.of(context).runPickImage,
-              ),
-            ),
-            if (hasImage) ...[
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.memory(
-                  _formData[k]['bytes'],
-                  height: 100,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _pickImage(k),
+                    icon: const Icon(Icons.image, size: 18),
+                    label: Text(hasImage ? l.runChangeImage : l.runPickImage),
+                  ),
                 ),
-              ),
-            ],
+                // 换了本地图之后还能退回工作流里那张
+                if (hasImage &&
+                    serverImage != null &&
+                    serverImage.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => setState(() => _formData.remove(k)),
+                      child: Text(l.runUseServerImage),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
         );
     }

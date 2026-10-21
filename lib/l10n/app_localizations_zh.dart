@@ -560,6 +560,18 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get runSizeRatio => '画面比例';
+
+  @override
+  String get runSizeLongEdge => '长边';
+
+  @override
+  String get runSizeCustom => '自定义宽高';
+
+  @override
+  String get runUseServerImage => '用原图';
+
+  @override
   String get runBoolOn => '开启';
 
   @override

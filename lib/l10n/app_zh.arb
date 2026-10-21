@@ -437,6 +437,14 @@
       "max": { "type": "String" }
     }
   },
+  "runSizeRatio": "画面比例",
+  "@runSizeRatio": { "description": "运行页尺寸卡：比例预设标题" },
+  "runSizeLongEdge": "长边",
+  "@runSizeLongEdge": { "description": "运行页尺寸卡：长边档位标题" },
+  "runSizeCustom": "自定义宽高",
+  "@runSizeCustom": { "description": "运行页尺寸卡：自定义宽高入口" },
+  "runUseServerImage": "用原图",
+  "@runUseServerImage": { "description": "运行页：放弃本地改图，恢复工作流自带的服务器图片" },
   "runBoolOn": "开启",
   "@runBoolOn": { "description": "运行页：开关打开" },
   "runBoolOff": "关闭",
