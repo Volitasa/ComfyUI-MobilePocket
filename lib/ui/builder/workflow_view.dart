@@ -9,6 +9,7 @@ import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../utils.dart';
 import '../widgets/compact_search_field.dart';
+import '../widgets/param_config_tile.dart';
 import 'run_view.dart'; // 下一步我们将创建运行页面
 
 class WorkflowView extends ConsumerStatefulWidget {
@@ -290,52 +291,30 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   }
 
   // 配置面板里单个参数行：勾选 + 别名编辑 + 类型/当前值摘要
+  //
+  // 紧凑版：勾选行 44 + 别名输入框 36（常显，不藏进二级入口），
+  // 类型说明与当前值合并成行尾一行小字。详见 ParamConfigTile。
   Widget _buildParamRow(WorkflowNode node) {
     final controllerKey = nodeParamKey(node.id, node.key);
+    final controller = _aliasControllers.putIfAbsent(
+      controllerKey,
+      () => TextEditingController(text: node.alias),
+    );
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            title: Text(node.alias, style: const TextStyle(fontSize: 14)),
-            subtitle: Text(
-              _describeParam(node, AppLocalizations.of(context)),
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-            ),
-            value: node.exposed,
-            onChanged: (val) {
-              setState(() {
-                node.exposed = val ?? false;
-              });
-            },
-            controlAffinity: ListTileControlAffinity.leading,
-            dense: true,
-          ),
-          if (node.exposed)
-            Padding(
-              padding: const EdgeInsets.only(left: 40.0),
-              child: TextField(
-                controller: _aliasControllers.putIfAbsent(
-                  controllerKey,
-                  () => TextEditingController(text: node.alias),
-                ),
-                onChanged: (val) => node.alias = val,
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: AppLocalizations.of(context).paramAliasHint,
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                ),
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-        ],
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: ParamConfigTile(
+        alias: node.alias,
+        summary: _describeParam(node, AppLocalizations.of(context)),
+        exposed: node.exposed,
+        onChanged: (val) {
+          setState(() {
+            node.exposed = val ?? false;
+          });
+        },
+        aliasController: controller,
+        aliasHint: AppLocalizations.of(context).paramAliasHint,
+        // 保存时用的是 node.alias，控制器文本必须回写，否则改了不生效
+        onAliasChanged: (val) => node.alias = val,
       ),
     );
   }
@@ -559,7 +538,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                               : _keyword.isNotEmpty || exposedCount > 0;
 
                           return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
+                            margin: const EdgeInsets.only(bottom: 8),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -584,7 +563,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
-                                      vertical: 10,
+                                      vertical: 8,
                                     ),
                                     child: Row(
                                       children: [
@@ -658,10 +637,10 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                                 if (expanded)
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(
-                                      12,
+                                      10,
                                       0,
-                                      12,
-                                      12,
+                                      10,
+                                      8,
                                     ),
                                     child: Column(
                                       children: [
