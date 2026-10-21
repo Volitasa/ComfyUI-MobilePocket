@@ -1168,4 +1168,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runOptionsRefreshFailed => 'Refresh failed — check the connection';
+
+  @override
+  String wfLastRun(String time) {
+    return 'Last run $time';
+  }
+
+  @override
+  String get wfNeverRun => 'Never run';
 }

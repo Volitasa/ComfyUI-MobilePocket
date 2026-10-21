@@ -1124,4 +1124,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get runOptionsRefreshFailed => '刷新失败，请检查连接';
+
+  @override
+  String wfLastRun(String time) {
+    return '上次运行 $time';
+  }
+
+  @override
+  String get wfNeverRun => '尚未运行';
 }

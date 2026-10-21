@@ -2113,6 +2113,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'刷新失败，请检查连接'**
   String get runOptionsRefreshFailed;
+
+  /// 工作流列表：该工作流上次运行的时间
+  ///
+  /// In zh, this message translates to:
+  /// **'上次运行 {time}'**
+  String wfLastRun(String time);
+
+  /// 工作流列表：一次都没跑过
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未运行'**
+  String get wfNeverRun;
 }
 
 class _AppLocalizationsDelegate

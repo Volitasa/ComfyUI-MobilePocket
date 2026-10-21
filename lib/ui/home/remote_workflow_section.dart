@@ -9,13 +9,16 @@ import '../../models/workflow_entry.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../providers/parsed_workflow_provider.dart';
+import '../../providers/task_manager.dart';
 import '../../providers/workflow_provider.dart';
 import '../../services/workflow_api_converter.dart';
 import '../../utils.dart';
+import '../../utils/workflow_last_run.dart';
 import '../builder/run_view.dart';
 import '../builder/workflow_parse_view.dart';
 import '../builder/workflow_view.dart';
 import '../settings/server_config_view.dart';
+import '../widgets/workflow_tile.dart';
 
 /// 服务器段：服务端工作流目录的投影。
 ///
@@ -28,6 +31,10 @@ class RemoteWorkflowSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final configState = ref.watch(connectionProvider);
     final workflowState = ref.watch(workflowProvider);
+    // 只为「新任务产生/记录被删」时刷新列表上的「上次运行时间」。
+    // 刻意不监听任务列表本身：WebSocket 每秒推好几次进度，
+    // 直接监听会把整个工作流列表跟着重建（画廊页踩过这个坑）。
+    ref.watch(taskManagerProvider.select((s) => s.history.length));
 
     if (!configState.isConnected) return _buildDisconnected(context);
     if (workflowState.isLoading) {
@@ -126,81 +133,43 @@ class RemoteWorkflowSection extends ConsumerWidget {
       subtitle = state.isChecking ? l.statusChecking : l.uiStatusParsed;
     }
 
-    // 未解析用虚线：与「能用但还没配」的实线卡片区分开
+    // 未解析的条目不描边：与「能用但还没配」的实线条目区分开
     final borderColor = stale ? const Color(0xFF854F0B) : Colors.grey.shade300;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: stale ? const Color(0xFFFAEEDA) : null,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: borderColor,
-          style: cached == null ? BorderStyle.none : BorderStyle.solid,
-        ),
-      ),
-      child: InkWell(
-        onTap: () => _onUiTap(context, ref, filename, cached?.id),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: stale ? const Color(0xFF854F0B) : Colors.grey,
-                      ),
-                    ),
-                  ],
+    return WorkflowTile(
+      title: title,
+      statusLabel: subtitle,
+      statusColor: stale ? const Color(0xFF854F0B) : null,
+      // 解析缓存的 id 才是历史记录里记的那个 id
+      footnote: cached == null ? l.wfNeverRun : _lastRunText(ref, cached.id, l),
+      footnoteColor: stale ? const Color(0xFF854F0B) : null,
+      borderColor: borderColor,
+      fillColor: stale ? const Color(0xFFFAEEDA) : null,
+      showBorder: cached != null,
+      menu: PopupMenuButton<String>(
+        icon: const Icon(Icons.more_vert, color: Colors.grey),
+        tooltip: AppLocalizations.of(context).menuMore,
+        onSelected: (v) =>
+            _onUiMenuSelected(context, ref, filename, cached?.id, v),
+        itemBuilder: (_) => cached == null
+            ? [
+                PopupMenuItem(
+                  value: 'parse',
+                  child: Text(AppLocalizations.of(context).uiMenuParse),
                 ),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Colors.grey),
-                tooltip: AppLocalizations.of(context).menuMore,
-                onSelected: (v) =>
-                    _onUiMenuSelected(context, ref, filename, cached?.id, v),
-                itemBuilder: (_) => cached == null
-                    ? [
-                        PopupMenuItem(
-                          value: 'parse',
-                          child: Text(AppLocalizations.of(context).uiMenuParse),
-                        ),
-                      ]
-                    : [
-                        PopupMenuItem(
-                          value: 'parse',
-                          child: Text(
-                            AppLocalizations.of(context).uiMenuReparse,
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'clear',
-                          child: Text(
-                            AppLocalizations.of(context).uiMenuClearParse,
-                          ),
-                        ),
-                      ],
-              ),
-            ],
-          ),
-        ),
+              ]
+            : [
+                PopupMenuItem(
+                  value: 'parse',
+                  child: Text(AppLocalizations.of(context).uiMenuReparse),
+                ),
+                PopupMenuItem(
+                  value: 'clear',
+                  child: Text(AppLocalizations.of(context).uiMenuClearParse),
+                ),
+              ],
       ),
+      onTap: () => _onUiTap(context, ref, filename, cached?.id),
     );
   }
 
@@ -444,50 +413,31 @@ class RemoteWorkflowSection extends ConsumerWidget {
     final borderColor = stale ? const Color(0xFF854F0B) : Colors.grey.shade300;
     final fillColor = stale ? const Color(0xFFFAEEDA) : null;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      color: fillColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: borderColor),
-      ),
-      child: InkWell(
-        onTap: () => _open(context, ref, filename),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: stale ? const Color(0xFF854F0B) : Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _buildMenu(context, ref, filename),
-            ],
-          ),
-        ),
-      ),
+    return WorkflowTile(
+      title: title,
+      statusLabel: subtitle,
+      statusColor: stale ? const Color(0xFF854F0B) : null,
+      footnote: _lastRunText(ref, filename, l),
+      footnoteColor: stale ? const Color(0xFF854F0B) : null,
+      borderColor: borderColor,
+      fillColor: fillColor,
+      menu: _buildMenu(context, ref, filename),
+      onTap: () => _open(context, ref, filename),
     );
+  }
+
+  /// 第二行：该工作流上次什么时候跑过。
+  ///
+  /// ⚠️ 这里刻意用 `read` 而不是 `watch` 去拿任务列表：WebSocket 每秒推
+  /// 好几次进度，直接监听会让整个工作流列表跟着重建（画廊页踩过这个坑）。
+  /// 真正触发重建的是页面顶部那条 `select` —— 只在任务条数变化时刷新。
+  String _lastRunText(WidgetRef ref, String workflowId, AppLocalizations l) {
+    final lastRun = lastRunTimeOf(
+      ref.read(taskManagerProvider).history,
+      workflowId,
+    );
+    if (lastRun == null) return l.wfNeverRun;
+    return l.wfLastRun(formatSnapshotStamp(lastRun));
   }
 
   Widget _buildMenu(BuildContext context, WidgetRef ref, String filename) {

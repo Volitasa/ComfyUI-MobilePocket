@@ -776,5 +776,13 @@
   "runOptionsRefreshed": "已刷新",
   "@runOptionsRefreshed": { "description": "运行页：刷新成功提示" },
   "runOptionsRefreshFailed": "刷新失败，请检查连接",
-  "@runOptionsRefreshFailed": { "description": "运行页：刷新失败提示" }
+  "@runOptionsRefreshFailed": { "description": "运行页：刷新失败提示" },
+
+  "wfLastRun": "上次运行 {time}",
+  "@wfLastRun": {
+    "description": "工作流列表：该工作流上次运行的时间",
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "wfNeverRun": "尚未运行",
+  "@wfNeverRun": { "description": "工作流列表：一次都没跑过" }
 }

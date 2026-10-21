@@ -376,5 +376,13 @@
   "runOptionsRefreshed": "Refreshed",
   "@runOptionsRefreshed": { "description": "Run page: refresh succeeded" },
   "runOptionsRefreshFailed": "Refresh failed — check the connection",
-  "@runOptionsRefreshFailed": { "description": "Run page: refresh failed" }
+  "@runOptionsRefreshFailed": { "description": "Run page: refresh failed" },
+
+  "wfLastRun": "Last run {time}",
+  "@wfLastRun": {
+    "description": "Workflow list: when this workflow was last run",
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "wfNeverRun": "Never run",
+  "@wfNeverRun": { "description": "Workflow list: never run before" }
 }

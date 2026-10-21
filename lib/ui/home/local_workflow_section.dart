@@ -7,10 +7,14 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../models/local_workflow.dart';
 import '../../providers/local_workflow_provider.dart';
+import '../../providers/task_manager.dart';
 import '../../providers/workflow_provider.dart';
 import '../../utils.dart';
+import '../../utils/workflow_last_run.dart';
+import '../../theme.dart';
 import '../builder/run_view.dart';
 import '../builder/workflow_view.dart';
+import '../widgets/workflow_tile.dart';
 
 /// 本地段：保存在本机的工作流资产。
 ///
@@ -30,6 +34,10 @@ class LocalWorkflowSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final workflows = ref.watch(localWorkflowProvider);
     final totalBytes = ref.read(localWorkflowProvider.notifier).totalBytes;
+    // 只为「新任务产生/记录被删」时刷新列表上的「上次运行时间」。
+    // 刻意不监听任务列表本身：WebSocket 每秒推好几次进度，
+    // 直接监听会把整个工作流列表跟着重建（画廊页踩过这个坑）。
+    ref.watch(taskManagerProvider.select((s) => s.history.length));
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -111,65 +119,37 @@ class LocalWorkflowSection extends ConsumerWidget {
             .length ??
         0;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade300),
+    final l = AppLocalizations.of(context);
+    final lastRun = lastRunTimeOf(
+      ref.read(taskManagerProvider).history,
+      workflow.id,
+    );
+    // 上次运行放最前：这一行放不下时会截掉尾部，
+    // 截掉大小无所谓，截掉刚加的上次运行就没意义了
+    final meta =
+        '${lastRun == null ? l.wfNeverRun : l.wfLastRun(formatSnapshotStamp(lastRun))}'
+        ' · ${workflow.sourceKind.label(l)}'
+        ' · ${_formatDate(workflow.createdAt)}'
+        ' · ${formatBytes(workflow.sizeBytes)}';
+
+    return WorkflowTile(
+      title: workflow.name,
+      statusLabel: exposedCount == 0
+          ? l.wfStatusUnconfigured
+          : l.configParamCount(exposedCount),
+      statusColor: exposedCount == 0 ? null : AppColors.primary,
+      footnote: meta,
+      menu: PopupMenuButton<String>(
+        icon: const Icon(Icons.more_vert, color: Colors.grey),
+        tooltip: l.menuMore,
+        onSelected: (v) => _onMenuSelected(context, ref, workflow, v),
+        itemBuilder: (_) => [
+          PopupMenuItem(value: 'rename', child: Text(l.menuRename)),
+          PopupMenuItem(value: 'config', child: Text(l.wfMenuReconfig)),
+          PopupMenuItem(value: 'delete', child: Text(l.delete)),
+        ],
       ),
-      child: InkWell(
-        onTap: () => _open(context, ref, workflow),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      workflow.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${workflow.sourceKind.label(AppLocalizations.of(context))} · ${_formatDate(workflow.createdAt)}'
-                      ' · ${formatBytes(workflow.sizeBytes)}'
-                      ' · ${exposedCount == 0 ? AppLocalizations.of(context).wfStatusUnconfigured : AppLocalizations.of(context).configParamCount(exposedCount)}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Colors.grey),
-                tooltip: AppLocalizations.of(context).menuMore,
-                onSelected: (v) => _onMenuSelected(context, ref, workflow, v),
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'rename',
-                    child: Text(AppLocalizations.of(context).menuRename),
-                  ),
-                  PopupMenuItem(
-                    value: 'config',
-                    child: Text(AppLocalizations.of(context).wfMenuReconfig),
-                  ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Text(AppLocalizations.of(context).delete),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      onTap: () => _open(context, ref, workflow),
     );
   }
 
