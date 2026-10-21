@@ -427,6 +427,16 @@
   "@runIntHint": { "description": "运行页：整数输入占位提示" },
   "runFloatHint": "数值（可小数）",
   "@runFloatHint": { "description": "运行页：小数输入占位提示" },
+  "runNumberInvalid": "请输入数字",
+  "@runNumberInvalid": { "description": "运行页：数值输入不是数字" },
+  "runNumberRange": "范围 {min} – {max}",
+  "@runNumberRange": {
+    "description": "运行页：数值超出服务器给定的范围",
+    "placeholders": {
+      "min": { "type": "String" },
+      "max": { "type": "String" }
+    }
+  },
   "runBoolOn": "开启",
   "@runBoolOn": { "description": "运行页：开关打开" },
   "runBoolOff": "关闭",

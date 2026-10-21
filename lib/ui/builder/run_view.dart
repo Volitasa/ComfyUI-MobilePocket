@@ -52,7 +52,11 @@ class _RunViewState extends ConsumerState<RunView> {
   // 「再次运行」时因配置变更而套用不到的参数条数（不能静默丢弃，要告知用户）
   int _unappliedCount = 0;
   // 本表单里需要向服务器问选项的下拉，所属的节点类名（决定要不要问、问哪些）
-  Set<String> _dynamicClassTypes = {};
+  /// 需要问下拉选项的节点类名（模型 / 采样器 / 调度器）。
+  Set<String> _optionClassTypes = {};
+
+  /// 需要问数值范围的节点类名（步数 / CFG / 尺寸 …）。
+  Set<String> _rangeClassTypes = {};
 
   /// 工作流数据在缓存中的归属 ID：快照模式下用快照 id，否则用工作流 id。
   /// 两者必须区分，否则快照数据会被判成属于另一个工作流（串台）。
@@ -112,7 +116,8 @@ class _RunViewState extends ConsumerState<RunView> {
 
     _formConfig = savedConfig.where((node) => node.exposed).toList();
 
-    _dynamicClassTypes = _collectDynamicClassTypes();
+    _optionClassTypes = _collectOptionClassTypes();
+    _rangeClassTypes = _collectRangeClassTypes();
     _ensureOptionData();
 
     final params = widget.initialParams;
@@ -214,7 +219,7 @@ class _RunViewState extends ConsumerState<RunView> {
   ///
   /// 只认模型类与采样类参数（名单见 [kDynamicOptionKeys]）：
   /// 图片上传参数绝不在内，否则下拉会变成一串服务器文件名，用户就传不了新图了。
-  Set<String> _collectDynamicClassTypes() {
+  Set<String> _collectOptionClassTypes() {
     final types = <String>{};
     for (final node in _formConfig) {
       if (node.paramType != ParamType.enumType) continue;
@@ -224,12 +229,91 @@ class _RunViewState extends ConsumerState<RunView> {
     return types;
   }
 
+  /// 哪些节点需要为数值参数问 min/max（名单见 [kRangeParamKeys]）。
+  ///
+  /// 与下拉分开收：刷新按钮只在真有下拉时才出现，不能因为多了几个数值参数
+  /// 就摆一个跟下拉无关的刷新入口。
+  Set<String> _collectRangeClassTypes() {
+    final types = <String>{};
+    for (final node in _formConfig) {
+      if (node.paramType != ParamType.intType &&
+          node.paramType != ParamType.float) {
+        continue;
+      }
+      if (!kRangeParamKeys.contains(node.key)) continue;
+      types.add(node.classType);
+    }
+    return types;
+  }
+
+  /// 该参数在服务器说明书里的定义（拿不到就是 null）。
+  NodeInputSpec? _specFor(WorkflowNode node) {
+    final serverId = ref.watch(connectionProvider).activeServerId;
+    if (serverId == null) return null;
+    return ref
+        .watch(objectInfoProvider)
+        .specFor(serverId, node.classType, node.key);
+  }
+
+  /// 数值输入框的红字提示。**只提示、不拦提交** —— 越界时让用户自己看见，
+  /// 由他决定要不要改（有时就是要故意超范围试一下）。
+  String? _numberError(WorkflowNode node) {
+    final spec = _specFor(node);
+    final key = nodeParamKey(node.id, node.key);
+    final issue = checkNumberAgainstSpec(
+      spec: spec,
+      text: _controllers[key]?.text ?? '',
+    );
+    if (issue == null) return null;
+
+    final l = AppLocalizations.of(context);
+    if (issue == NumberIssue.notANumber) return l.runNumberInvalid;
+    return l.runNumberRange(_fmtNum(spec!.min!), _fmtNum(spec.max!));
+  }
+
+  /// 1.0 显示成 1，0.5 仍显示 0.5，避免提示里冒出一堆多余的 0。
+  String _fmtNum(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
+  /// 数值输入框。
+  ///
+  /// 用 [ValueListenableBuilder] 监听控制器：越界提示依赖当前文本，而改文本
+  /// 本身不会让整页重建，不监听的话红字要等下一次重建才出现。
+  Widget _numberField(
+    WorkflowNode node, {
+    required bool decimal,
+    required String hint,
+  }) {
+    final k = nodeParamKey(node.id, node.key);
+    final controller = _controllers[k];
+    if (controller == null) return const SizedBox.shrink();
+
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (_, _, _) => TextField(
+        controller: controller,
+        keyboardType: decimal
+            ? const TextInputType.numberWithOptions(decimal: true)
+            : TextInputType.number,
+        decoration: InputDecoration(
+          hintText: hint,
+          errorText: _numberError(node),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          isDense: true,
+          filled: true,
+          fillColor: Colors.white,
+        ),
+      ),
+    );
+  }
+
   /// 进页面时问一次服务器，把下拉的真实选项取回来。
   ///
   /// 拿不到就当作没问过：界面退回原样（下拉里仍是工作流当前的那个值），
   /// 不弹错误、不卡住页面。
   void _ensureOptionData() {
-    if (_dynamicClassTypes.isEmpty) return;
+    final classTypes = <String>{..._optionClassTypes, ..._rangeClassTypes};
+    if (classTypes.isEmpty) return;
     final config = ref.read(connectionProvider);
     final serverId = config.activeServerId;
     if (!config.isConnected || serverId == null) return;
@@ -241,7 +325,7 @@ class _RunViewState extends ConsumerState<RunView> {
           .ensureLoaded(
             serverId: serverId,
             baseUrl: config.comfyUrl,
-            classTypes: _dynamicClassTypes,
+            classTypes: classTypes,
           );
     });
   }
@@ -258,7 +342,7 @@ class _RunViewState extends ConsumerState<RunView> {
         .refresh(
           serverId: serverId,
           baseUrl: config.comfyUrl,
-          classTypes: _dynamicClassTypes,
+          classTypes: <String>{..._optionClassTypes, ..._rangeClassTypes},
         );
 
     if (!mounted) return;
@@ -575,7 +659,7 @@ class _RunViewState extends ConsumerState<RunView> {
         actions: [
           // 只在表单里确实有模型/采样器下拉时才出现，纯提示词的工作流不该
           // 摆一个点不动的按钮。
-          if (_dynamicClassTypes.isNotEmpty)
+          if (_optionClassTypes.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: AppLocalizations.of(context).runRefreshModels,
@@ -803,6 +887,7 @@ class _RunViewState extends ConsumerState<RunView> {
   Widget _buildInputControl(WorkflowNode node) {
     // 同一节点可有多个参数，控制器/状态统一用 id:key 复合键
     final k = nodeParamKey(node.id, node.key);
+    final l10n = AppLocalizations.of(context);
     switch (node.paramType) {
       case ParamType.text:
         return TextField(
@@ -843,29 +928,9 @@ class _RunViewState extends ConsumerState<RunView> {
           ],
         );
       case ParamType.intType:
-        return TextField(
-          controller: _controllers[k],
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            hintText: AppLocalizations.of(context).runIntHint,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            isDense: true,
-            filled: true,
-            fillColor: Colors.white,
-          ),
-        );
+        return _numberField(node, decimal: false, hint: l10n.runIntHint);
       case ParamType.float:
-        return TextField(
-          controller: _controllers[k],
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            hintText: AppLocalizations.of(context).runFloatHint,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            isDense: true,
-            filled: true,
-            fillColor: Colors.white,
-          ),
-        );
+        return _numberField(node, decimal: true, hint: l10n.runFloatHint);
       case ParamType.boolType:
         return SwitchListTile(
           contentPadding: EdgeInsets.zero,

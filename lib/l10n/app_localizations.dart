@@ -1082,6 +1082,18 @@ abstract class AppLocalizations {
   /// **'数值（可小数）'**
   String get runFloatHint;
 
+  /// 运行页：数值输入不是数字
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入数字'**
+  String get runNumberInvalid;
+
+  /// 运行页：数值超出服务器给定的范围
+  ///
+  /// In zh, this message translates to:
+  /// **'范围 {min} – {max}'**
+  String runNumberRange(String min, String max);
+
   /// 运行页：开关打开
   ///
   /// In zh, this message translates to:

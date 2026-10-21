@@ -11,6 +11,22 @@ import 'package:http/http.dart' as http;
 /// ⚠️ **图片上传参数（`image` / `image_path`）绝不能进来** —— 服务器说明书里
 /// `LoadImage.image` 就是一串文件名列表（实测 139 项），一旦当成普通下拉，
 /// 用户就再也传不了新图，只能选服务器上已有的文件。上传控件必须保留。
+/// 需要向服务器问数值约束的参数名。
+///
+/// 只有这些键会触发「为了拿 min/max 而去取说明书」，避免为每个节点都发一次
+/// 请求。范围同样只放内存，不落盘。
+const Set<String> kRangeParamKeys = {
+  'steps',
+  'cfg',
+  'denoise',
+  'strength_model',
+  'strength_clip',
+  'width',
+  'height',
+  'batch_size',
+  'upscale_by',
+};
+
 const Set<String> kDynamicOptionKeys = {
   // 模型加载
   'ckpt_name',
@@ -87,7 +103,13 @@ EnumOptionView resolveEnumOptions({
 /// 只留用得上的两个字段 —— 一期只解决「下拉里该有哪些选项」，
 /// min/max/step 这些数值约束没进来（用了就得连带把输入框改成滑块）。
 class NodeInputSpec {
-  const NodeInputSpec({required this.isCombo, this.options = const []});
+  const NodeInputSpec({
+    required this.isCombo,
+    this.options = const [],
+    this.min,
+    this.max,
+    this.step,
+  });
 
   /// 是否是「确实拿到了选项列表的 COMBO」。
   ///
@@ -100,8 +122,51 @@ class NodeInputSpec {
   /// COMBO 的真实选项。可能为空（服务器上确实一个都没有）。
   final List<String> options;
 
+  /// 数值下限（INT / FLOAT 的元数据）。没给就是 null。
+  final double? min;
+
+  /// 数值上限。⚠️ 实测 `KSampler` 的 max 是字符串
+  /// `"18446744073709551615"`（超出 int64），只能按 double 处理。
+  final double? max;
+
+  /// 步进。拿不到时由调用方按类型兜底（整数 1、小数 0.01）。
+  final double? step;
+
+  /// 能否用于**校验**：上下限都在、有限、且 max > min。
+  bool get hasBounds =>
+      min != null &&
+      max != null &&
+      min!.isFinite &&
+      max!.isFinite &&
+      max! > min!;
+
+  /// 能否用于**滑块**：有些节点的 max 是天文数字（种子类），画成滑块没有意义，
+  /// 这类只有上下限、不画滑块。
+  bool get hasSliderRange =>
+      hasBounds && max!.abs() <= 1e9 && min!.abs() <= 1e9;
+
   bool contains(String? value) =>
       value != null && value.isNotEmpty && options.contains(value);
+}
+
+/// 数值输入的问题（用于输入框的红字提示）。
+enum NumberIssue { notANumber, outOfRange }
+
+/// 校验一段文本是否落在服务器的 min/max 之内。**纯函数，便于单测。**
+///
+/// 返回 null 表示「没问题」或「没有可依据的范围」——
+/// 拿不到说明书时不算错，只是我们不知道边界。
+NumberIssue? checkNumberAgainstSpec({
+  required NodeInputSpec? spec,
+  required String text,
+}) {
+  if (spec == null || !spec.hasBounds) return null;
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return null; // 空值交给提交侧处理，不在这里报
+  final v = num.tryParse(trimmed);
+  if (v == null) return NumberIssue.notANumber;
+  if (v < spec.min! || v > spec.max!) return NumberIssue.outOfRange;
+  return null;
 }
 
 /// 单个节点的全部输入定义（参数名 → 定义）
@@ -211,9 +276,28 @@ class ObjectInfoService {
       );
     }
 
-    // 形态 C（COMFY_DYNAMICCOMBO_V3）与 INT / FLOAT / STRING / 连线类型等，
+    // INT / FLOAT：元数据里可能有 min / max / step
+    if (type == 'INT' || type == 'FLOAT') {
+      return NodeInputSpec(
+        isCombo: false,
+        min: _asDouble(meta?['min']),
+        max: _asDouble(meta?['max']),
+        step: _asDouble(meta?['step']),
+      );
+    }
+
+    // 形态 C（COMFY_DYNAMICCOMBO_V3）与 STRING / 连线类型等，
     // 一律当作「没有下拉选项」。
     return const NodeInputSpec(isCombo: false);
+  }
+
+  /// 说明书里的数字可能是数字，也可能是字符串（实测 `max` 就有超 int64 的
+  /// 字符串），统一按 double 读；读不出来就当没给。
+  static double? _asDouble(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is num) return raw.toDouble();
+    final v = double.tryParse(raw.toString());
+    return v == null || !v.isFinite ? null : v;
   }
 
   /// 向服务器取一个节点的说明书。失败返回空 Map，不抛异常。

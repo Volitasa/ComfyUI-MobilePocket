@@ -552,6 +552,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get runFloatHint => '数值（可小数）';
 
   @override
+  String get runNumberInvalid => '请输入数字';
+
+  @override
+  String runNumberRange(String min, String max) {
+    return '范围 $min – $max';
+  }
+
+  @override
   String get runBoolOn => '开启';
 
   @override

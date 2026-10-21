@@ -564,6 +564,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get runFloatHint => 'Number (decimals allowed)';
 
   @override
+  String get runNumberInvalid => 'Enter a number';
+
+  @override
+  String runNumberRange(String min, String max) {
+    return 'Range $min – $max';
+  }
+
+  @override
   String get runBoolOn => 'On';
 
   @override
