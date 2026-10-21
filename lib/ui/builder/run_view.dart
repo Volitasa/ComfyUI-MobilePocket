@@ -13,6 +13,8 @@ import '../../providers/local_workflow_provider.dart';
 import '../../providers/task_manager.dart';
 import '../../providers/ws_event_provider.dart';
 import '../../providers/connection_provider.dart';
+import '../../providers/object_info_provider.dart';
+import '../../services/object_info_service.dart';
 import '../../utils.dart';
 import '../main_screen.dart';
 import 'workflow_view.dart';
@@ -49,6 +51,8 @@ class _RunViewState extends ConsumerState<RunView> {
   final Set<String> _collapsedNodeIds = {};
   // 「再次运行」时因配置变更而套用不到的参数条数（不能静默丢弃，要告知用户）
   int _unappliedCount = 0;
+  // 本表单里需要向服务器问选项的下拉，所属的节点类名（决定要不要问、问哪些）
+  Set<String> _dynamicClassTypes = {};
 
   /// 工作流数据在缓存中的归属 ID：快照模式下用快照 id，否则用工作流 id。
   /// 两者必须区分，否则快照数据会被判成属于另一个工作流（串台）。
@@ -107,6 +111,9 @@ class _RunViewState extends ConsumerState<RunView> {
     }
 
     _formConfig = savedConfig.where((node) => node.exposed).toList();
+
+    _dynamicClassTypes = _collectDynamicClassTypes();
+    _ensureOptionData();
 
     final params = widget.initialParams;
     if (params != null) {
@@ -201,6 +208,107 @@ class _RunViewState extends ConsumerState<RunView> {
     await ref
         .read(workflowProvider.notifier)
         .fetchWorkflowContent(widget.workflowId);
+  }
+
+  /// 本表单里，哪些下拉需要向服务器问真实选项（按所属节点类名去重）。
+  ///
+  /// 只认模型类与采样类参数（名单见 [kDynamicOptionKeys]）：
+  /// 图片上传参数绝不在内，否则下拉会变成一串服务器文件名，用户就传不了新图了。
+  Set<String> _collectDynamicClassTypes() {
+    final types = <String>{};
+    for (final node in _formConfig) {
+      if (node.paramType != ParamType.enumType) continue;
+      if (!kDynamicOptionKeys.contains(node.key)) continue;
+      types.add(node.classType);
+    }
+    return types;
+  }
+
+  /// 进页面时问一次服务器，把下拉的真实选项取回来。
+  ///
+  /// 拿不到就当作没问过：界面退回原样（下拉里仍是工作流当前的那个值），
+  /// 不弹错误、不卡住页面。
+  void _ensureOptionData() {
+    if (_dynamicClassTypes.isEmpty) return;
+    final config = ref.read(connectionProvider);
+    final serverId = config.activeServerId;
+    if (!config.isConnected || serverId == null) return;
+
+    // 还在 initState 里，写 provider 必须让出当前帧
+    scheduleProviderWrite(() {
+      ref
+          .read(objectInfoProvider.notifier)
+          .ensureLoaded(
+            serverId: serverId,
+            baseUrl: config.comfyUrl,
+            classTypes: _dynamicClassTypes,
+          );
+    });
+  }
+
+  /// 手动刷新下拉选项：电脑上新装了模型，手机上能立刻拉到。
+  Future<void> _refreshOptions() async {
+    final l = AppLocalizations.of(context);
+    final config = ref.read(connectionProvider);
+    final serverId = config.activeServerId;
+    if (serverId == null) return;
+
+    final ok = await ref
+        .read(objectInfoProvider.notifier)
+        .refresh(
+          serverId: serverId,
+          baseUrl: config.comfyUrl,
+          classTypes: _dynamicClassTypes,
+        );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? l.runOptionsRefreshed : l.runOptionsRefreshFailed),
+      ),
+    );
+  }
+
+  /// 这个下拉当前该怎么显示（选项、选中项、是否以服务器为准）。
+  EnumOptionView _enumView(WorkflowNode node) {
+    final serverId = ref.watch(connectionProvider).activeServerId;
+    final spec = serverId == null
+        ? null
+        : ref
+              .watch(objectInfoProvider)
+              .specFor(serverId, node.classType, node.key);
+    // 只有「确实拿到了 COMBO 选项」才以服务器为准；
+    // 问过但没问到（服务器不认识这个节点）等同于没数据。
+    final usable = spec != null && spec.isCombo ? spec : null;
+
+    return resolveEnumOptions(
+      hasServerData: usable != null,
+      serverOptions: usable?.options ?? const [],
+      currentValue: _widgetValues[nodeParamKey(node.id, node.key)]?.toString(),
+      fallbackOptions: node.options,
+    );
+  }
+
+  /// 拿到真实选项、但当前值不在其中的下拉 —— 也就是服务器上没有的那个模型。
+  ///
+  /// 没拿到服务器数据时不算缺失：那只是我们不知道，不是服务器上没有。
+  List<WorkflowNode> _missingOnServerNodes() {
+    final serverId = ref.read(connectionProvider).activeServerId;
+    if (serverId == null) return const [];
+
+    final missing = <WorkflowNode>[];
+    for (final node in _formConfig) {
+      if (node.paramType != ParamType.enumType) continue;
+      if (!kDynamicOptionKeys.contains(node.key)) continue;
+      final spec = ref
+          .read(objectInfoProvider)
+          .specFor(serverId, node.classType, node.key);
+      if (spec == null || !spec.isCombo) continue;
+      final current = _widgetValues[nodeParamKey(node.id, node.key)]
+          ?.toString();
+      if (!spec.contains(current)) missing.add(node);
+    }
+    return missing;
   }
 
   /// 收集当前表单值，供「再次运行」预填
@@ -334,6 +442,14 @@ class _RunViewState extends ConsumerState<RunView> {
     }
     final workflowData = wfState.currentWorkflowData!;
 
+    // 工作流里写的模型在服务器上已经没有了 → 先把人拦下来让他选一个。
+    // 不然请求发出去也是失败，服务器只会回一句看不懂的 node_errors。
+    if (_missingOnServerNodes().isNotEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.runSelectModelFirst)));
+      return;
+    }
+
     setState(() => _isExecuting = true);
     ref.read(wsProvider.notifier).connect();
 
@@ -457,6 +573,14 @@ class _RunViewState extends ConsumerState<RunView> {
           style: const TextStyle(fontSize: 16),
         ),
         actions: [
+          // 只在表单里确实有模型/采样器下拉时才出现，纯提示词的工作流不该
+          // 摆一个点不动的按钮。
+          if (_dynamicClassTypes.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: AppLocalizations.of(context).runRefreshModels,
+              onPressed: _refreshOptions,
+            ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: AppLocalizations.of(context).runNodeConfigTooltip,
@@ -755,38 +879,55 @@ class _RunViewState extends ConsumerState<RunView> {
           onChanged: (val) => setState(() => _widgetValues[k] = val),
         );
       case ParamType.enumType:
-        final opts = node.options;
-        final current = _widgetValues[k]?.toString() ?? '';
-        // 若当前值不在选项里（理论上不会），仍显示它
-        final items = opts.contains(current)
-            ? opts
-            : [...opts, if (current.isNotEmpty) current];
-        return DropdownButtonFormField<String>(
-          initialValue: items.contains(current)
-              ? current
-              : (items.isNotEmpty ? items.first : null),
-          isExpanded: true,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            isDense: true,
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
-          ),
-          items: items
-              .map(
-                (o) => DropdownMenuItem(
-                  value: o,
-                  child: Text(o, overflow: TextOverflow.ellipsis),
+        // 拿到服务器的真实选项时，下拉里**只有**真实选项 ——
+        // 工作流里写的那个模型如果服务器上没有，就不再塞进选项里凑数，
+        // 用户点开菜单自己看得出来，提交时也会被拦下。
+        final l10n = AppLocalizations.of(context);
+        final view = _enumView(node);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropdownButtonFormField<String>(
+              // 选项是在页面显示之后才到的。initialValue 只在创建时生效一次，
+              // 所以必须让 key 跟着选项走，否则真选项到了下拉也不刷新。
+              key: ValueKey(
+                '$k:${view.fromServer ? 's' : 'f'}:${view.options.length}',
+              ),
+              initialValue: view.selected,
+              hint: Text(l10n.runSelectPlaceholder),
+              isExpanded: true,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              )
-              .toList(),
-          onChanged: (val) {
-            if (val != null) setState(() => _widgetValues[k] = val);
-          },
+                isDense: true,
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              items: view.options
+                  .map(
+                    (o) => DropdownMenuItem(
+                      value: o,
+                      child: Text(o, overflow: TextOverflow.ellipsis),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (val) {
+                if (val != null) setState(() => _widgetValues[k] = val);
+              },
+            ),
+            if (view.missingOnServer) ...[
+              const SizedBox(height: 4),
+              Text(
+                l10n.runModelMissing,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ],
         );
       case ParamType.image:
         final hasImage = _formData[k] != null;

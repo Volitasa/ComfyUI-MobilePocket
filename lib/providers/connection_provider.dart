@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../utils.dart';
 // export 不会把符号引入本文件作用域，本文件自己也要用到
 import 'shared_preferences_provider.dart';
+import 'object_info_provider.dart';
 
 // 原有引用点（main.dart、各 provider）仍可从本文件拿到 SharedPreferences provider
 export 'shared_preferences_provider.dart';
@@ -236,6 +237,9 @@ class ConnectionNotifier extends Notifier<ConfigState> {
   Future<void> removeServer(String id) async {
     final servers = state.servers.where((s) => s.id != id).toList();
     _saveServers(servers);
+
+    // 连带丢掉这台服务器的节点说明书缓存，别让它留着占内存
+    ref.read(objectInfoProvider.notifier).clearServer(id);
 
     if (state.activeServerId == id) {
       // 移除的是启用中的连接：直接断开（comfyUrl 置空触发 WS 断开与列表清空）

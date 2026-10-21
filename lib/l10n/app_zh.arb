@@ -763,5 +763,18 @@
   "historyFilterAll": "全部",
   "@historyFilterAll": { "description": "生成记录页：状态筛选-全部" },
   "historyFilterPending": "进行中",
-  "@historyFilterPending": { "description": "生成记录页：状态筛选-进行中（排队+生成）" }
+  "@historyFilterPending": { "description": "生成记录页：状态筛选-进行中（排队+生成）" },
+
+  "runSelectPlaceholder": "请选择",
+  "@runSelectPlaceholder": { "description": "运行页：下拉未选中时的占位提示" },
+  "runModelMissing": "服务器没有此模型",
+  "@runModelMissing": { "description": "运行页：工作流里的模型在服务器上找不到" },
+  "runSelectModelFirst": "请先选择模型",
+  "@runSelectModelFirst": { "description": "运行页：提交时因模型不存在被拦下" },
+  "runRefreshModels": "刷新模型列表",
+  "@runRefreshModels": { "description": "运行页：手动重新拉取服务器模型列表" },
+  "runOptionsRefreshed": "已刷新",
+  "@runOptionsRefreshed": { "description": "运行页：刷新成功提示" },
+  "runOptionsRefreshFailed": "刷新失败，请检查连接",
+  "@runOptionsRefreshFailed": { "description": "运行页：刷新失败提示" }
 }

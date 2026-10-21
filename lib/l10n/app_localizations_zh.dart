@@ -1106,4 +1106,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get historyFilterPending => '进行中';
+
+  @override
+  String get runSelectPlaceholder => '请选择';
+
+  @override
+  String get runModelMissing => '服务器没有此模型';
+
+  @override
+  String get runSelectModelFirst => '请先选择模型';
+
+  @override
+  String get runRefreshModels => '刷新模型列表';
+
+  @override
+  String get runOptionsRefreshed => '已刷新';
+
+  @override
+  String get runOptionsRefreshFailed => '刷新失败，请检查连接';
 }

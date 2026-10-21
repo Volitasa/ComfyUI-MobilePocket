@@ -363,5 +363,18 @@
   "historyFilterAll": "All",
   "@historyFilterAll": { "description": "History page: status filter - all" },
   "historyFilterPending": "Running",
-  "@historyFilterPending": { "description": "History page: status filter - pending (queued + running)" }
+  "@historyFilterPending": { "description": "History page: status filter - pending (queued + running)" },
+
+  "runSelectPlaceholder": "Select one",
+  "@runSelectPlaceholder": { "description": "Run page: placeholder when no dropdown value is selected" },
+  "runModelMissing": "This model is not on the server",
+  "@runModelMissing": { "description": "Run page: the model in the workflow is missing on the server" },
+  "runSelectModelFirst": "Select a model first",
+  "@runSelectModelFirst": { "description": "Run page: submit blocked because the model is missing" },
+  "runRefreshModels": "Refresh model list",
+  "@runRefreshModels": { "description": "Run page: manually refetch server model list" },
+  "runOptionsRefreshed": "Refreshed",
+  "@runOptionsRefreshed": { "description": "Run page: refresh succeeded" },
+  "runOptionsRefreshFailed": "Refresh failed — check the connection",
+  "@runOptionsRefreshFailed": { "description": "Run page: refresh failed" }
 }

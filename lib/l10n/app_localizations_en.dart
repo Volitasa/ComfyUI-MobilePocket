@@ -1150,4 +1150,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get historyFilterPending => 'Running';
+
+  @override
+  String get runSelectPlaceholder => 'Select one';
+
+  @override
+  String get runModelMissing => 'This model is not on the server';
+
+  @override
+  String get runSelectModelFirst => 'Select a model first';
+
+  @override
+  String get runRefreshModels => 'Refresh model list';
+
+  @override
+  String get runOptionsRefreshed => 'Refreshed';
+
+  @override
+  String get runOptionsRefreshFailed => 'Refresh failed — check the connection';
 }

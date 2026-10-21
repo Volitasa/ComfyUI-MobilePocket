@@ -2077,6 +2077,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'进行中'**
   String get historyFilterPending;
+
+  /// 运行页：下拉未选中时的占位提示
+  ///
+  /// In zh, this message translates to:
+  /// **'请选择'**
+  String get runSelectPlaceholder;
+
+  /// 运行页：工作流里的模型在服务器上找不到
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器没有此模型'**
+  String get runModelMissing;
+
+  /// 运行页：提交时因模型不存在被拦下
+  ///
+  /// In zh, this message translates to:
+  /// **'请先选择模型'**
+  String get runSelectModelFirst;
+
+  /// 运行页：手动重新拉取服务器模型列表
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新模型列表'**
+  String get runRefreshModels;
+
+  /// 运行页：刷新成功提示
+  ///
+  /// In zh, this message translates to:
+  /// **'已刷新'**
+  String get runOptionsRefreshed;
+
+  /// 运行页：刷新失败提示
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新失败，请检查连接'**
+  String get runOptionsRefreshFailed;
 }
 
 class _AppLocalizationsDelegate
