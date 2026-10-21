@@ -89,24 +89,24 @@ class NodeRule {
   /// （如 `UnetLoaderGGUF`、`LoraLoaderModelOnly`）。
   final Set<String> classTypes;
 
-  /// 要暴露的参数名。为 null 时暴露该节点全部「控件型」参数。
+  /// 该节点「值得在手机上调」的参数名。
   ///
-  /// 只写真正值得在手机上调的那几个 —— 其余保持不可见，
-  /// 否则一个节点几十个参数会把运行页淹没。
+  /// ⚠️ **不限制列表**，只参与默认勾选的判定：没写在这里的参数照样出现在
+  /// 配置页，只是默认不勾。这是刻意的 —— 10-15 实测 1500 多种节点类型里
+  /// 上千种本身带可调参数，按名单把没收录的参数过滤掉，用户就彻底拿不到了
+  /// （「减少识别范围」在这项目里已被判定为反向优化）。少勾几项用户能自己
+  /// 补上，参数压根不出现就没得补。
+  ///
+  /// 为 null 时该节点全部参数默认勾选（此时 [defaultExposedKeys] 不生效）。
   final Set<String>? keys;
 
   /// 强制类型：优先于按值推断，用于纠正 `denoise` 这类误判。
   final Map<String, ParamType> forceTypes;
 
-  /// 默认勾选的参数名。为 null 时 [keys] 全部默认勾选。
+  /// 默认勾选的参数名。为 null 时全部默认勾选（见 [keys]）。
   final Set<String>? defaultExposedKeys;
 
   bool matches(String classType) => classTypes.contains(classType);
-
-  bool exposes(String key) => keys?.contains(key) ?? true;
-
-  bool isDefaultExposed(String key) =>
-      defaultExposedKeys?.contains(key) ?? highFreqParams.contains(key);
 }
 
 /// 内置规则表。
@@ -240,9 +240,6 @@ const List<NodeRule> kDefaultNodeRules = [
 class WorkflowNodeParser {
   const WorkflowNodeParser._();
 
-  /// 未命中规则表时的兜底参数名：任意节点只要有这两个、且是字符串，就认。
-  static const Set<String> _fallbackKeys = {'text', 'value'};
-
   /// 内置规则（供测试替换）。
   static List<NodeRule> get defaultRules => kDefaultNodeRules;
 
@@ -257,8 +254,8 @@ class WorkflowNodeParser {
   /// 解析工作流 JSON，得到「可配置参数」列表。
   ///
   /// 口径：
-  /// - 命中规则表 → 按规则暴露指定参数（可指定强制类型与默认勾选）；
-  /// - 未命中 → 沿用旧兜底：任意节点的 `text` / `value` 字符串参数。
+  /// - 命中规则表 → 按规则决定默认勾选（可指定强制类型）；
+  /// - 未命中 → 可填参数全部列出来，但只默认勾选高频参数（见 [_defaultExposed]）。
   static List<WorkflowNode> parse(
     Map<String, dynamic> jsonMap, {
     required AppLocalizations l,
@@ -278,10 +275,7 @@ class WorkflowNodeParser {
       final title = meta?['title'] as String? ?? 'Node $nodeId';
       final rule = ruleFor(classType, rules: rules);
 
-      // 命中规则但没写 keys → 暴露全部控件型参数；未命中 → 只认 text/value。
-      final onlyKeys = rule?.keys ?? _fallbackKeys;
       final forceTypes = rule?.forceTypes ?? const <String, ParamType>{};
-      final defaultKeys = rule?.defaultExposedKeys ?? _fallbackKeys;
 
       inputs.forEach((key, rawValue) {
         if (isLinkReference(rawValue)) return; // 连线引用不暴露
@@ -289,10 +283,7 @@ class WorkflowNodeParser {
         final type = resolveType(key, rawValue, forceTypes);
         if (type == null) return;
 
-        final exposed = onlyKeys == _fallbackKeys
-            ? true
-            : (defaultKeys.contains(key) ||
-                  (rule != null && rule.defaultExposedKeys == null));
+        final exposed = _defaultExposed(rule, key);
 
         nodes.add(
           WorkflowNode(
@@ -313,6 +304,20 @@ class WorkflowNodeParser {
     });
 
     return nodes;
+  }
+
+  /// 该参数是否默认勾选。
+  ///
+  /// 命中规则：按规则来 —— 规则没指定默认勾选集合时全部勾上（能进规则表的
+  /// 都值得在手机上调），指定了就只勾指定的那几个。
+  ///
+  /// 未命中规则：只勾高频参数，其余保持可见但不勾。
+  /// 之所以不退回「没收录就只认 text/value」：那样过滤掉的从来不是噪音，
+  /// 而是大量真实可调的社区节点参数（理由见 [NodeRule.keys]）。
+  static bool _defaultExposed(NodeRule? rule, String key) {
+    if (rule == null) return highFreqParams.contains(key);
+    if (rule.keys == null || rule.defaultExposedKeys == null) return true;
+    return rule.defaultExposedKeys!.contains(key);
   }
 
   /// 参数类型判定优先级：强制类型 > 种子 > 上传框 > 按值推断。
