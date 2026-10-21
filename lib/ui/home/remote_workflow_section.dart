@@ -61,14 +61,6 @@ class RemoteWorkflowSection extends ConsumerWidget {
           ...workflowState.uiWorkflowList.map(
             (file) => _buildUiWorkflowCard(context, ref, file, workflowState),
           ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              AppLocalizations.of(context).homeUiFormatNote,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ),
           const SizedBox(height: 18),
         ],
         Padding(

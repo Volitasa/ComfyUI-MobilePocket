@@ -1172,16 +1172,10 @@ abstract class AppLocalizations {
   /// **'UI 工作流 · 需解析'**
   String get homeGroupUi;
 
-  /// 首页：UI 格式说明
-  ///
-  /// In zh, this message translates to:
-  /// **'UI 格式是 ComfyUI 界面保存的原始结构，需转换为 API 结构后才能运行。'**
-  String get homeUiFormatNote;
-
   /// 首页：工作流来源说明
   ///
   /// In zh, this message translates to:
-  /// **'提示：工作流来自 ComfyUI 的 userdata/workflows 目录。其中 API JSON 由 ComfyUI-AutoSaveAPI 插件自动生成（https://github.com/Volitasa/ComfyUI-AutoSaveAPI.git）。'**
+  /// **'提示：工作流来自 ComfyUI 的 userdata/workflows 目录。UI 格式是 ComfyUI 界面保存的原始结构，需转换为 API 结构后才能运行。可在应用内直接解析转换，无需安装插件；也可在 ComfyUI 安装 ComfyUI-AutoSaveAPI 插件自动生成 API JSON（https://github.com/Volitasa/ComfyUI-AutoSaveAPI.git）。'**
   String get homeWorkflowSourceNote;
 
   /// UI 工作流状态：未解析

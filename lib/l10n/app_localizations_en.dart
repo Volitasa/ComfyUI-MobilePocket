@@ -618,12 +618,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGroupUi => 'UI workflows · need parsing';
 
   @override
-  String get homeUiFormatNote =>
-      'The UI format is the raw structure saved by the ComfyUI interface; it must be converted to the API structure before it can run.';
-
-  @override
   String get homeWorkflowSourceNote =>
-      'Tip: workflows come from ComfyUI\'s userdata/workflows directory. The API JSON files are generated automatically by the ComfyUI-AutoSaveAPI plugin (https://github.com/Volitasa/ComfyUI-AutoSaveAPI.git).';
+      'Tip: workflows come from ComfyUI\'s userdata/workflows directory. The UI format is the raw structure saved by the ComfyUI interface; it must be converted to the API structure before it can run. Parse it right in the app — no plugin needed — or install the ComfyUI-AutoSaveAPI plugin on the server to generate API JSON automatically (https://github.com/Volitasa/ComfyUI-AutoSaveAPI.git).';
 
   @override
   String get uiStatusNotParsed => 'Not parsed yet · tap to parse';
