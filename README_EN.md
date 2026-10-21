@@ -54,10 +54,10 @@
 ## Core capabilities
 
 1. **Connect and run** — type the server address and the workflow list appears; UI-format workflows are parsed into a runnable structure inside the app; local JSON can be imported too.
-2. **Parameters become a form** — node parameters are detected automatically; tick what you want to tweak, give it an alias, and the run page renders the right control (text / seed / int / float / toggle / dropdown / image).
+2. **Parameters become a form** — node parameters are detected automatically; tick what you want to tweak, give it an alias, and the run page renders the right control (text / seed / int / float / toggle / dropdown / image). **Model and sampler dropdowns are filled with the options that actually exist on the server**, so you can switch models without going back to the PC.
 3. **Results land on your phone** — live WebSocket progress and five task states; outputs are downloaded into an on-device gallery (PNG metadata preserved, so you can drop them back into ComfyUI) and can be saved to your album; every history entry can be replayed with "Run again".
 
-**Two things in the pipeline**: picking models that already exist on your server straight from the dropdowns, and running workflows through RunningHub — see [Roadmap](#11-roadmap).
+**One thing in the pipeline**: running workflows through RunningHub — see [Roadmap](#11-roadmap).
 
 ## Three steps to your first image
 
@@ -104,6 +104,7 @@ The three headline capabilities are at the top of this page; here is everything,
 | Multiple servers | Save any number of servers (home LAN / office), each with a **primary + backup address**; falls back automatically when the primary is unreachable |
 | Three workflow sources | Server `_api.json` runs directly; server UI-format JSON is **parsed into the API structure inside the app**; local JSON files can be imported |
 | Parameters become a form | Node parameters are recognised through a **data-driven rule table**; tick what to expose, give it an alias, and the run page renders the right control (text / seed / int / float / toggle / dropdown / image). The config panel supports expand-all/collapse-all, per-node select-all and search by parameter |
+| Dropdowns with real option lists | On opening the run page, the app asks the server once; dropdowns for models (Checkpoint / UNET / CLIP / VAE / LoRA / ControlNet), samplers and schedulers are then filled with the **list that really exists on the server**, with a manual refresh in the top-right corner. If the model written in the workflow is missing there, it is flagged and submission is blocked |
 | Live progress | Progress is pushed over WebSocket, showing the node currently executing plus a percentage; reconnects automatically and reconciles with the server, **including when the app returns to the foreground** |
 | Five task states | Queued / Running / Completed / Failed / Interrupted, with the server's actual error message shown on failure |
 | Run again | Every run freezes a snapshot, so any history entry can restore the exact form and values it was run with — one tap to run it again |
@@ -322,7 +323,7 @@ Fill in the parameters and submit. Controls are rendered according to the config
 | Int | Number field | Steps, width/height, batch size |
 | Float | Number field | CFG, denoise |
 | Toggle | Switch | Boolean parameters |
-| Enum | Dropdown | Sampler, scheduler, model names, … |
+| Enum | Dropdown | Sampler, scheduler, model names, … Model and sampler dropdowns fetch the real list from the server (refresh in the top-right corner); other dropdowns keep just the value hard-coded in the workflow |
 | Image | Pick image button + preview | A newly picked image is uploaded to the server before running; leaving it alone keeps the image already in the workflow |
 
 Parameters stay grouped by node and are expanded by default.
@@ -573,7 +574,8 @@ So even if that workflow has since changed or been deleted on the server, "run a
 
 These are real boundaries of the current version, not bugs:
 
-- **Enum dropdowns only contain the value hard-coded in the workflow**: the model-name dropdown, for instance, offers only the current one — you can't switch to another model available on the server from the phone yet. Change it on the PC, re-save the workflow (pulling real options from `/object_info` is planned).
+- **Only model and sampler dropdowns fetch real server options**: other dropdowns (for example enums of third-party nodes) still contain just the value hard-coded in the workflow. **Image upload parameters deliberately do not** — otherwise they would turn into a list of server filenames and you could no longer upload a new image.
+- **Real dropdown options depend on the current connection**: with no connection, or when the request fails, dropdowns fall back to "just the current value" — exactly the old behaviour, with no error. The list is fetched when the page opens, so a model you just installed on the PC needs a tap on the refresh button.
 - **Numeric parameters have no min/max/step**: integers and floats are free-text fields with no range validation; a non-numeric entry falls back to the workflow's original value (it never submits an empty value).
 - **Nodes with a huge parameter count have no narrowing rule**: video-combine nodes and `ModelMerge*` (30–66 parameters on a single node) only get the fallback, so every fillable parameter is listed in the config panel at once and you have to untick the ones you don't want.
 - **Image parameters record only the server-side filename**, so if the server cleans out its input directory, image references in old records can break.
@@ -667,11 +669,10 @@ Pure logic — parsing, search, language resolution — is extracted into functi
 
 ## 11. Roadmap
 
-Two directions, **unscheduled and not promised** — listed for reference only:
+One direction, **unscheduled and not promised** — listed for reference only:
 
 | Direction | What it solves |
 | --- | --- |
-| **Pick models that already exist on your server** | Dropdowns currently offer only the value hard-coded in the workflow, so switching models means going back to the PC and re-saving. Plan: read the real candidate lists (models / LoRA / VAE / samplers, …) from the server's `/object_info` and turn the dropdowns into real option lists |
 | **Run workflows on RunningHub** | Run the same workflows when you have no local GPU, or don't want to keep the machine at home switched on. It offers a ComfyUI-compatible way in; the goal is to treat it as "just another server" and reuse the existing connection and run flow |
 
 Details and ordering are still open.
