@@ -108,7 +108,9 @@ void main() {
     await tester.tap(find.text('自定义宽高'));
     await tester.pump();
 
-    final fields = tester.widgetList<TextField>(find.byType(TextField)).toList();
+    final fields = tester
+        .widgetList<TextField>(find.byType(TextField))
+        .toList();
     expect(fields.length, 2);
     await tester.enterText(find.byType(TextField).first, '960');
     expect(c['width']!.text, '960');

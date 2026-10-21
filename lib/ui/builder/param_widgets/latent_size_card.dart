@@ -44,7 +44,8 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
     return node == null ? null : widget.controllerOf(node);
   }
 
-  int _intOf(String key) => int.tryParse(_controller(key)?.text.trim() ?? '') ?? 0;
+  int _intOf(String key) =>
+      int.tryParse(_controller(key)?.text.trim() ?? '') ?? 0;
 
   bool get _hasSize => _node('width') != null && _node('height') != null;
 
@@ -114,7 +115,10 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
             children: [
               Text(
                 '${_intOf('width')} × ${_intOf('height')}',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const Spacer(),
               TextButton(
@@ -163,10 +167,7 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
 
   Widget _sectionLabel(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
-    child: Text(
-      text,
-      style: const TextStyle(fontSize: 11, color: Colors.grey),
-    ),
+    child: Text(text, style: const TextStyle(fontSize: 11, color: Colors.grey)),
   );
 
   Widget _longEdgePicker() {
@@ -195,7 +196,9 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
                   '$edge',
                   style: TextStyle(
                     fontSize: 12,
-                    color: selected ? Colors.blue.shade700 : Colors.grey.shade700,
+                    color: selected
+                        ? Colors.blue.shade700
+                        : Colors.grey.shade700,
                   ),
                 ),
               ),

@@ -21,13 +21,34 @@ void main() {
 
   group('sizeForRatio：比例 × 长边', () {
     test('常见档位与方案里的换算表一致', () {
-      expect(sizeForRatio(kSizeRatios['1:1']!, 1024), (width: 1024, height: 1024));
-      expect(sizeForRatio(kSizeRatios['4:3']!, 1024), (width: 1024, height: 768));
-      expect(sizeForRatio(kSizeRatios['3:4']!, 1024), (width: 768, height: 1024));
-      expect(sizeForRatio(kSizeRatios['16:9']!, 1024), (width: 1024, height: 576));
-      expect(sizeForRatio(kSizeRatios['9:16']!, 768), (width: 448, height: 768));
-      expect(sizeForRatio(kSizeRatios['3:2']!, 1024), (width: 1024, height: 704));
-      expect(sizeForRatio(kSizeRatios['2:3']!, 1536), (width: 1024, height: 1536));
+      expect(sizeForRatio(kSizeRatios['1:1']!, 1024), (
+        width: 1024,
+        height: 1024,
+      ));
+      expect(sizeForRatio(kSizeRatios['4:3']!, 1024), (
+        width: 1024,
+        height: 768,
+      ));
+      expect(sizeForRatio(kSizeRatios['3:4']!, 1024), (
+        width: 768,
+        height: 1024,
+      ));
+      expect(sizeForRatio(kSizeRatios['16:9']!, 1024), (
+        width: 1024,
+        height: 576,
+      ));
+      expect(sizeForRatio(kSizeRatios['9:16']!, 768), (
+        width: 448,
+        height: 768,
+      ));
+      expect(sizeForRatio(kSizeRatios['3:2']!, 1024), (
+        width: 1024,
+        height: 704,
+      ));
+      expect(sizeForRatio(kSizeRatios['2:3']!, 1536), (
+        width: 1024,
+        height: 1536,
+      ));
     });
 
     test('1280 与 1536 这两档也按 64 对齐', () {

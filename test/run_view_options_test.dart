@@ -322,7 +322,9 @@ void main() {
     const bigMax = 2000000000;
 
     testWidgets('超出服务器范围 → 输入框下方红字提示', (tester) async {
-      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, bigMax)});
+      _installServer({
+        'KSampler': intRangeBody('KSampler', 'steps', 1, bigMax),
+      });
       await _pumpRunView(tester, mapping: stepsOnlyConfig());
 
       await tester.enterText(find.byType(TextField).first, '9999999999');
@@ -332,7 +334,9 @@ void main() {
     });
 
     testWidgets('不是数字 → 提示请输入数字', (tester) async {
-      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, bigMax)});
+      _installServer({
+        'KSampler': intRangeBody('KSampler', 'steps', 1, bigMax),
+      });
       await _pumpRunView(tester, mapping: stepsOnlyConfig());
 
       await tester.enterText(find.byType(TextField).first, 'abc');
@@ -342,7 +346,9 @@ void main() {
     });
 
     testWidgets('只提示、不拦提交：生成按钮仍然可点', (tester) async {
-      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, bigMax)});
+      _installServer({
+        'KSampler': intRangeBody('KSampler', 'steps', 1, bigMax),
+      });
       await _pumpRunView(tester, mapping: stepsOnlyConfig());
 
       await tester.enterText(find.byType(TextField).first, '9999999999');
@@ -351,9 +357,7 @@ void main() {
       expect(find.text('范围 1 – 2000000000'), findsOneWidget);
       // 放行：按钮不能因为越界就被禁用
       expect(
-        find.byWidgetPredicate(
-          (w) => w is FilledButton && w.onPressed != null,
-        ),
+        find.byWidgetPredicate((w) => w is FilledButton && w.onPressed != null),
         findsOneWidget,
       );
     });

@@ -913,7 +913,8 @@ class _RunViewState extends ConsumerState<RunView> {
           padding: const EdgeInsets.only(top: 12),
           child: LatentSizeCard(
             params: match.params,
-            controllerOf: (node) => _controllers[nodeParamKey(node.id, node.key)],
+            controllerOf: (node) =>
+                _controllers[nodeParamKey(node.id, node.key)],
           ),
         ),
       ];
@@ -962,7 +963,11 @@ class _RunViewState extends ConsumerState<RunView> {
   }
 
   /// 找紧随其后的「搭档参数」，能配对就返回，否则 null。
-  WorkflowNode? _pairPartner(WorkflowNode node, List<WorkflowNode> params, int i) {
+  WorkflowNode? _pairPartner(
+    WorkflowNode node,
+    List<WorkflowNode> params,
+    int i,
+  ) {
     if (node.paramType != ParamType.intType &&
         node.paramType != ParamType.float) {
       return null;
@@ -997,10 +1002,7 @@ class _RunViewState extends ConsumerState<RunView> {
             ),
             if (node.key != 'text' && node.key != 'value')
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(4),
