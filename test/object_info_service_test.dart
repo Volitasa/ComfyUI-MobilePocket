@@ -354,4 +354,106 @@ void main() {
       expect(view.missingOnServer, isFalse);
     });
   });
+
+  group('解析：数值参数的 min/max/step', () {
+    test('INT 元数据 → 取到上下限与步进', () {
+      final spec = ObjectInfoService.parseNodeSpec(
+        _required([
+          'INT',
+          {'default': 20, 'min': 1, 'max': 100, 'step': 1},
+        ], key: 'steps'),
+        'KSampler',
+      );
+      final s = spec['steps']!;
+      expect(s.min, 1);
+      expect(s.max, 100);
+      expect(s.step, 1);
+      expect(s.hasBounds, isTrue);
+      expect(s.hasSliderRange, isTrue);
+    });
+
+    test('max 是超 int64 的字符串（种子类）→ 能校验但不画滑块', () {
+      final spec = ObjectInfoService.parseNodeSpec(
+        _required([
+          'INT',
+          {'min': 0, 'max': '18446744073709551615'},
+        ], key: 'seed'),
+        'KSampler',
+      );
+      final s = spec['seed']!;
+      expect(s.max, 18446744073709551615.0);
+      expect(s.hasBounds, isTrue);
+      // 天文数字画成滑块没有意义
+      expect(s.hasSliderRange, isFalse);
+    });
+
+    test('没有元数据 → 没有任何边界，不算范围', () {
+      final spec = ObjectInfoService.parseNodeSpec(
+        _required(['FLOAT'], key: 'cfg'),
+        'KSampler',
+      );
+      final s = spec['cfg']!;
+      expect(s.min, isNull);
+      expect(s.hasBounds, isFalse);
+      expect(checkNumberAgainstSpec(spec: s, text: '99999'), isNull);
+    });
+
+    test('max <= min 的畸形定义 → 不算范围', () {
+      const bad = NodeInputSpec(isCombo: false, min: 10, max: 10);
+      expect(bad.hasBounds, isFalse);
+    });
+
+    test('只填了 min → 不算范围（不猜上界）', () {
+      const half = NodeInputSpec(isCombo: false, min: 1);
+      expect(half.hasBounds, isFalse);
+    });
+  });
+
+  group('数值校验 checkNumberAgainstSpec', () {
+    const spec = NodeInputSpec(isCombo: false, min: 1, max: 100);
+
+    test('范围内 → 没问题', () {
+      expect(checkNumberAgainstSpec(spec: spec, text: '50'), isNull);
+    });
+
+    test('超出上界 / 下界 → outOfRange', () {
+      expect(
+        checkNumberAgainstSpec(spec: spec, text: '101'),
+        NumberIssue.outOfRange,
+      );
+      expect(
+        checkNumberAgainstSpec(spec: spec, text: '0'),
+        NumberIssue.outOfRange,
+      );
+    });
+
+    test('不是数字 → notANumber', () {
+      expect(
+        checkNumberAgainstSpec(spec: spec, text: 'abc'),
+        NumberIssue.notANumber,
+      );
+    });
+
+    test('空值不在这里报，交给提交侧', () {
+      expect(checkNumberAgainstSpec(spec: spec, text: ''), isNull);
+      expect(checkNumberAgainstSpec(spec: spec, text: '  '), isNull);
+    });
+
+    test('小数与负数按数值比较，不做字符串比较', () {
+      const f = NodeInputSpec(isCombo: false, min: 0, max: 1);
+      expect(checkNumberAgainstSpec(spec: f, text: '0.5'), isNull);
+      expect(
+        checkNumberAgainstSpec(spec: f, text: '0.9'),
+        isNull, // 字符串比较会误判 "0.9" > "1"
+      );
+      expect(
+        checkNumberAgainstSpec(spec: f, text: '2'),
+        NumberIssue.outOfRange,
+      );
+    });
+
+    test('拿不到说明书 → 一律不报错', () {
+      expect(checkNumberAgainstSpec(spec: null, text: 'whatever'), isNull);
+    });
+  });
 }

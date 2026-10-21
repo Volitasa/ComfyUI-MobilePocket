@@ -287,4 +287,83 @@ void main() {
       expect(requests, isEmpty);
     });
   });
+
+  group('运行页：数值范围提示', () {
+    /// 形态：INT + min/max 元数据
+    String intRangeBody(String classType, String key, int min, int max) =>
+        jsonEncode({
+          classType: {
+            'input': {
+              'required': {
+                key: [
+                  'INT',
+                  {'default': 20, 'min': min, 'max': max},
+                ],
+              },
+            },
+          },
+        });
+
+    List<Map<String, dynamic>> stepsOnlyConfig() => [
+      {
+        'id': '3',
+        'classType': 'KSampler',
+        'key': 'steps',
+        'alias': '采样步数',
+        'exposed': true,
+        'title': '',
+        'paramType': 'intType',
+        'options': <String>[],
+        'value': 20,
+      },
+    ];
+
+    testWidgets('超出服务器范围 → 输入框下方红字提示', (tester) async {
+      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, 100)});
+      await _pumpRunView(tester, mapping: stepsOnlyConfig());
+
+      await tester.enterText(find.byType(TextField).first, '999');
+      await tester.pump();
+
+      expect(find.text('范围 1 – 100'), findsOneWidget);
+    });
+
+    testWidgets('不是数字 → 提示请输入数字', (tester) async {
+      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, 100)});
+      await _pumpRunView(tester, mapping: stepsOnlyConfig());
+
+      await tester.enterText(find.byType(TextField).first, 'abc');
+      await tester.pump();
+
+      expect(find.text('请输入数字'), findsOneWidget);
+    });
+
+    testWidgets('只提示、不拦提交：生成按钮仍然可点', (tester) async {
+      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, 100)});
+      await _pumpRunView(tester, mapping: stepsOnlyConfig());
+
+      await tester.enterText(find.byType(TextField).first, '999');
+      await tester.pump();
+
+      expect(find.text('范围 1 – 100'), findsOneWidget);
+      // 放行：按钮不能因为越界就被禁用
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is FilledButton && w.onPressed != null,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('拿不到说明书 → 不显示任何范围提示', (tester) async {
+      _installServer({'KSampler': '{}'});
+      await _pumpRunView(tester, mapping: stepsOnlyConfig());
+
+      await tester.enterText(find.byType(TextField).first, '999');
+      await tester.pump();
+
+      expect(find.text('范围 1 – 100'), findsNothing);
+      expect(find.text('请输入数字'), findsNothing);
+    });
+  });
 }
