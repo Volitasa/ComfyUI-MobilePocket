@@ -82,6 +82,54 @@ void main() {
       expect(notifier.byId(secondId)!.createdAt, firstCreatedAt);
     });
 
+    test('复用的快照名字为空时用本次的名字补上', () async {
+      final prefs = await _prefsWith();
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(snapshotProvider.notifier);
+      // 模拟旧数据：取名字取错了数据源，名字被存成空串
+      final id = notifier.upsert(
+        workflowJson: _workflow(),
+        mappingConfig: [_node()],
+        sourceName: '',
+      );
+      expect(notifier.byId(id)!.sourceName, '');
+
+      notifier.upsert(
+        workflowJson: _workflow(),
+        mappingConfig: [_node()],
+        sourceName: '服务器上的工作流',
+      );
+
+      expect(notifier.byId(id)!.sourceName, '服务器上的工作流');
+    });
+
+    test('已有名字的快照复用时不被覆盖', () async {
+      final prefs = await _prefsWith();
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(snapshotProvider.notifier);
+      final id = notifier.upsert(
+        workflowJson: _workflow(),
+        mappingConfig: [_node()],
+        sourceName: '原名',
+      );
+
+      notifier.upsert(
+        workflowJson: _workflow(),
+        mappingConfig: [_node()],
+        sourceName: '新名',
+      );
+
+      expect(notifier.byId(id)!.sourceName, '原名');
+    });
+
     test('工作流内容变了则新建快照', () async {
       final prefs = await _prefsWith();
       final container = ProviderContainer(

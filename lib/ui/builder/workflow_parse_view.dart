@@ -80,9 +80,9 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
     var lastStatus = '';
 
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(milliseconds: 400), (
-      timer,
-    ) async {
+    // 1 秒一次足够：前端加载通常在数秒级，探得再密也只是白跑 JS 调用
+    // （原来 400ms，90 秒超时内要探 200 多次）。
+    _pollTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (_done) {
         timer.cancel();
         return;

@@ -327,7 +327,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     );
 
     if (choice == null || !mounted) return;
-    ref
+    await ref
         .read(taskManagerProvider.notifier)
         .removeTask(task.promptId, deleteLocalImages: choice);
   }

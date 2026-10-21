@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,8 +26,21 @@ class WsNotifier extends Notifier<WsState> {
   /// 只在「回到前台且有未终结任务」时判定，避免空闲状态下无谓重连。
   static const Duration _staleAfter = Duration(seconds: 45);
 
+  /// 自动重连的次数上限。
+  ///
+  /// 服务器关着时无限重试既连不上又白耗电，还会在后台一直撞墙；
+  /// 试满就停，等用户主动操作（切服务器、重新测试连接、回到前台）再给机会。
+  static const int _maxReconnectAttempts = 3;
+
+  /// 重连基础间隔，逐次翻倍：3s → 6s → 12s。
+  static const Duration _reconnectBaseDelay = Duration(seconds: 3);
+
+  int _reconnectAttempts = 0;
+  Timer? _reconnectTimer;
+
   @override
   WsState build() {
+    ref.onDispose(_cancelReconnect);
     // 注意：不在 build() 里用 ref.listen 做跨 provider 副作用监听
     // （这是 Riverpod 反模式，且会触发 Flutter 3.47 的 InheritedElement
     //  deactivate 断言）。连接触发由 UI 层（home_view）在连接状态变化时
@@ -77,6 +91,7 @@ class WsNotifier extends Notifier<WsState> {
       // stream 订阅成功后标记已连接
       _channel = channel;
       _lastMessageAt = DateTime.now();
+      _resetReconnectAttempts();
       state = WsState(isConnected: true);
     } catch (e) {
       state = WsState(isConnected: false);
@@ -88,10 +103,29 @@ class WsNotifier extends Notifier<WsState> {
     state = WsState(isConnected: false);
   }
 
+  void _cancelReconnect() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+  }
+
+  /// 一轮连接生命周期结束（连上了 / 主动断开）时清零，下次再断重新给满次数。
+  void _resetReconnectAttempts() {
+    _cancelReconnect();
+    _reconnectAttempts = 0;
+  }
+
   void _scheduleReconnect() {
     // 断线后若连接配置仍有效，自动重连，避免进度更新长期中断
     if (!ref.read(connectionProvider).isConnected) return;
-    Future.delayed(const Duration(seconds: 3), () {
+    // 已在等待重连就不重复排：onDone 与 onError 可能都触发，
+    // 叠加会让重连次数被快速耗尽
+    if (_reconnectTimer != null) return;
+    if (_reconnectAttempts >= _maxReconnectAttempts) return;
+
+    final delay = _reconnectBaseDelay * (1 << _reconnectAttempts);
+    _reconnectAttempts++;
+    _reconnectTimer = Timer(delay, () {
+      _reconnectTimer = null;
       if (_channel == null && ref.read(connectionProvider).isConnected) {
         connect();
       }
@@ -119,6 +153,7 @@ class WsNotifier extends Notifier<WsState> {
     _channel?.sink.close();
     _channel = null;
     _lastMessageAt = null;
+    _resetReconnectAttempts();
     state = WsState(isConnected: false);
   }
 }

@@ -8,6 +8,34 @@ import '../../providers/task_manager.dart';
 import '../../services/gallery_store.dart';
 import '../../services/media_saver.dart';
 
+/// 判断任务列表的变化是否可能影响画廊目录的内容。
+///
+/// 放在顶层是纯函数，便于单测（写在页面 State 里就没法测了）。
+///
+/// 只有两种情形会真的动到磁盘：
+/// - 记录被删（可能勾了「连带删除本地图片」）；
+/// - 新图下载完成并登记了本地路径。
+///
+/// 注意看的是 localPath 而不是「状态变已完成」：图片是任务完成后异步下载的，
+/// 状态先变、文件后到，盯着状态会刷在文件落盘之前。
+bool galleryDirectoryMayHaveChanged(TaskState? prev, TaskState next) {
+  if (prev == null) return false;
+  if (next.history.length < prev.history.length) return true;
+  return _localPathCount(next) > _localPathCount(prev);
+}
+
+/// 已下载到本地的媒体条数。
+int _localPathCount(TaskState state) {
+  var count = 0;
+  for (final task in state.history) {
+    for (final media in task.images) {
+      final path = media['localPath'];
+      if (path is String && path.isNotEmpty) count++;
+    }
+  }
+  return count;
+}
+
 /// 画廊：浏览所有本地化保存的生成图片。
 /// 图片以原始文件保存在 App 沙盒，内嵌 ComfyUI 工作流元数据，
 /// 拖回 ComfyUI 即可复现。
@@ -39,10 +67,10 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
 
   @override
   Widget build(BuildContext context) {
-    // 监听任务列表：新增生成图 / 删除记录（连带删图）后自动刷新画廊，
-    // 避免列表残留已删除的文件导致保存时报错
-    ref.listen(taskManagerProvider, (_, _) {
-      _refresh();
+    // 只在「画廊目录真的可能变了」时才刷新。生成中的进度推送每秒好几次，
+    // 跟着全量列目录 + 整页重建纯属浪费（IndexedStack 常驻，不在前台也照跑）。
+    ref.listen(taskManagerProvider, (prev, next) {
+      if (galleryDirectoryMayHaveChanged(prev, next)) _refresh();
     });
 
     return Scaffold(
@@ -123,13 +151,15 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
     );
   }
 
-  void _openViewer(int index) {
-    Navigator.push(
+  Future<void> _openViewer(int index) async {
+    // 查看器里可能删图，删完带结果回来，这里重扫一次把列表对齐
+    final deleted = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
+      MaterialPageRoute<bool>(
         builder: (_) => _GalleryViewer(images: _images, initialIndex: index),
       ),
     );
+    if (deleted == true && mounted) _refresh();
   }
 }
 
@@ -228,7 +258,8 @@ class _GalleryViewerState extends State<_GalleryViewer> {
     );
     if (ok == true && mounted) {
       await GalleryStore.instance.deleteFile(_current.path);
-      if (mounted) Navigator.pop(context);
+      // 带 true 回去，画廊页据此重扫，避免列表残留已删文件
+      if (mounted) Navigator.pop(context, true);
     }
   }
 

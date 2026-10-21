@@ -78,9 +78,15 @@ class SnapshotNotifier extends Notifier<List<WorkflowSnapshot>> {
     if (existing != null) {
       // 复用：保留原 createdAt，只更新配置与来源服务器。
       // 展示名由模型按当前语言推导，这里不再构造（避免固化旧语言文案）。
+      //
+      // 名字为空时才用本次的名字补上：早期版本取名字取错了数据源，
+      // 一批快照的 sourceName 被存成空串，一直显示成「本地导入」。
+      // 沿用旧值会让它们永远修不好，所以这里留一个修复口子。
       final updated = WorkflowSnapshot(
         id: id,
-        sourceName: existing.sourceName,
+        sourceName: existing.sourceName.isNotEmpty
+            ? existing.sourceName
+            : sourceName,
         createdAt: existing.createdAt,
         serverId: serverId ?? existing.serverId,
         workflowJson: existing.workflowJson,

@@ -154,7 +154,10 @@ class TaskManagerNotifier extends Notifier<TaskState> {
 
   // 按 promptId 删除任务，避免列表在渲染与点击之间发生变化时删错条目
   // deleteLocalImages=true 时连带删除该任务已下载到画廊的本地图片
-  void removeTask(String promptId, {bool deleteLocalImages = false}) {
+  Future<void> removeTask(
+    String promptId, {
+    bool deleteLocalImages = false,
+  }) async {
     if (deleteLocalImages) {
       final idx = state.history.indexWhere((t) => t.promptId == promptId);
       if (idx != -1) {
@@ -162,7 +165,9 @@ class TaskManagerNotifier extends Notifier<TaskState> {
         for (final img in task.images) {
           final localPath = img['localPath'];
           if (localPath is String && localPath.isNotEmpty) {
-            GalleryStore.instance.deleteFile(localPath);
+            // 等删完再移除记录：画廊页靠「记录变少」判断要刷新，
+            // 不等的话会刷在文件删除完成之前
+            await GalleryStore.instance.deleteFile(localPath);
           }
         }
       }

@@ -392,10 +392,12 @@ class _RunViewState extends ConsumerState<RunView> {
             .upsert(
               workflowJson: workflowData,
               mappingConfig: _formConfig,
-              // 取不到真实名字时留空，展示时按当前语言补默认名（翻译不落盘）
+              // 取不到真实名字时留空，展示时按当前语言补默认名（翻译不落盘）。
+              // 必须用「本地资产 + 解析缓存」的合集：服务器解析来的工作流只在
+              // 解析缓存里，只查本地库会查不到，名字存成空串显示成「本地导入」。
               sourceName:
                   workflowNameForStorage(
-                    ref.read(localWorkflowProvider),
+                    ref.read(knownWorkflowEntriesProvider),
                     widget.workflowId,
                   ) ??
                   '',
