@@ -8,6 +8,7 @@ import '../../services/workflow_node_parser.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../utils.dart';
+import '../widgets/compact_search_field.dart';
 import 'run_view.dart'; // 下一步我们将创建运行页面
 
 class WorkflowView extends ConsumerStatefulWidget {
@@ -373,8 +374,17 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     final l = AppLocalizations.of(context);
     final exposedTotal = _extractableNodes.where((n) => n.exposed).length;
 
+    // 区块内字号统一 13：以前计数是 11、按钮是默认 14，混在一行里大小不齐。
+    const textStyle = TextStyle(fontSize: 13);
+    // 用 visualDensity 收紧按钮内边距，而不是 styleFrom(padding: …) ——
+    // 后者会把水平内边距一起清掉。
+    final buttonStyle = TextButton.styleFrom(
+      textStyle: const TextStyle(fontSize: 13),
+      visualDensity: VisualDensity.compact,
+    );
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
       child: Row(
         children: [
           Expanded(
@@ -385,13 +395,13 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                       _extractableNodes.length,
                     )
                   : l.configParamCount(_extractableNodes.length),
-              style: TextStyle(
-                fontSize: 11,
+              style: textStyle.copyWith(
                 color: exposedTotal > 0 ? Colors.green.shade700 : Colors.grey,
               ),
             ),
           ),
           TextButton.icon(
+            style: buttonStyle,
             onPressed: () => setState(() {
               _collapsedNodeIds.clear();
               _expandedNodeIds.addAll(_extractableNodes.map((n) => n.id));
@@ -400,6 +410,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
             label: Text(l.configExpandAll),
           ),
           TextButton.icon(
+            style: buttonStyle,
             onPressed: () => setState(() {
               _expandedNodeIds.clear();
               _collapsedNodeIds.addAll(_extractableNodes.map((n) => n.id));
@@ -413,32 +424,20 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   }
 
   /// 搜索框：按别名 / 参数名 / 节点类名过滤（只影响显示，不改数据）。
+  /// 与生成记录页共用同一个紧凑搜索框。
   Widget _buildSearchField() {
     final l = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: TextField(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: CompactSearchField(
         controller: _searchController,
+        hintText: l.configSearchHint,
+        hasText: _keyword.isNotEmpty,
         onChanged: (v) => setState(() => _keyword = v.trim().toLowerCase()),
-        decoration: InputDecoration(
-          isDense: true,
-          hintText: l.configSearchHint,
-          prefixIcon: const Icon(Icons.search, size: 18),
-          suffixIcon: _keyword.isEmpty
-              ? null
-              : IconButton(
-                  icon: const Icon(Icons.clear, size: 18),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _keyword = '');
-                  },
-                ),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 12,
-          ),
-        ),
+        onClear: () {
+          _searchController.clear();
+          setState(() => _keyword = '');
+        },
       ),
     );
   }
@@ -501,15 +500,18 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       ),
       body: Column(
         children: [
+          // 顶部三块顺序固定为「搜索 → 工具条 → 说明」，
+          // 相互间距统一 8，避免三块各自一个边距。
+          if (_extractableNodes.isNotEmpty) _buildSearchField(),
+          if (_extractableNodes.isNotEmpty) _buildToolbar(),
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Text(
               AppLocalizations.of(context).configPanelHint,
-              style: const TextStyle(color: Colors.black54, fontSize: 14),
+              // 与工具条同为 13：三块挨在一起，字号不齐会显得脏
+              style: const TextStyle(color: Colors.black54, fontSize: 13),
             ),
           ),
-          if (_extractableNodes.isNotEmpty) _buildToolbar(),
-          if (_extractableNodes.isNotEmpty) _buildSearchField(),
           Expanded(
             child: _extractableNodes.isEmpty
                 ? Center(
