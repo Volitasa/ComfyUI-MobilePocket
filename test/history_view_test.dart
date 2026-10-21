@@ -264,4 +264,78 @@ void main() {
       expect(find.text('对应的工作流快照已被删除，无法再次运行'), findsOneWidget);
     });
   });
+
+  group('紧凑行：行高与状态文案', () {
+    testWidgets('行高砍半，操作收成图标后热区仍在', (tester) async {
+      await _pumpHistory(tester, [
+        _task(status: 'completed', promptId: 'p-a', nodePhase: 'done'),
+        _task(status: 'completed', promptId: 'p-b', nodePhase: 'done'),
+      ]);
+
+      // 含卡片之间的 6px 间距：改之前是 153，一屏只放得下三四条
+      final firstCard = tester.widgetList<Card>(find.byType(Card)).first;
+      final pitch = tester.getSize(find.byWidget(firstCard)).height;
+      expect(pitch, lessThan(90));
+
+      // 压行高不能顺手把点击热区压没
+      final replay = tester
+          .widgetList<IconButton>(find.byType(IconButton))
+          .first;
+      expect(
+        tester.getSize(find.byWidget(replay)).width,
+        greaterThanOrEqualTo(40),
+      );
+    });
+
+    testWidgets('完成态不再重复「生成成功」', (tester) async {
+      await _pumpHistory(tester, [
+        _task(status: 'completed', promptId: 'p-done', nodePhase: 'done'),
+      ]);
+
+      expect(find.textContaining('已完成 · '), findsOneWidget);
+      expect(find.textContaining('生成成功'), findsNothing);
+    });
+
+    testWidgets('「未在服务端找到该任务」不是同义反复，照常显示', (tester) async {
+      await _pumpHistory(tester, [
+        _task(status: 'interrupted', promptId: 'p-lost', nodePhase: 'lost'),
+      ]);
+
+      // 这是服务器重启导致的中断，跟用户主动中断不是一回事，不能省
+      expect(find.textContaining('未在服务端找到该任务'), findsOneWidget);
+    });
+
+    testWidgets('失败原因单独一行，不把时间挤掉', (tester) async {
+      const reason = "'NextDiT' object has no attribute 'patch'";
+      await _pumpHistory(tester, [
+        _task(
+          status: 'failed',
+          promptId: 'p-err',
+          nodePhase: 'error',
+          nodeDetail: reason,
+        ),
+      ]);
+
+      expect(find.textContaining(reason), findsOneWidget);
+
+      // 第二行固定「状态 · 时间」，错误原文不许混进来截掉时间
+      final meta = tester
+          .widgetList<Text>(find.textContaining('已失败 · '))
+          .map((t) => t.data ?? '')
+          .firstWhere((s) => s.isNotEmpty, orElse: () => '');
+      expect(meta, matches(RegExp(r'^已失败 · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$')));
+    });
+
+    testWidgets('阶段文案很长也不截掉时间（挪到单独一行）', (tester) async {
+      await _pumpHistory(tester, [
+        _task(status: 'interrupted', promptId: 'p-lost2', nodePhase: 'lost'),
+      ]);
+
+      final meta = tester
+          .widgetList<Text>(find.textContaining('已中断 · '))
+          .map((t) => t.data ?? '')
+          .firstWhere((s) => s.isNotEmpty, orElse: () => '');
+      expect(meta, matches(RegExp(r'^已中断 · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$')));
+    });
+  });
 }

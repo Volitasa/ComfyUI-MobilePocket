@@ -18,6 +18,7 @@ import '../../models/workflow_snapshot.dart';
 import '../../utils.dart';
 import '../../utils/history_search.dart';
 import '../../utils/task_display.dart';
+import '../widgets/compact_search_field.dart';
 import '../widgets/connection_status_badge.dart';
 import '../builder/run_view.dart';
 import '../settings/server_config_view.dart';
@@ -50,68 +51,20 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     super.dispose();
   }
 
-  /// 卡片底部的操作区：左右各占一半，仅用图标颜色做轻度区分，不加重装饰
-  Widget _buildActionBar(
-    TaskHistory task,
-    List<WorkflowSnapshot> snapshots,
-    AppLocalizations l,
-  ) {
-    // 记录里有 snapshotId 还不够，必须快照当前真的存在——
-    // 用户可能已经在设置页把它删掉了
-    final canRerun =
-        task.snapshotId != null &&
-        snapshots.any((s) => s.id == task.snapshotId);
-
-    return Row(
-      children: [
-        _ActionKey(
-          icon: Icons.replay,
-          label: l.historyRerun,
-          // 用沉一点的成功色而非品牌亮绿，小图标不至于抢过内容
-          color: AppColors.success,
-          // 置灰但仍可点：点击会说明具体原因，而不是静默无反应
-          enabled: canRerun,
-          onTap: () => _runAgain(task),
-        ),
-        _ActionKey(
-          icon: Icons.delete_outline,
-          label: l.delete,
-          color: AppColors.danger,
-          enabled: true,
-          onTap: () => _confirmDelete(task),
-        ),
-      ],
-    );
-  }
-
   /// 搜索框：按工作流名 / 填入的文本 / 参数别名过滤。
-  ///
-  /// 样式与配置页的搜索框保持一致（圆角 8、图标 18、dense）。
+  /// 与配置页共用同一个紧凑搜索框，样式不会在两处各自漂移。
   Widget _buildSearchField(AppLocalizations l) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-      child: TextField(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: CompactSearchField(
         controller: _searchController,
+        hintText: l.historySearchHint,
+        hasText: _keyword.isNotEmpty,
         onChanged: (v) => setState(() => _keyword = v.trim()),
-        decoration: InputDecoration(
-          isDense: true,
-          hintText: l.historySearchHint,
-          prefixIcon: const Icon(Icons.search, size: 18),
-          suffixIcon: _keyword.isEmpty
-              ? null
-              : IconButton(
-                  icon: const Icon(Icons.clear, size: 18),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _keyword = '');
-                  },
-                ),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 12,
-          ),
-        ),
+        onClear: () {
+          _searchController.clear();
+          setState(() => _keyword = '');
+        },
       ),
     );
   }
@@ -470,10 +423,66 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     );
   }
 
+  /// 缩略图方框：有出图就显示首图（多图时右下角标数量），没有就给占位。
+  ///
+  /// 尺寸从 72 收到 56 —— 它是卡片高度的主要来源，56 仍认得出画面。
+  Widget _buildThumbnail(
+    TaskHistory task,
+    Color statusColor,
+    AppLocalizations l,
+  ) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: task.images.isNotEmpty
+          ? Stack(
+              fit: StackFit.expand,
+              children: [
+                _isVideo(task.images[0]['filename'])
+                    ? const Center(
+                        child: Icon(Icons.videocam, color: Colors.grey),
+                      )
+                    : _thumbnail(task.images[0]),
+                if (task.images.length > 1)
+                  Positioned(
+                    right: 3,
+                    bottom: 3,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${task.images.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            )
+          : Center(child: _noOutputPlaceholder(task, statusColor, l)),
+    );
+  }
+
   /// 单张生成记录卡片。
   ///
-  /// [hit.summary] 非空时（有关键词且靠参数内容命中）在工作流名下方
-  /// 补一行命中摘要，让用户一眼看出这条为什么被匹配。
+  /// 紧凑行：56 缩略图 + 两行文字（名字 / 状态·时间），操作收成右上角两个图标。
+  /// [hit.summary] 非空时（有关键词且靠参数内容命中）补一行命中摘要，
+  /// 让用户一眼看出这条为什么被匹配。
   Widget _buildHistoryCard(
     HistoryHit hit,
     List<WorkflowSnapshot> snapshots,
@@ -485,12 +494,21 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
         ? (task.progressValue / task.progressMax)
         : 0.0;
 
+    // 记录里有 snapshotId 还不够，必须快照当前真的存在——
+    // 用户可能已经在设置页把它删掉了
+    final canRerun =
+        task.snapshotId != null &&
+        snapshots.any((s) => s.id == task.snapshotId);
+
+    // 阶段说明单独一行：跟时间挤在一行会互相截断
+    final detail = taskStageDetail(l, task);
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 6),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: Colors.grey.shade300),
       ),
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
@@ -500,150 +518,105 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
             // 状态色条：一屏内快速区分成功/失败/中断/进行中
             Container(width: 4, color: statusColor),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(14.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                workflowDisplayNameOr(l, task.title),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              // 命中摘要：说明这条为什么被搜到。
-                              // 只在有关键词且靠参数内容命中时出现，靠名称命中的不重复展示
-                              if (hit.summary != null) ...[
-                                const SizedBox(height: 5),
-                                Text(
-                                  hit.summary!,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                              const SizedBox(height: 6),
-                              Text(
-                                '${taskStatusLabel(l, task.status)} · ${taskNodeText(l, task)}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: statusColor,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              // 终结态不再显示进度条（失败/中断时它是条永远不动的空槽）
-                              if (task.status.isPending) ...[
-                                const SizedBox(height: 8),
-                                LinearProgressIndicator(
-                                  value: progress,
-                                  backgroundColor: Colors.grey.shade200,
-                                  color: statusColor,
-                                  minHeight: 4,
-                                ),
-                              ],
-                              const SizedBox(height: 6),
-                              Text(
-                                _formatTime(task.timestamp),
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _openViewer(task.images, 0),
+                      child: _buildThumbnail(task, statusColor, l),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            workflowDisplayNameOr(l, task.title),
+                            // 锁行高：默认行高会让 14 号字占掉 20px，行高压不下来
+                            style: const TextStyle(
+                              fontSize: 14,
+                              height: 1.2,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        const SizedBox(width: 14),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            GestureDetector(
-                              onTap: () => _openViewer(task.images, 0),
-                              child: Container(
-                                width: 72,
-                                height: 72,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                ),
-                                clipBehavior: Clip.hardEdge,
-                                child: task.images.isNotEmpty
-                                    ? Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          _isVideo(task.images[0]['filename'])
-                                              ? const Center(
-                                                  child: Icon(
-                                                    Icons.videocam,
-                                                    color: Colors.grey,
-                                                  ),
-                                                )
-                                              : _thumbnail(task.images[0]),
-                                          if (task.images.length > 1)
-                                            Positioned(
-                                              right: 4,
-                                              bottom: 4,
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 2,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.black
-                                                      .withValues(alpha: 0.6),
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                child: Text(
-                                                  '${task.images.length}',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      )
-                                    : Center(
-                                        child: _noOutputPlaceholder(
-                                          task,
-                                          statusColor,
-                                          l,
-                                        ),
-                                      ),
+                          // 命中摘要：说明这条为什么被搜到。
+                          // 只在有关键词且靠参数内容命中时出现，靠名称命中的不重复展示
+                          if (hit.summary != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              hit.summary!,
+                              style: TextStyle(
+                                fontSize: 11,
+                                height: 1.2,
+                                color: Colors.grey.shade600,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
-                        ),
-                      ],
+                          const SizedBox(height: 2),
+                          Text(
+                            // 第二行固定「状态 · 时间」：时间不许被阶段文案挤掉
+                            '${taskStatusLabel(l, task.status)} · ${_formatTime(task.timestamp)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              height: 1.2,
+                              color: statusColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (detail.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              detail,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                height: 1.2,
+                                color: Colors.grey,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          // 终结态不再显示进度条（失败/中断时它是条永远不动的空槽）
+                          if (task.status.isPending) ...[
+                            const SizedBox(height: 4),
+                            LinearProgressIndicator(
+                              value: progress,
+                              backgroundColor: Colors.grey.shade200,
+                              color: statusColor,
+                              minHeight: 3,
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const Divider(height: 1),
-                  // 操作区放在卡片底部左右排开，不再挤在缩略图下方：
-                  // 两个按钮各占一半宽度，触控目标也更大
-                  _buildActionBar(task, snapshots, l),
-                ],
+                    // 操作收成右侧两个图标：去掉底部按钮条和分隔线，
+                    // 一条省下 37px。它们竖着撑满行高，不吃文字的行高
+                    _IconAction(
+                      icon: Icons.replay,
+                      // 用沉一点的成功色而非品牌亮绿，小图标不至于抢过内容
+                      color: canRerun
+                          ? AppColors.success
+                          : Colors.grey.shade400,
+                      tooltip: l.historyRerun,
+                      // 置灰但仍可点：点击会说明具体原因，而不是静默无反应
+                      onTap: () => _runAgain(task),
+                    ),
+                    _IconAction(
+                      icon: Icons.delete_outline,
+                      color: AppColors.danger,
+                      tooltip: l.delete,
+                      onTap: () => _confirmDelete(task),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -653,43 +626,32 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   }
 }
 
-/// 底部操作项：图标 + 文字，无底色无阴影，仅靠图标颜色区分语义。
-/// 用 InkWell 提供点击涟漪，保持与列表其它区域的观感一致。
-class _ActionKey extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  const _ActionKey({
+/// 右侧的操作图标。
+///
+/// 40 的热区在 56 高的行里不占额外高度，所以压行高不必牺牲点击面积。
+class _IconAction extends StatelessWidget {
+  const _IconAction({
     required this.icon,
-    required this.label,
     required this.color,
-    required this.enabled,
+    required this.tooltip,
     required this.onTap,
   });
 
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
-    // 只有图标带语义色，文字统一中性灰，让操作区整体后退
-    final iconColor = enabled ? color : Colors.grey.shade400;
-    final textColor = enabled ? Colors.grey.shade600 : Colors.grey.shade400;
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          height: 36,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 16, color: iconColor),
-              const SizedBox(width: 5),
-              Text(label, style: TextStyle(fontSize: 12, color: textColor)),
-            ],
-          ),
-        ),
-      ),
+    return IconButton(
+      padding: EdgeInsets.zero,
+      iconSize: 18,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      visualDensity: VisualDensity.compact,
+      icon: Icon(icon, color: color),
+      tooltip: tooltip,
+      onPressed: onTap,
     );
   }
 }
