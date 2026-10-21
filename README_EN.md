@@ -237,6 +237,8 @@ Each card shows a status:
 | Content updated, please reconfirm | The workflow content on the server changed, old parameters may no longer fit | Card turns amber |
 | Server has an update (UI workflow) | The UI JSON changed, you can re-parse | Card turns amber |
 
+The second line of each card shows the **last run time** (from the local history; "Never run" if it hasn't). When you're hunting for a workflow, "which one did I run last" is often easier to recognise than the name. The list uses compact single-line cards — a screen fits about a dozen.
+
 > **How does it know the server changed?** Every configured workflow stores a content hash. Refreshing re-fetches the content and compares, so server-side edits are detected instead of you silently running against stale parameters.
 
 #### Local side: your own assets
@@ -293,10 +295,9 @@ Pull node parameters out of the workflow and turn them into a phone form. Open i
 
 | Control | What it does |
 | --- | --- |
-| Counter at the left (e.g. `4/18 selected`) | How many parameters are exposed at a glance |
-| Expand all / Collapse all | Expand state for every node, **without touching selections** |
+| Search box (top of the page) | Filters by parameter name, alias or node name; **only the matching parameters are shown**, and matching groups auto-expand |
+| Counter (e.g. `4/18 selected`) and Expand all / Collapse all | The counter shows how many parameters are exposed; expand/collapse **without touching selections** |
 | Select all / Clear selection icon in a card header | Applies to **that card only**, separate from the expand hotspot |
-| Search box | Filters by parameter name, alias or node name; **only the matching parameters are shown**, and matching groups auto-expand |
 
 **Default aliases**: text parameters prefer the node title you gave it in ComfyUI (e.g. "Base settings"); structured parameters use the built-in name ("Steps", "CFG scale", "Seed"). Aliases are **content you saved**, so they are never translated when you switch the UI language.
 
@@ -308,7 +309,7 @@ Pull node parameters out of the workflow and turn them into a phone form. Open i
   <img src="docs/screenshots/en/04-config-search.png" width="45%" />
 </p>
 
-<p align="center"><i>Left: the config panel (counter / expand-collapse / search / per-card select-all)　Right: searching "seed" and seeing only the matching parameter</i></p>
+<p align="center"><i>Left: the config panel (search at the top, counter and expand-collapse beneath it, per-card select-all)　Right: searching "seed" and seeing only the matching parameter</i></p>
 
 > Saving the config takes you to the run page; the gear icon in the run page's top-right brings you back to the config panel. The two replace each other rather than stacking up routes.
 
@@ -327,6 +328,8 @@ Fill in the parameters and submit. Controls are rendered according to the config
 | Image | Pick image button + preview | A newly picked image is uploaded to the server before running; leaving it alone keeps the image already in the workflow |
 
 Parameters stay grouped by node and are expanded by default.
+
+**Model dropdowns are filled with what the server really has**: opening the run page asks the server once, so dropdowns for models (Checkpoint / UNET / CLIP / VAE / LoRA / ControlNet), samplers and schedulers list the models that actually exist there — install a new model on the PC and tap refresh in the top-right corner to pick it up. The scope is deliberately narrow: only these dropdowns fetch real options, and image upload parameters never do (they would become a list of server filenames and you could no longer upload a new image). If the model written in the workflow isn't on the server, it is flagged and submission is blocked instead of sending a task that is bound to fail; with no connection or a failed request, dropdowns fall back to "just the current value", exactly as before.
 
 **What "Generate" does**
 
@@ -378,7 +381,7 @@ stateDiagram-v2
 
 ### 5.6 History and run-again
 
-Each entry is a card: a status colour bar on the left, title + status + node info + time, a thumbnail on the right (multiple images show a count badge). Two actions at the bottom: **Run again** / **Delete**.
+Each entry is a compact card: a status colour bar on the left, one line for the title and one for status + time, a thumbnail on the right (multiple images show a count badge); meaningful phase notes (e.g. an interruption caused by a server restart) get their own line. **Run again** / **Delete** sit in the top-right corner — delete still asks for confirmation, and a record whose snapshot is gone stays tappable and explains why instead of failing silently.
 
 **Search and status filter**
 
@@ -397,7 +400,7 @@ Each entry is a card: a status colour bar on the left, title + status + node inf
   <img src="docs/screenshots/en/06-history-search.png" width="45%" />
 </p>
 
-<p align="center"><i>Left: default view with the status filter row　Right: searching "human" hits the prompt and shows a summary</i></p>
+<p align="center"><i>Left: default view with the status filter row　Right: searching "lora" matches 4 entries by workflow name</i></p>
 
 **Run again** — one of the most useful things this app does:
 
