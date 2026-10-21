@@ -288,6 +288,12 @@ class _RunViewState extends ConsumerState<RunView> {
     final controller = _controllers[k];
     if (controller == null) return const SizedBox.shrink();
 
+    final spec = _specFor(node);
+    // 只有服务器给了可信范围才画滑块；拿不到范围就维持输入框，不猜。
+    if (spec != null && spec.hasSliderRange) {
+      return _sliderField(node, controller, spec, decimal: decimal);
+    }
+
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: controller,
       builder: (_, _, _) => TextField(
@@ -305,6 +311,74 @@ class _RunViewState extends ConsumerState<RunView> {
         ),
       ),
     );
+  }
+
+  /// 滑块 + 可编辑数值：手机上拖比打字快，但要随时能看到/改到精确值。
+  Widget _sliderField(
+    WorkflowNode node,
+    TextEditingController controller,
+    NodeInputSpec spec, {
+    required bool decimal,
+  }) {
+    final min = spec.min!;
+    final max = spec.max!;
+    final step = (spec.step != null && spec.step! > 0)
+        ? spec.step!
+        : (decimal ? 0.01 : 1);
+    final divisions = (max - min) / step;
+    final usableDivisions = divisions.isFinite && divisions <= 1000
+        ? divisions.round()
+        : null;
+
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (_, value, _) {
+        final parsed = num.tryParse(value.text.trim());
+        // 超出范围（或手输成了别的）时夹回边界，滑块必须有合法位置
+        final current = (parsed ?? min).toDouble().clamp(min, max);
+        return Row(
+          children: [
+            Expanded(
+              child: Slider(
+                value: current,
+                min: min,
+                max: max,
+                divisions: usableDivisions,
+                onChanged: (v) => controller.text = _fmtValue(v, decimal),
+              ),
+            ),
+            SizedBox(
+              width: 56,
+              child: TextField(
+                controller: controller,
+                textAlign: TextAlign.end,
+                keyboardType: decimal
+                    ? const TextInputType.numberWithOptions(decimal: true)
+                    : TextInputType.number,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 8,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 写回控制器时的格式：整数不带小数点，小数最多两位、去掉尾随 0。
+  ///
+  /// 必须与 `_resolveValue` 的 `num.tryParse` 对得上，不能出现
+  /// 「4.5000000001」这种提交后被服务器当成怪值。
+  String _fmtValue(double v, bool decimal) {
+    if (!decimal) return v.round().toString();
+    final s = (v * 100).round() / 100;
+    return s == s.roundToDouble() ? s.toInt().toString() : s.toString();
   }
 
   /// 进页面时问一次服务器，把下拉的真实选项取回来。
@@ -708,7 +782,7 @@ class _RunViewState extends ConsumerState<RunView> {
                         : true; // 运行页默认全部展开
 
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
+                      margin: const EdgeInsets.only(bottom: 12),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -731,8 +805,8 @@ class _RunViewState extends ConsumerState<RunView> {
                             }),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
+                                horizontal: 14,
+                                vertical: 10,
                               ),
                               child: Row(
                                 children: [
@@ -770,59 +844,11 @@ class _RunViewState extends ConsumerState<RunView> {
                           ),
                           if (expanded)
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
                               child: Column(
                                 children: [
                                   const Divider(height: 1),
-                                  ...params.map(
-                                    (node) => Padding(
-                                      padding: const EdgeInsets.only(top: 16),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  node.alias,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.w500,
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                              ),
-                                              if (node.key != 'text' &&
-                                                  node.key != 'value')
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 2,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.grey.shade100,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          4,
-                                                        ),
-                                                  ),
-                                                  child: Text(
-                                                    node.key,
-                                                    style: const TextStyle(
-                                                      fontSize: 10,
-                                                      color: Colors.grey,
-                                                    ),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                          _buildInputControl(node),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
+                                  ..._buildParamFields(params),
                                 ],
                               ),
                             ),
@@ -876,6 +902,103 @@ class _RunViewState extends ConsumerState<RunView> {
     );
   }
 
+  /// 同一节点内的参数块序列。
+  ///
+  /// 成对的短数值（宽/高、步数/CFG、两个 LoRA 强度）在屏幕够宽时并排两列，
+  /// 窄屏自动回退单列 —— 并排是为了少滚一屏，代价是每列变窄，不能硬来。
+  List<Widget> _buildParamFields(List<WorkflowNode> params) {
+    final width = MediaQuery.sizeOf(context).width;
+    final twoColumns = width >= 360;
+    final rows = <Widget>[];
+    var i = 0;
+    while (i < params.length) {
+      final node = params[i];
+      final partner = twoColumns ? _pairPartner(node, params, i) : null;
+      if (partner != null) {
+        rows.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _buildParamBlock(node)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildParamBlock(partner)),
+              ],
+            ),
+          ),
+        );
+        i += 2;
+      } else {
+        rows.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: _buildParamBlock(node),
+          ),
+        );
+        i += 1;
+      }
+    }
+    return rows;
+  }
+
+  /// 找紧随其后的「搭档参数」，能配对就返回，否则 null。
+  WorkflowNode? _pairPartner(WorkflowNode node, List<WorkflowNode> params, int i) {
+    if (node.paramType != ParamType.intType &&
+        node.paramType != ParamType.float) {
+      return null;
+    }
+    final expected = kPairParamKeys[node.key];
+    if (expected == null) return null;
+    if (i + 1 >= params.length) return null;
+    final next = params[i + 1];
+    if (next.key != expected) return null;
+    if (next.paramType != ParamType.intType &&
+        next.paramType != ParamType.float) {
+      return null;
+    }
+    return next;
+  }
+
+  /// 单个参数：别名 + 参数键 chip + 控件
+  Widget _buildParamBlock(WorkflowNode node) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                node.alias,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            if (node.key != 'text' && node.key != 'value')
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  node.key,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        _buildInputControl(node),
+      ],
+    );
+  }
+
   // 分组卡片头部标签：优先节点标题，无有效标题回退类名
   String _groupLabel(List<WorkflowNode> params) {
     final classType = params.first.classType;
@@ -892,8 +1015,8 @@ class _RunViewState extends ConsumerState<RunView> {
       case ParamType.text:
         return TextField(
           controller: _controllers[k],
-          maxLines: 3,
-          minLines: 3,
+          maxLines: 6,
+          minLines: 2,
           decoration: InputDecoration(
             hintText: AppLocalizations.of(context).runTextHint,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),

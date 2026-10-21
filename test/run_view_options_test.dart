@@ -318,18 +318,21 @@ void main() {
       },
     ];
 
+    // 上界超过 1e9：能校验，但不画滑块（种子类参数就是这种）
+    const bigMax = 2000000000;
+
     testWidgets('超出服务器范围 → 输入框下方红字提示', (tester) async {
-      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, 100)});
+      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, bigMax)});
       await _pumpRunView(tester, mapping: stepsOnlyConfig());
 
-      await tester.enterText(find.byType(TextField).first, '999');
+      await tester.enterText(find.byType(TextField).first, '9999999999');
       await tester.pump();
 
-      expect(find.text('范围 1 – 100'), findsOneWidget);
+      expect(find.text('范围 1 – 2000000000'), findsOneWidget);
     });
 
     testWidgets('不是数字 → 提示请输入数字', (tester) async {
-      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, 100)});
+      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, bigMax)});
       await _pumpRunView(tester, mapping: stepsOnlyConfig());
 
       await tester.enterText(find.byType(TextField).first, 'abc');
@@ -339,13 +342,13 @@ void main() {
     });
 
     testWidgets('只提示、不拦提交：生成按钮仍然可点', (tester) async {
-      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, 100)});
+      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, bigMax)});
       await _pumpRunView(tester, mapping: stepsOnlyConfig());
 
-      await tester.enterText(find.byType(TextField).first, '999');
+      await tester.enterText(find.byType(TextField).first, '9999999999');
       await tester.pump();
 
-      expect(find.text('范围 1 – 100'), findsOneWidget);
+      expect(find.text('范围 1 – 2000000000'), findsOneWidget);
       // 放行：按钮不能因为越界就被禁用
       expect(
         find.byWidgetPredicate(
@@ -362,8 +365,17 @@ void main() {
       await tester.enterText(find.byType(TextField).first, '999');
       await tester.pump();
 
-      expect(find.text('范围 1 – 100'), findsNothing);
+      expect(find.text('范围'), findsNothing);
       expect(find.text('请输入数字'), findsNothing);
+    });
+
+    testWidgets('范围可信（1–100）→ 画成滑块，数值仍可手改', (tester) async {
+      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, 100)});
+      await _pumpRunView(tester, mapping: stepsOnlyConfig());
+
+      expect(find.byType(Slider), findsOneWidget);
+      // 初值 20 显示在滑块右侧的数值框里
+      expect(find.text('20'), findsWidgets);
     });
   });
 }

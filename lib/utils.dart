@@ -106,6 +106,15 @@ const Set<String> knownEnumParams = {
   'upscale_model',
 };
 
+/// 运行页里可以并排两列的成对数值参数：键 → 它的搭档键。
+///
+/// 只有「同一节点内紧挨着、且都是数值」时才真的并排，窄屏一律回退单列。
+const Map<String, String> kPairParamKeys = {
+  'width': 'height',
+  'steps': 'cfg',
+  'strength_model': 'strength_clip',
+};
+
 /// 判断某参数是否默认暴露（高频暴露，其余默认不暴露，由用户手动勾选）。
 bool isDefaultExposed(String key, String classType) {
   return highFreqParams.contains(key);
