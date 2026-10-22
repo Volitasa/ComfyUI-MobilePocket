@@ -56,8 +56,8 @@ void main() {
   group('工作流状态表：单条刷新不得抹掉其它条目', () {
     test('点进 A 再返回后，B 仍然是「已配置」而不是 unknown', () async {
       final container = await _container({
-        'mapping_a_api.json': _mappingPayload(),
-        'mapping_b_api.json': _mappingPayload(),
+        'mapping_srv1_a_api.json': _mappingPayload(),
+        'mapping_srv1_b_api.json': _mappingPayload(),
       });
       final notifier = container.read(workflowProvider.notifier);
 
@@ -85,7 +85,7 @@ void main() {
 
     test('未配置的条目保持 unconfigured，不会退化成 unknown', () async {
       final container = await _container({
-        'mapping_a_api.json': _mappingPayload(),
+        'mapping_srv1_a_api.json': _mappingPayload(),
       });
       final notifier = container.read(workflowProvider.notifier);
 
@@ -104,8 +104,8 @@ void main() {
 
     test('传完整列表（pruneMissing）时才清掉已删除条目的状态', () async {
       final container = await _container({
-        'mapping_a_api.json': _mappingPayload(),
-        'mapping_b_api.json': _mappingPayload(),
+        'mapping_srv1_a_api.json': _mappingPayload(),
+        'mapping_srv1_b_api.json': _mappingPayload(),
       });
       final notifier = container.read(workflowProvider.notifier);
 

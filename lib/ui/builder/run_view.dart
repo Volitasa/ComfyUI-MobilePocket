@@ -105,7 +105,10 @@ class _RunViewState extends ConsumerState<RunView> {
     } else {
       savedConfig = ref
           .read(workflowProvider.notifier)
-          .getMappingConfig(widget.workflowId);
+          .getMappingConfig(
+            widget.workflowId,
+            serverId: ref.read(connectionProvider).activeServerId,
+          );
     }
 
     if (savedConfig == null || savedConfig.isEmpty) {
@@ -671,6 +674,8 @@ class _RunViewState extends ConsumerState<RunView> {
       type: FileType.image,
       withData: true,
     );
+    // 选图期间用户可能已经把页面关掉了
+    if (!mounted) return;
     if (result != null && result.files.single.bytes != null) {
       setState(() {
         _formData[nodeId] = {

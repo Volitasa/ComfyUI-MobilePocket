@@ -183,6 +183,8 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
   }) async {
     final config = ref.read(connectionProvider);
     if (!config.isConnected || files.isEmpty) return;
+    // 列表里的都是服务器上的文件，配置按这台服务器各存各的
+    final serverId = config.activeServerId;
 
     state = state.copyWith(isChecking: true);
     final results = <String, WorkflowMappingStatus>{};
@@ -190,7 +192,7 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
     try {
       await Future.wait(
         files.map((filename) async {
-          if (!hasMappingConfig(filename)) {
+          if (!hasMappingConfig(filename, serverId: serverId)) {
             results[filename] = WorkflowMappingStatus.unconfigured;
             return;
           }
@@ -202,12 +204,17 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
           }
 
           final hash = contentHashOf(data);
-          final savedHash = getMappingContentHash(filename);
+          final savedHash = getMappingContentHash(filename, serverId: serverId);
           if (savedHash == null) {
             // 旧配置没有哈希记录，借这次拉取补上，之后就能正常检测
-            final nodes = getMappingConfig(filename);
+            final nodes = getMappingConfig(filename, serverId: serverId);
             if (nodes != null) {
-              await saveMappingConfig(filename, nodes, contentHash: hash);
+              await saveMappingConfig(
+                filename,
+                nodes,
+                contentHash: hash,
+                serverId: serverId,
+              );
             }
             results[filename] = WorkflowMappingStatus.configured;
             return;
@@ -343,22 +350,29 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
       stableHash(jsonEncode(normalizeWorkflowJson(data))).toRadixString(36);
 
   // 保存节点配置
+  //
+  // [serverId] 是工作流所属服务器：两台服务器上同名的工作流各存各的，
+  // 不传则沿用不带归属的旧键（本地 / 解析缓存走这条路，见 [mappingKeyFor]）。
   Future<void> saveMappingConfig(
     String workflowId,
     List<WorkflowNode> config, {
     String? contentHash,
+    String? serverId,
   }) async {
     final payload = <String, dynamic>{
       'version': 1,
       'contentHash': contentHash,
       'nodes': config.map((e) => e.toJson()).toList(),
     };
-    await _prefs.setString('mapping_$workflowId', jsonEncode(payload));
+    await _prefs.setString(
+      mappingKeyFor(workflowId, serverId),
+      jsonEncode(payload),
+    );
   }
 
   // 获取已保存的节点配置
-  List<WorkflowNode>? getMappingConfig(String workflowId) {
-    final payload = _mappingPayload(workflowId);
+  List<WorkflowNode>? getMappingConfig(String workflowId, {String? serverId}) {
+    final payload = _mappingPayload(workflowId, serverId);
     if (payload == null) return null;
 
     final rawNodes = payload['nodes'];
@@ -371,16 +385,16 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
   }
 
   /// 配置里记录的内容哈希；旧配置没有该字段时返回 null
-  String? getMappingContentHash(String workflowId) {
-    final payload = _mappingPayload(workflowId);
+  String? getMappingContentHash(String workflowId, {String? serverId}) {
+    final payload = _mappingPayload(workflowId, serverId);
     final hash = payload?['contentHash'];
     return hash is String ? hash : null;
   }
 
   /// 读取配置条目。兼容两种形态：
   /// 新版 `{'version':1,'contentHash':..,'nodes':[...]}`，旧版裸 `[...]`。
-  Map<String, dynamic>? _mappingPayload(String workflowId) {
-    final dataString = _prefs.getString('mapping_$workflowId');
+  Map<String, dynamic>? _mappingPayload(String workflowId, String? serverId) {
+    final dataString = _prefs.getString(mappingKeyFor(workflowId, serverId));
     if (dataString == null) return null;
 
     try {
@@ -401,14 +415,17 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
   }
 
   // 该工作流是否已有映射配置（用于首页判断直接进入运行页还是配置页）
-  bool hasMappingConfig(String workflowId) {
-    final config = getMappingConfig(workflowId);
+  bool hasMappingConfig(String workflowId, {String? serverId}) {
+    final config = getMappingConfig(workflowId, serverId: serverId);
     return config != null && config.isNotEmpty;
   }
 
   /// 删除节点配置（本地工作流被删除时连带清理，避免留下孤儿键）
-  Future<void> removeMappingConfig(String workflowId) async {
-    await _prefs.remove('mapping_$workflowId');
+  Future<void> removeMappingConfig(
+    String workflowId, {
+    String? serverId,
+  }) async {
+    await _prefs.remove(mappingKeyFor(workflowId, serverId));
   }
 
   // 断开连接/切换服务器时清空列表和选中的缓存数据。

@@ -166,12 +166,15 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     // 取服务器说明书（§3.1）：扫出全部 class_type → 去重 → 并发取 → 整体预算 2s。
     // 取齐才解析；超预算就按已拿到的定型，绝不让页面一直转圈。
     _specs = await _loadSpecs(jsonMap);
+    // ⚠️ 取说明书那两秒里用户可能已经按了返回键。State 一旦销毁就不能再碰 context
+    // （_parseWorkflow 里要查 AppLocalizations），release 下会拿到 null 直接崩。
+    // 所以过了 await 先问一句还活着没，再往下走。
+    if (!mounted) return;
     // ⚠️ 必须把 _specs 传进去 —— 不然控制页拿到的说明书只用来算「缺参数」标黄，
     // `control` / `bounds` 一个都不会写，等于整期功能没生效（2026-10-23 修）。
     _parseWorkflow(jsonMap, savedConfig: savedConfig, specs: _specs);
     _specIssues = WorkflowNodeParser.computeIssues(_extractableNodes, _specs);
 
-    if (!mounted) return;
     setState(() {
       _isReady = true;
     });
@@ -268,7 +271,11 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
           savedConfig ??
           ref
               .read(workflowProvider.notifier)
-              .getMappingConfig(widget.workflowId);
+              .getMappingConfig(
+                widget.workflowId,
+                // 与保存时同一个口径，否则存进去了却读不出来
+                serverId: ref.read(connectionProvider).activeServerId,
+              );
       if (config != null && config.isNotEmpty) {
         final savedConfig = config;
         if (nodes.isEmpty) {
@@ -377,6 +384,8 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
     // 与 _initData 同样的定型流程（重新解析也要重新问一次服务器）
     _specs = await _loadSpecs(jsonMap);
+    // 同上：重新解析也要等两秒，这期间用户按了返回就不能再碰 context
+    if (!mounted) return;
     _parseWorkflow(jsonMap, useSavedConfig: false, specs: _specs);
     _specIssues = WorkflowNodeParser.computeIssues(_extractableNodes, _specs);
 
@@ -572,7 +581,12 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       // 抢在写入之前读就会出现「提示已保存、运行页却说没有表单」
       await ref
           .read(workflowProvider.notifier)
-          .saveMappingConfig(widget.workflowId, _extractableNodes);
+          .saveMappingConfig(
+            widget.workflowId,
+            _extractableNodes,
+            // 服务器工作流按服务器存，避免两台服务器上同名文件共用一份配置
+            serverId: ref.read(connectionProvider).activeServerId,
+          );
     }
     if (!mounted) return;
     navigator.pushReplacement(

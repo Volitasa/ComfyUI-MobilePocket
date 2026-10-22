@@ -106,7 +106,10 @@ class RemoteWorkflowSection extends ConsumerWidget {
         ? 0
         : ref
                   .read(workflowProvider.notifier)
-                  .getMappingConfig(cached.id)
+                  .getMappingConfig(
+                    cached.id,
+                    serverId: ref.read(connectionProvider).activeServerId,
+                  )
                   ?.where((n) => n.exposed)
                   .length ??
               0;
@@ -203,7 +206,10 @@ class RemoteWorkflowSection extends ConsumerWidget {
   ) async {
     final hasConfig = ref
         .read(workflowProvider.notifier)
-        .hasMappingConfig(parsedId);
+        .hasMappingConfig(
+          parsedId,
+          serverId: ref.read(connectionProvider).activeServerId,
+        );
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -384,7 +390,10 @@ class RemoteWorkflowSection extends ConsumerWidget {
     final exposedCount =
         ref
             .read(workflowProvider.notifier)
-            .getMappingConfig(filename)
+            .getMappingConfig(
+              filename,
+              serverId: ref.read(connectionProvider).activeServerId,
+            )
             ?.where((n) => n.exposed)
             .length ??
         0;
@@ -544,7 +553,10 @@ class RemoteWorkflowSection extends ConsumerWidget {
     final state = ref.read(workflowProvider);
     final hasConfig = ref
         .read(workflowProvider.notifier)
-        .hasMappingConfig(filename);
+        .hasMappingConfig(
+          filename,
+          serverId: ref.read(connectionProvider).activeServerId,
+        );
     final stale = state.statusOf(filename) == WorkflowMappingStatus.stale;
 
     final Widget page = (hasConfig && !stale)

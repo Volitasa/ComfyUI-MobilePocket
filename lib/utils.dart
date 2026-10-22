@@ -30,6 +30,28 @@ int stableHash(String input) {
   return hash;
 }
 
+/// 这个工作流 ID 是否要额外按服务器区分归属。
+///
+/// 服务器 API 工作流的 ID **就是文件名本身**（`workflow_api.json`），
+/// 两台服务器上有同名文件时，节点配置会共用同一份 —— 在 A 上配好的模型名
+/// 会直接套到 B 上，提交必定失败。所以键里必须带上服务器。
+///
+/// 本地（`local_`）与解析缓存（`parsed_`）不需要：前者的 ID 是内容哈希，
+/// 后者的哈希里已经混进了服务器 ID，两者自身就全局唯一。
+bool needsServerScope(String workflowId) =>
+    !workflowId.startsWith('local_') && !workflowId.startsWith('parsed_');
+
+/// 节点配置的存储键。服务器工作流带服务器归属，其余沿用原键（见 [needsServerScope]）。
+///
+/// 判定放在这里而不是各调用点：保存与读取必须算出同一个键，
+/// 分散判断迟早会有一处漏 —— 那样配置存进去了却读不出来。
+String mappingKeyFor(String workflowId, String? serverId) {
+  if (serverId == null || serverId.isEmpty || !needsServerScope(workflowId)) {
+    return 'mapping_$workflowId';
+  }
+  return 'mapping_${serverId}_$workflowId';
+}
+
 bool _looksLikeNodeMap(Map map) =>
     map.values.any((v) => v is Map && v.containsKey('class_type'));
 

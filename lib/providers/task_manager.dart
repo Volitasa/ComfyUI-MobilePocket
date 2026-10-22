@@ -329,11 +329,14 @@ class TaskManagerNotifier extends Notifier<TaskState> {
   }
 
   // 节点 ID → 可读名称：优先用工作流映射里保存的节点标题，无则回退"类名(ID)"
-  String _nodeLabel(String workflowId, dynamic nodeId) {
+  //
+  // [serverId] 是这条任务当时跑在哪台服务器上：服务器工作流的配置按服务器分开存，
+  // 拿错了就取不到标题（会退化成"类名(ID)"），但绝不会串到别的服务器的配置上。
+  String _nodeLabel(String workflowId, String? serverId, dynamic nodeId) {
     final idStr = nodeId?.toString() ?? '';
     final config = ref
         .read(workflowProvider.notifier)
-        .getMappingConfig(workflowId);
+        .getMappingConfig(workflowId, serverId: serverId);
     if (config != null) {
       for (final n in config) {
         if (n.id == idStr) {
@@ -430,8 +433,13 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       // 节点名已由 executing 事件写进 nodeDetail，这里只更新进度
     } else if (type == 'executing') {
       if (data['node'] != null) {
-        // 用节点标题代替裸节点 ID，存进 nodeDetail 供进度展示拼接
-        final label = _nodeLabel(task.workflowId, data['node']);
+        // 用节点标题代替裸节点 ID，存进 nodeDetail 供进度展示拼接。
+        // 旧记录没有 serverId（那时还没记归属），退回到当前连着的这台。
+        final label = _nodeLabel(
+          task.workflowId,
+          task.serverId ?? ref.read(connectionProvider).activeServerId,
+          data['node'],
+        );
         task.status = TaskStatus.running;
         task.nodePhase = TaskNodePhase.running;
         task.nodeDetail = label;
