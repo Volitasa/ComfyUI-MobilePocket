@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/param_field.dart';
+
 import '../../../l10n/app_localizations.dart';
 import '../../../models/workflow_node.dart';
 import 'size_presets.dart';
@@ -171,12 +173,15 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
   );
 
   Widget _longEdgePicker() {
+    // 选中态跟随主题色（原来是写死的蓝色，和同一张卡里的比例 chips 撞色）
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      height: 32,
+      height: 40,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(ParamFieldStyle.radius),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Row(
         children: kLongEdgeOptions.map((edge) {
           final selected = _longEdge == edge;
@@ -191,13 +196,13 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
               },
               child: Container(
                 alignment: Alignment.center,
-                color: selected ? Colors.blue.shade50 : null,
+                color: selected ? scheme.secondaryContainer : null,
                 child: Text(
                   '$edge',
                   style: TextStyle(
                     fontSize: 12,
                     color: selected
-                        ? Colors.blue.shade700
+                        ? scheme.onSecondaryContainer
                         : Colors.grey.shade700,
                   ),
                 ),
@@ -216,14 +221,10 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
           child: TextField(
             controller: _controller('width'),
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              isDense: true,
+            decoration: ParamFieldStyle.decoration(
+              context,
               hintText: 'width',
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 8,
-              ),
+              contentPadding: ParamFieldStyle.compactPadding,
             ),
           ),
         ),
@@ -232,14 +233,10 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
           child: TextField(
             controller: _controller('height'),
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              isDense: true,
+            decoration: ParamFieldStyle.decoration(
+              context,
               hintText: 'height',
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 8,
-              ),
+              contentPadding: ParamFieldStyle.compactPadding,
             ),
           ),
         ),
