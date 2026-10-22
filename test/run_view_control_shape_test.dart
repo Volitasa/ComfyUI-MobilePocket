@@ -58,6 +58,7 @@ Map<String, dynamic> _node({
   required String control,
   required dynamic value,
   List<String> options = const [],
+  Map<String, dynamic>? bounds,
 }) => {
   'id': id,
   'classType': classType,
@@ -69,6 +70,7 @@ Map<String, dynamic> _node({
   'options': options,
   'value': value,
   'control': control,
+  'bounds': ?bounds,
 };
 
 const Map<String, dynamic> _workflow = {
@@ -479,6 +481,35 @@ void main() {
 
       // 收尾放行，别把超时定时器留在那儿
       await gate.release(tester);
+    });
+
+    testWidgets('slider 只靠落盘的 bounds 定型：说明书拿不到也照样画滑块', (tester) async {
+      // 说明书取数失败（500）→ 旧代码 _sliderUsable(spec: null) 判 false，
+      // 先画成输入框；等说明书到达再跳成滑块，当着用户的面改形态。
+      // 形态是配置页定好的，刻度也该用落盘的 bounds。
+      final previous = ObjectInfoService.instance.client;
+      ObjectInfoService.instance.client = MockClient(
+        (_) async => http.Response('boom', 500),
+      );
+      addTearDown(() => ObjectInfoService.instance.client = previous);
+
+      await _pumpRunView(
+        tester,
+        mapping: [
+          _node(
+            id: '3',
+            classType: 'KSampler',
+            key: 'denoise',
+            alias: '重绘幅度',
+            paramType: 'float',
+            control: 'slider',
+            value: 1.0,
+            bounds: {'min': 0.0, 'max': 1.0, 'step': 0.01},
+          ),
+        ],
+      );
+
+      expect(find.byType(Slider), findsOneWidget);
     });
 
     testWidgets('老名单外的下拉（aspect_ratio）也能刷回服务器选项', (tester) async {

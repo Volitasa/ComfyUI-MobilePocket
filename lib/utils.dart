@@ -135,7 +135,7 @@ String nodeParamKey(String nodeId, String key) => '$nodeId:$key';
 /// 不能让配置页一直转圈等网络。
 const Duration kConfigSpecBudget = Duration(seconds: 2);
 
-/// 在 [budget] 内等 [task] 完成；超时返回 null。
+/// 在 [budget] 内等 [task] 完成，返回**是否等到了**。
 ///
 /// ⚠️ 超时**不取消** [task] —— 请求仍在飞，结果回来后照常写进缓存
 /// （下次进页面直接命中）。既不会卡住当前页面，也不浪费那次请求。
@@ -143,22 +143,29 @@ const Duration kConfigSpecBudget = Duration(seconds: 2);
 /// ⚠️ 但超时用的 Timer **必须取消**：用 `Future.any([task, delayed])` 的话，
 /// task 先完成时那个 2 秒 Timer 还挂着，widget 树销毁后就会被测试框架
 /// 判为「Timer is still pending」，把所有含该页面的组件测试一起拖挂。
-Future<T?> waitWithin<T>(Future<T> task, Duration budget) {
-  final completer = Completer<T?>();
+///
+/// 🔴 返回值刻意是 `bool`，**不能写成 `T?`（null = 超时）**：
+/// `Future<void>` 成功完成时的值本来就是 `null`，「正常完成」和「超时」
+/// 会混成同一个值 —— 配置页因此把所有工作流都标成「未获取到服务器节点信息，
+/// 已按参数名推断控件」（2026-10-23 修）。要拿任务结果就别用这个函数。
+///
+/// 任务抛错也按「没在预算内拿到结果」返回 false：说明书是加分项，
+/// 不该把配置页带崩。
+Future<bool> waitWithin(Future<void> task, Duration budget) {
+  final completer = Completer<bool>();
   final timer = Timer(budget, () {
-    if (!completer.isCompleted) completer.complete(null);
+    if (!completer.isCompleted) completer.complete(false);
   });
 
-  void finish(void Function() action) {
+  void finish(bool ok) {
     if (completer.isCompleted) return;
     timer.cancel();
-    action();
+    completer.complete(ok);
   }
 
   task.then(
-    (value) => finish(() => completer.complete(value)),
-    onError: (Object error, StackTrace stack) =>
-        finish(() => completer.completeError(error, stack)),
+    (_) => finish(true),
+    onError: (Object error, StackTrace stack) => finish(false),
   );
 
   return completer.future;

@@ -166,7 +166,9 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     // 取服务器说明书（§3.1）：扫出全部 class_type → 去重 → 并发取 → 整体预算 2s。
     // 取齐才解析；超预算就按已拿到的定型，绝不让页面一直转圈。
     _specs = await _loadSpecs(jsonMap);
-    _parseWorkflow(jsonMap, savedConfig: savedConfig);
+    // ⚠️ 必须把 _specs 传进去 —— 不然控制页拿到的说明书只用来算「缺参数」标黄，
+    // `control` / `bounds` 一个都不会写，等于整期功能没生效（2026-10-23 修）。
+    _parseWorkflow(jsonMap, savedConfig: savedConfig, specs: _specs);
     _specIssues = WorkflowNodeParser.computeIssues(_extractableNodes, _specs);
 
     if (!mounted) return;
@@ -183,6 +185,9 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   ///
   /// 拿不到说明书不能让表单打不开，也不该弹任何错误。
   Future<Map<String, NodeSpec>> _loadSpecs(Map<String, dynamic> jsonMap) async {
+    // 每次重新取数都重算降级提示，别让上一次的结论粘住
+    _specsDegraded = false;
+
     final classTypes = WorkflowNodeParser.collectClassTypes(jsonMap);
     if (classTypes.isEmpty) return const {};
 
@@ -197,7 +202,6 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       return const {};
     }
 
-    var completed = false;
     // 让出当前帧再写 provider：_initData 可能由 didChangeDependencies 同步触发。
     final task = () async {
       await scheduleProviderWrite(() async {
@@ -209,7 +213,6 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
               classTypes: classTypes,
             );
       });
-      completed = true;
     }();
 
     // 整体预算：超时就走，不等了。
@@ -217,9 +220,14 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     final finished = await waitWithin(task, kConfigSpecBudget);
 
     // ⚠️ 超时不是失败：已返回的那部分照常采用（§3.3），只提示降级。
-    if (finished == null || !completed) _specsDegraded = true;
-
     final state = ref.read(objectInfoProvider);
+    // 一个节点都没拿到说明书 → 控件全是推断出来的，得说一句。
+    // 只认 `ok`：`empty`（服务器不认识）与 `failure` 都拿不到可用的 spec。
+    final gotAny = classTypes.any(
+      (t) => state.statusFor(serverId, t) == ObjectInfoFetchStatus.ok,
+    );
+    if (!finished || !gotAny) _specsDegraded = true;
+
     return <String, NodeSpec>{
       // 缓存里存的是 NodeSpecEntry（说明书 + 取数状态），定型只要规格那一半。
       //
@@ -369,7 +377,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
     // 与 _initData 同样的定型流程（重新解析也要重新问一次服务器）
     _specs = await _loadSpecs(jsonMap);
-    _parseWorkflow(jsonMap, useSavedConfig: false);
+    _parseWorkflow(jsonMap, useSavedConfig: false, specs: _specs);
     _specIssues = WorkflowNodeParser.computeIssues(_extractableNodes, _specs);
 
     if (!mounted) return;

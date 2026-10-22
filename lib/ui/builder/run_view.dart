@@ -352,12 +352,22 @@ class _RunViewState extends ConsumerState<RunView> {
   /// 只有 denoise / start_percent 这种 0–1（100 档）才留滑块。
   static const int _maxSliderDivisions = 100;
 
-  bool _sliderUsable(NodeInputSpec? spec, bool decimal) {
-    if (spec == null || !spec.hasSliderRange) return false;
-    final step = (spec.step != null && spec.step! > 0)
-        ? spec.step!
+  /// 这个数值参数的可取值范围：**优先用配置页落盘的 `bounds`**。
+  ///
+  /// 落盘那份是定型时算的，**离线也能画滑块**；只有旧配置（没有 `bounds`）
+  /// 才退回运行时说明书。否则滑块会在「说明书到达」那一刻从输入框跳成滑块，
+  /// 直接违反 §1.1 原则 1（运行页形态不随网络变化）。
+  ParamBounds? _boundsFor(WorkflowNode node) =>
+      node.bounds ?? _specFor(node)?.toBounds();
+
+  bool _sliderUsable(ParamBounds? bounds, bool decimal) {
+    if (bounds == null || !bounds.hasBounds) return false;
+    // 天文数字的范围（种子类）画成滑块没有意义：拖一格跳几亿
+    if (bounds.max!.abs() > 1e9 || bounds.min!.abs() > 1e9) return false;
+    final step = (bounds.step != null && bounds.step! > 0)
+        ? bounds.step!
         : (decimal ? 0.01 : 1);
-    final divisions = (spec.max! - spec.min!) / step;
+    final divisions = (bounds.max! - bounds.min!) / step;
     return divisions.isFinite &&
         divisions > 0 &&
         divisions <= _maxSliderDivisions;
@@ -377,10 +387,10 @@ class _RunViewState extends ConsumerState<RunView> {
     final controller = _controllers[k];
     if (controller == null) return const SizedBox.shrink();
 
-    final spec = _specFor(node);
+    final bounds = _boundsFor(node);
     // 半列宽放不下「滑块 + 数值」，两列时一律用输入框
-    if (allowSlider && !paired && _sliderUsable(spec, decimal)) {
-      return _sliderField(node, controller, spec!, decimal: decimal);
+    if (allowSlider && !paired && _sliderUsable(bounds, decimal)) {
+      return _sliderField(node, controller, bounds!, decimal: decimal);
     }
 
     return ValueListenableBuilder<TextEditingValue>(
@@ -403,13 +413,13 @@ class _RunViewState extends ConsumerState<RunView> {
   Widget _sliderField(
     WorkflowNode node,
     TextEditingController controller,
-    NodeInputSpec spec, {
+    ParamBounds bounds, {
     required bool decimal,
   }) {
-    final min = spec.min!;
-    final max = spec.max!;
-    final step = (spec.step != null && spec.step! > 0)
-        ? spec.step!
+    final min = bounds.min!;
+    final max = bounds.max!;
+    final step = (bounds.step != null && bounds.step! > 0)
+        ? bounds.step!
         : (decimal ? 0.01 : 1);
     final divisions = (max - min) / step;
     final usableDivisions = divisions.isFinite && divisions <= 1000
