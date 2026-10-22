@@ -114,6 +114,7 @@ List<Map<String, dynamic>> _textOnlyConfig() => [
 Future<void> _pumpRunView(
   WidgetTester tester, {
   List<Map<String, dynamic>>? mapping,
+  Map<String, dynamic>? initialParams,
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
@@ -141,7 +142,11 @@ Future<void> _pumpRunView(
         locale: const Locale('zh'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: RunView(workflowId: 'local_test', snapshotId: 'snap_1'),
+        home: RunView(
+          workflowId: 'local_test',
+          snapshotId: 'snap_1',
+          initialParams: initialParams,
+        ),
       ),
     ),
   );
@@ -725,5 +730,43 @@ void main() {
       final field = tester.getSize(find.byType(TextField));
       expect(field.height, greaterThan(ParamFieldStyle.height + 12));
     });
+  });
+
+  testWidgets('再次运行时，下拉形态的 text 参数沿用上次的值', (tester) async {
+    _installServer({
+      'CLIPLoader': jsonEncode({
+        'CLIPLoader': {
+          'input': {
+            'required': {
+              'type': [
+                ['stable_diffusion', 'lumina2', 'qwen_image'],
+              ],
+            },
+          },
+        },
+      }),
+    });
+    await _pumpRunView(
+      tester,
+      mapping: [
+        {
+          'id': '9',
+          'classType': 'CLIPLoader',
+          'key': 'type',
+          'alias': 'type',
+          'exposed': true,
+          'title': '加载CLIP',
+          'paramType': 'text',
+          'options': <String>[],
+          'value': 'lumina2',
+        },
+      ],
+      // 「再次运行」带过来的上次选择
+      initialParams: {'9:type': 'qwen_image'},
+    );
+
+    // 下拉里显示的必须是预填值，而不是工作流原值
+    expect(find.text('qwen_image'), findsOneWidget);
+    expect(find.text('lumina2'), findsNothing);
   });
 }

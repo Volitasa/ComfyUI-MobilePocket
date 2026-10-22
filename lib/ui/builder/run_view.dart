@@ -1196,7 +1196,12 @@ class _RunViewState extends ConsumerState<RunView> {
     if (spec != null && spec.isCombo && !kImageParamKeys.contains(node.key)) {
       // 非 enumType 的参数没有 _widgetValues 初值，这里补一次；
       // _resolveValue 会优先读它，否则提交时会把下拉选的值丢掉。
-      _widgetValues.putIfAbsent(k, () => node.value?.toString() ?? '');
+      // ⚠️ 必须取控制器里的文本（「再次运行」时它装着上次的预填值），
+      //    不能直接取 node.value —— 否则预填会被工作流原值顶掉。
+      _widgetValues.putIfAbsent(
+        k,
+        () => _controllers[k]?.text ?? node.value?.toString() ?? '',
+      );
       return _enumControl(node);
     }
 
