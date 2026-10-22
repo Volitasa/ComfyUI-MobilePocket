@@ -155,7 +155,7 @@ void main() {
   });
 
   group('拿不到时静默', () {
-    test('请求抛异常 → 不抛出、不写入可用数据，但记为「问过」以免反复重试', () async {
+    test('请求抛异常 → 不抛出、不写入可用数据，且记为「没取到」以便下次重试', () async {
       final rec = _Recorder()..install((_) async => throw Exception('timeout'));
 
       final ok = await notifier.ensureLoaded(
@@ -167,11 +167,33 @@ void main() {
       expect(ok, isFalse);
       expect(rec.paths.length, 1);
       final state = container.read(objectInfoProvider);
-      // 问过 ≠ 问到：问过但空，specFor 返回 null，界面退回原样
-      expect(state.hasNode('srv_1', 'CheckpointLoaderSimple'), isTrue);
+      // 失败**不算答案**：specFor 仍是 null，界面退回原样
+      expect(
+        state.statusFor('srv_1', 'CheckpointLoaderSimple'),
+        ObjectInfoFetchStatus.failure,
+      );
       expect(
         state.specFor('srv_1', 'CheckpointLoaderSimple', 'ckpt_name'),
         isNull,
+      );
+
+      // 关键：网络恢复后再来一次必须**重试**。
+      // 早先的实现把 failure 也算「问过」→ 一次断网就让配置页在整个会话里
+      // 一直显示「未获取到服务器节点信息」，用户只能重启 App 才能恢复。
+      ObjectInfoService.instance.client = MockClient(
+        (_) async => http.Response(_ckptBody(['a']), 200),
+      );
+      await notifier.ensureLoaded(
+        serverId: 'srv_1',
+        baseUrl: 'http://1.2.3.4:8190',
+        classTypes: ['CheckpointLoaderSimple'],
+      );
+      expect(
+        container
+            .read(objectInfoProvider)
+            .specFor('srv_1', 'CheckpointLoaderSimple', 'ckpt_name')!
+            .options,
+        ['a'],
       );
     });
 
@@ -220,26 +242,46 @@ void main() {
   });
 
   group('刷新与清理', () {
-    test('刷新会丢掉旧缓存并重新拉一次', () async {
-      final rec = _Recorder()
-        ..install((_) async => http.Response(_ckptBody(['a']), 200));
+    test('refreshInPlace 能把上次失败的条目覆盖成可用数据', () async {
+      // 配置页第一次断网 → 缓存里是 failure；刷新回来后必须换成真定义，
+      // 否则「缺节点」检查会永远拿不到 spec。
+      final rec = _Recorder()..install((_) async => throw Exception('boom'));
 
       await notifier.ensureLoaded(
         serverId: 'srv_1',
         baseUrl: 'http://1.2.3.4:8190',
         classTypes: ['CheckpointLoaderSimple'],
       );
-      final ok = await notifier.refresh(
+      expect(
+        container
+            .read(objectInfoProvider)
+            .statusFor('srv_1', 'CheckpointLoaderSimple'),
+        ObjectInfoFetchStatus.failure,
+      );
+      final before = rec.paths.length;
+
+      // 仍然走 rec，才能数到这次请求
+      rec.install((_) async => http.Response(_ckptBody(['a', 'b']), 200));
+      final ok = await notifier.refreshInPlace(
         serverId: 'srv_1',
         baseUrl: 'http://1.2.3.4:8190',
         classTypes: ['CheckpointLoaderSimple'],
       );
 
       expect(ok, isTrue);
-      expect(rec.paths.length, 2);
+      expect(rec.paths.length, before + 1);
+      final state = container.read(objectInfoProvider);
+      expect(
+        state.statusFor('srv_1', 'CheckpointLoaderSimple'),
+        ObjectInfoFetchStatus.ok,
+      );
+      expect(
+        state.specFor('srv_1', 'CheckpointLoaderSimple', 'ckpt_name')!.options,
+        ['a', 'b'],
+      );
     });
 
-    test('刷新后能看到新装的模型', () async {
+    test('refreshInPlace 会重取已缓存过的节点（写入式，不是补缺式）', () async {
       var first = true;
       final rec = _Recorder()
         ..install((_) async {
@@ -253,7 +295,7 @@ void main() {
         baseUrl: 'http://1.2.3.4:8190',
         classTypes: ['CheckpointLoaderSimple'],
       );
-      await notifier.refresh(
+      await notifier.refreshInPlace(
         serverId: 'srv_1',
         baseUrl: 'http://1.2.3.4:8190',
         classTypes: ['CheckpointLoaderSimple'],

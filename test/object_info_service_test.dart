@@ -369,7 +369,7 @@ void main() {
       expect(s.max, 100);
       expect(s.step, 1);
       expect(s.hasBounds, isTrue);
-      expect(s.hasSliderRange, isTrue);
+      expect(s.toBounds()!.hasSliderRange, isTrue);
     });
 
     test('max 是超 int64 的字符串（种子类）→ 能校验但不画滑块', () {
@@ -384,7 +384,7 @@ void main() {
       expect(s.max, 18446744073709551615.0);
       expect(s.hasBounds, isTrue);
       // 天文数字画成滑块没有意义
-      expect(s.hasSliderRange, isFalse);
+      expect(s.toBounds()!.hasSliderRange, isFalse);
     });
 
     test('没有元数据 → 没有任何边界，不算范围', () {

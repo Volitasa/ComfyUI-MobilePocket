@@ -89,10 +89,16 @@ class ObjectInfoNotifier extends Notifier<ObjectInfoState> {
   static String _key(String serverId, String classType) =>
       '$serverId|$classType';
 
-  /// 补齐缺失的节点说明书。已经在缓存里的不重复请求。
+  /// 补齐缺失的节点说明书。**已经问到过的不重复请求。**
   ///
   /// 返回是否**全部**都问到了定义（拿到空定义算没问到）。
   /// 拿不到的一律静默 —— 说明书是加分项，不是必需品。
+  ///
+  /// ⚠️ 「问到过」只认 `ok` / `empty`（服务器给了答案，哪怕答案是「不认识这个节点」）。
+  /// **`failure` 不算答案**：断网 / 超时是暂时的，网络恢复后应该重试。
+  /// 早先的实现用 `hasNode()` 判，把 failure 也算成「问过」—— 结果一次断网就会让
+  /// 配置页在整个会话里一直显示「未获取到服务器节点信息」，用户只能重启 App
+  /// 才能恢复（2026-10-23 修）。
   Future<bool> ensureLoaded({
     required String serverId,
     required String baseUrl,
@@ -101,7 +107,8 @@ class ObjectInfoNotifier extends Notifier<ObjectInfoState> {
     final todo = <String>[];
     for (final classType in classTypes) {
       if (classType.isEmpty) continue;
-      if (state.hasNode(serverId, classType)) continue;
+      final status = state.statusFor(serverId, classType);
+      if (status != null && status != ObjectInfoFetchStatus.failure) continue;
       final k = _key(serverId, classType);
       if (_inFlight.contains(k)) continue;
       _inFlight.add(k);
@@ -139,8 +146,9 @@ class ObjectInfoNotifier extends Notifier<ObjectInfoState> {
   /// 与 [ensureLoaded]（补缺式，已缓存就跳过）和 [refresh]（先清整桶再取）
   /// 的区别是：这里全程**不出现空档**。
   ///
-  /// ⚠️ 运行页首帧后刷新候选值必须用这个 —— 用 `refresh()` 会先把已有选项
-  /// 清成「只剩当前值」再刷回来，观感上闪一下（方案 §3.5）。
+  /// ⚠️ 刷新候选值/范围一律用这个。**不要**改成「先清桶再取」—— 那样首帧的
+  /// 完整选项会先缩成「只剩当前值」再涨回去，观感上闪一下（方案 §3.5）。
+  /// （原来有个 `refresh()` 就是这种写法，run 页改用本方法后它已无调用方，已删。）
   Future<bool> refreshInPlace({
     required String serverId,
     required String baseUrl,
@@ -170,21 +178,6 @@ class ObjectInfoNotifier extends Notifier<ObjectInfoState> {
       }
     }
     return allResolved;
-  }
-
-  /// 丢弃这台服务器的全部缓存并重新取一遍（刷新入口用）。
-  Future<bool> refresh({
-    required String serverId,
-    required String baseUrl,
-    required Iterable<String> classTypes,
-  }) {
-    state = state._withoutServer(serverId);
-    _inFlight.removeWhere((k) => k.startsWith('$serverId|'));
-    return ensureLoaded(
-      serverId: serverId,
-      baseUrl: baseUrl,
-      classTypes: classTypes,
-    );
   }
 
   /// 删除服务器连接时连带清掉它的缓存。

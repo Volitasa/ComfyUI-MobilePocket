@@ -287,11 +287,14 @@ class _RunViewState extends ConsumerState<RunView> {
   ///
   /// 与下拉分开收：刷新按钮只在真有下拉时才出现，不能因为多了几个数值参数
   /// 就摆一个跟下拉无关的刷新入口。
+  ///
+  /// 判定看 `control`（与渲染同源），不再看推断出的 `paramType` ——
+  /// 说明书说某个 text 参数其实是 INT 时，也才会被算进来。
   Set<String> _collectRangeClassTypes() {
     final types = <String>{};
     for (final node in _formConfig) {
-      if (node.paramType != ParamType.intType &&
-          node.paramType != ParamType.float) {
+      final control = _controlFor(node, paired: false);
+      if (control != ParamControl.number && control != ParamControl.slider) {
         continue;
       }
       if (!kRangeParamKeys.contains(node.key)) continue;
@@ -350,7 +353,10 @@ class _RunViewState extends ConsumerState<RunView> {
   /// cfg 0–100（1000 档）、LoRA 强度 −100…100（20000 档）。而且两列布局下
   /// 滑轨实际只有 ~70dp，拖 1dp 就是上百步。这类一律退回输入框，
   /// 只有 denoise / start_percent 这种 0–1（100 档）才留滑块。
-  static const int _maxSliderDivisions = 100;
+  ///
+  /// ⚠️ 阈值必须用 [kSliderMaxDivisions]，别在这里另写一个常量 ——
+  /// 配置页定型用的是那个，两处一旦漂移就会出现「配置页定成滑块、
+  /// 运行页却死活不肯画」的矛盾（本文件原来有个同值的私有常量，已删）。
 
   /// 这个数值参数的可取值范围：**优先用配置页落盘的 `bounds`**。
   ///
@@ -361,16 +367,14 @@ class _RunViewState extends ConsumerState<RunView> {
       node.bounds ?? _specFor(node)?.toBounds();
 
   bool _sliderUsable(ParamBounds? bounds, bool decimal) {
-    if (bounds == null || !bounds.hasBounds) return false;
-    // 天文数字的范围（种子类）画成滑块没有意义：拖一格跳几亿
-    if (bounds.max!.abs() > 1e9 || bounds.min!.abs() > 1e9) return false;
+    if (bounds == null || !bounds.hasSliderRange) return false;
     final step = (bounds.step != null && bounds.step! > 0)
         ? bounds.step!
         : (decimal ? 0.01 : 1);
     final divisions = (bounds.max! - bounds.min!) / step;
     return divisions.isFinite &&
         divisions > 0 &&
-        divisions <= _maxSliderDivisions;
+        divisions <= kSliderMaxDivisions;
   }
 
   Widget _numberField(

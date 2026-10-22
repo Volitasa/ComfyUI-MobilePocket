@@ -50,6 +50,15 @@ class ParamBounds {
       max!.isFinite &&
       max! > min!;
 
+  /// 能否用于**滑块**：有些参数的 max 是天文数字（种子类），画成滑块没有意义，
+  /// 这类只有上下限、不画滑块。
+  ///
+  /// 运行页画滑块用的是**落盘的** bounds（离线也要画得出来），所以这条判据
+  /// 落在 [ParamBounds] 上；`NodeInputSpec` 里原来有一份一样的实现，已删掉 ——
+  /// 两处必须同步的东西迟早会漂移。
+  bool get hasSliderRange =>
+      hasBounds && max!.abs() <= 1e9 && min!.abs() <= 1e9;
+
   factory ParamBounds.fromJson(Map<String, dynamic> json) {
     double? asDoubleOrNull(dynamic raw) => (raw as num?)?.toDouble();
     return ParamBounds(

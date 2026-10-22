@@ -191,25 +191,6 @@ void main() {
       );
     });
 
-    test('4b 两列布局时滑块降级为 number', () {
-      expect(
-        WorkflowNodeParser.resolveControl(
-          key: 'denoise',
-          rawValue: 1,
-          paramType: ParamType.float,
-          spec: const NodeInputSpec(
-            isCombo: false,
-            declaredType: 'FLOAT',
-            min: 0,
-            max: 1,
-            step: 0.01,
-          ),
-          sliderAllowed: false,
-        ),
-        ParamControl.number,
-      );
-    });
-
     test('5 数值档位过多 → number（steps 1–10000 有 9999 档）', () {
       expect(
         WorkflowNodeParser.resolveControl(

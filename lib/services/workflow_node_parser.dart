@@ -407,13 +407,14 @@ class WorkflowNodeParser {
   /// ⚠️ 只在**配置页**调用一次；运行页只读落盘的 `control`，因此
   /// 运行页的控件形态不会随网络结果变化（§1.1 原则 1 / 2）。
   ///
-  /// [sliderAllowed] 为 false 时滑块一律降级为数值框（两列布局用）。
+  /// ⚠️ 这里**不接收**「是否允许滑块」这类布局参数：两列布局的降级是
+  /// 运行期渲染才知道的事，由运行页 `_controlFor(paired:)` 处理。
+  /// 原来有个 `sliderAllowed` 入参，lib 里零调用（只有测试在用），已删。
   static ParamControl? resolveControl({
     required String key,
     required dynamic rawValue,
     required ParamType? paramType,
     NodeInputSpec? spec,
-    bool sliderAllowed = true,
   }) {
     // 1) 图片上传：永远优先于说明书结论
     if (kImageParamKeys.contains(key) && rawValue is String) {
@@ -430,9 +431,8 @@ class WorkflowNodeParser {
       case 'INT':
       case 'FLOAT':
         final d = spec!.divisionsFor(decimal: paramType == ParamType.float);
-        if (d != null && d <= kSliderMaxDivisions) {
-          return sliderAllowed ? ParamControl.slider : ParamControl.number;
-        }
+        // 档位够少才画滑块；两列布局的降级由运行页 _controlFor(paired:) 负责
+        if (d != null && d <= kSliderMaxDivisions) return ParamControl.slider;
         return ParamControl.number;
     }
 

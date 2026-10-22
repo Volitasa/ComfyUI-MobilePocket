@@ -182,11 +182,6 @@ class NodeInputSpec {
       max!.isFinite &&
       max! > min!;
 
-  /// 能否用于**滑块**：有些节点的 max 是天文数字（种子类），画成滑块没有意义，
-  /// 这类只有上下限、不画滑块。
-  bool get hasSliderRange =>
-      hasBounds && max!.abs() <= 1e9 && min!.abs() <= 1e9;
-
   /// 档位数：`(max - min) / step`。拿不到可靠范围时返回 null。
   ///
   /// ⚠️ 只在**配置页定型**时算一次，用来判断「滑块还是输入框」（§3.4 第 4 条）。
