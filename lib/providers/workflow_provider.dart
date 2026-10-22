@@ -155,8 +155,9 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
 
         // 列表就绪后立刻比对内容：API 工作流看配置是否过期，
         // UI 工作流看解析缓存是否过期。两者都只比对哈希，都不需要解析。
-        await refreshStatuses(apiFiles);
-        await refreshUiStatuses(uiFiles);
+        // 这里是服务器返回的完整列表，可以清掉已删除条目的旧状态。
+        await refreshStatuses(apiFiles, pruneMissing: true);
+        await refreshUiStatuses(uiFiles, pruneMissing: true);
       }
     } catch (e) {
       // 生产环境可接入日志
@@ -169,7 +170,17 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
   ///
   /// 未配置的工作流直接判定，不浪费请求；已配置但拉取失败的保持
   /// 「已配置」，不因网络抖动误报成需要重新配置。
-  Future<void> refreshStatuses(List<String> files) async {
+  ///
+  /// [pruneMissing] 为 true 表示传进来的 [files] 就是服务器的完整列表，
+  /// 结果可以直接替换整张表（顺带清掉已被删除的条目）。
+  /// 单条刷新**必须**用默认的 false：合并进现有表。
+  /// 以前这里无条件整表替换，于是「点进 A 再返回」这条路径
+  /// （只传 [A]）会把 B、C 的状态抹成 unknown —— 列表上显示成「未配置」，
+  /// 而其实配置还在、点进去照样能直接运行；「服务器有更新」的提示也会一起丢。
+  Future<void> refreshStatuses(
+    List<String> files, {
+    bool pruneMissing = false,
+  }) async {
     final config = ref.read(connectionProvider);
     if (!config.isConnected || files.isEmpty) return;
 
@@ -208,7 +219,10 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
         }),
       );
     } finally {
-      state = state.copyWith(statuses: results, isChecking: false);
+      state = state.copyWith(
+        statuses: pruneMissing ? results : {...state.statuses, ...results},
+        isChecking: false,
+      );
     }
   }
 
@@ -217,7 +231,14 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
   /// **只比对哈希，不解析**——解析要加载整个前端（约 12 MB），
   /// 比对只要拉一份几十 KB 的 JSON，所以刷新时可以批量做。
   /// 未解析的条目没有基线，不参与比对。
-  Future<void> refreshUiStatuses(List<String> files) async {
+  ///
+  /// [pruneMissing] 语义与 [refreshStatuses] 相同：只有传完整列表时才替换整张表。
+  /// 单条解析完之后那次刷新如果整表替换，其它条目的「服务器有更新」会被
+  /// 抹成 unknown —— 界面上退回「已解析」，用户就看不到需要重新解析了。
+  Future<void> refreshUiStatuses(
+    List<String> files, {
+    bool pruneMissing = false,
+  }) async {
     final config = ref.read(connectionProvider);
     final serverId = config.activeServerId;
     if (!config.isConnected || serverId == null || files.isEmpty) return;
@@ -250,7 +271,10 @@ class WorkflowNotifier extends Notifier<WorkflowState> {
         }),
       );
     } finally {
-      state = state.copyWith(uiStatuses: results, isChecking: false);
+      state = state.copyWith(
+        uiStatuses: pruneMissing ? results : {...state.uiStatuses, ...results},
+        isChecking: false,
+      );
     }
   }
 
