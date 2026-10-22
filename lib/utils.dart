@@ -113,6 +113,9 @@ const Map<String, String> kPairParamKeys = {
   'width': 'height',
   'steps': 'cfg',
   'strength_model': 'strength_clip',
+  // 采样器 / 调度器、CLIP 的 type / device：都是短值，合一行省两行高度
+  'sampler_name': 'scheduler',
+  'type': 'device',
 };
 
 /// 判断某参数是否默认暴露（高频暴露，其余默认不暴露，由用户手动勾选）。
@@ -214,4 +217,39 @@ String formatBytes(int bytes) {
 bool isMeaningfulTitle(String title, String classType) {
   final t = title.trim();
   return t.isNotEmpty && t != classType && !t.startsWith('Node ');
+}
+
+/// 把控件的当前状态解析成「要提交给服务器的值」。
+///
+/// 抽成纯函数是为了能单测：这里最容易出的错是「界面看着改了、提交时没带上」。
+/// 典型就是「服务器说这是 COMBO 的 text 参数」（type / device / weight_dtype）——
+/// 它的选中值存在下拉状态里，不在文本控制器里，只看 text 就会把改动丢掉。
+dynamic resolveParamValue({
+  required WorkflowNode node,
+  required String text,
+  dynamic widgetValue,
+}) {
+  switch (node.paramType) {
+    case ParamType.seed:
+      final n = num.tryParse(text);
+      return n?.round() ??
+          (node.value is num ? (node.value as num).round() : 0);
+    case ParamType.intType:
+      // 解析不出来时退回工作流原值 —— 返回 null 会被提交给服务器，
+      // 而服务端的报错信息完全看不出是这儿出的问题。
+      final n = num.tryParse(text);
+      return n?.round() ?? node.value;
+    case ParamType.float:
+      final n = num.tryParse(text);
+      return n?.toDouble() ?? node.value;
+    case ParamType.boolType:
+      return widgetValue ?? false;
+    case ParamType.enumType:
+      return widgetValue;
+    case ParamType.text:
+      // 有些 text 参数其实是服务器的 COMBO，选中值在 widgetValue 里
+      return widgetValue ?? text;
+    case ParamType.image:
+      return text;
+  }
 }

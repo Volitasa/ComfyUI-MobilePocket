@@ -15,8 +15,10 @@ import '../../providers/ws_event_provider.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/object_info_provider.dart';
 import '../../services/object_info_service.dart';
+import '../../services/workflow_node_parser.dart';
 import '../../utils.dart';
 import '../main_screen.dart';
+import '../widgets/param_field.dart';
 import 'param_widgets/param_card_registry.dart';
 import 'param_widgets/latent_size_card.dart';
 import 'workflow_view.dart';
@@ -224,8 +226,13 @@ class _RunViewState extends ConsumerState<RunView> {
   Set<String> _collectOptionClassTypes() {
     final types = <String>{};
     for (final node in _formConfig) {
-      if (node.paramType != ParamType.enumType) continue;
-      if (!kDynamicOptionKeys.contains(node.key)) continue;
+      if (node.paramType == ParamType.image) continue;
+      // 模型/采样器类键，加上「服务端是 COMBO、工作流里只有一串字符」的键，
+      // 都要问一次说明书 —— 前者决定下拉选项，后者决定控件形态。
+      if (!kDynamicOptionKeys.contains(node.key) &&
+          !kExtraComboKeys.contains(node.key)) {
+        continue;
+      }
       types.add(node.classType);
     }
     return types;
@@ -281,19 +288,39 @@ class _RunViewState extends ConsumerState<RunView> {
   ///
   /// 用 [ValueListenableBuilder] 监听控制器：越界提示依赖当前文本，而改文本
   /// 本身不会让整页重建，不监听的话红字要等下一次重建才出现。
+  /// 滑块只在「档位够少」时才画。
+  ///
+  /// 服务端给的合法范围经常大到没法拖：steps 1–10000（9999 档）、
+  /// cfg 0–100（1000 档）、LoRA 强度 −100…100（20000 档）。而且两列布局下
+  /// 滑轨实际只有 ~70dp，拖 1dp 就是上百步。这类一律退回输入框，
+  /// 只有 denoise / start_percent 这种 0–1（100 档）才留滑块。
+  static const int _maxSliderDivisions = 100;
+
+  bool _sliderUsable(NodeInputSpec? spec, bool decimal) {
+    if (spec == null || !spec.hasSliderRange) return false;
+    final step = (spec.step != null && spec.step! > 0)
+        ? spec.step!
+        : (decimal ? 0.01 : 1);
+    final divisions = (spec.max! - spec.min!) / step;
+    return divisions.isFinite &&
+        divisions > 0 &&
+        divisions <= _maxSliderDivisions;
+  }
+
   Widget _numberField(
     WorkflowNode node, {
     required bool decimal,
     required String hint,
+    bool paired = false,
   }) {
     final k = nodeParamKey(node.id, node.key);
     final controller = _controllers[k];
     if (controller == null) return const SizedBox.shrink();
 
     final spec = _specFor(node);
-    // 只有服务器给了可信范围才画滑块；拿不到范围就维持输入框，不猜。
-    if (spec != null && spec.hasSliderRange) {
-      return _sliderField(node, controller, spec, decimal: decimal);
+    // 半列宽放不下「滑块 + 数值」，两列时一律用输入框
+    if (!paired && _sliderUsable(spec, decimal)) {
+      return _sliderField(node, controller, spec!, decimal: decimal);
     }
 
     return ValueListenableBuilder<TextEditingValue>(
@@ -303,13 +330,10 @@ class _RunViewState extends ConsumerState<RunView> {
         keyboardType: decimal
             ? const TextInputType.numberWithOptions(decimal: true)
             : TextInputType.number,
-        decoration: InputDecoration(
+        decoration: ParamFieldStyle.decoration(
+          context,
           hintText: hint,
           errorText: _numberError(node),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          isDense: true,
-          filled: true,
-          fillColor: Colors.white,
         ),
       ),
     );
@@ -341,7 +365,6 @@ class _RunViewState extends ConsumerState<RunView> {
         // 滑块本身拖不出范围，但右手那个数值框可以手输 ——
         // 越界一样要看得见，不能因为「有滑块」就不提示。
         final error = _numberError(node);
-        final errorColor = Theme.of(context).colorScheme.error;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -367,18 +390,10 @@ class _RunViewState extends ConsumerState<RunView> {
                     keyboardType: decimal
                         ? const TextInputType.numberWithOptions(decimal: true)
                         : TextInputType.number,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 8,
-                      ),
-                      enabledBorder: error == null
-                          ? null
-                          : OutlineInputBorder(
-                              borderSide: BorderSide(color: errorColor),
-                            ),
+                    decoration: ParamFieldStyle.decoration(
+                      context,
+                      contentPadding: ParamFieldStyle.compactPadding,
+                      invalid: error != null,
                     ),
                   ),
                 ),
@@ -389,7 +404,10 @@ class _RunViewState extends ConsumerState<RunView> {
                 padding: const EdgeInsets.only(top: 4, left: 4),
                 child: Text(
                   error,
-                  style: TextStyle(fontSize: 11, color: errorColor),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                 ),
               ),
           ],
@@ -586,31 +604,14 @@ class _RunViewState extends ConsumerState<RunView> {
     }
   }
 
-  // 根据参数类型，把控件里的值解析成正确的 Dart 类型后提交
+  // 把控件里的值解析成提交用的 Dart 类型（纯函数在 utils.dart，便于单测）
   dynamic _resolveValue(WorkflowNode node) {
     final k = nodeParamKey(node.id, node.key);
-    final text = _controllers[k]?.text ?? '';
-    switch (node.paramType) {
-      case ParamType.seed:
-        final n = num.tryParse(text);
-        return n?.round() ??
-            (node.value is num ? (node.value as num).round() : 0);
-      case ParamType.intType:
-        // 解析不出来时退回工作流原值 —— 直接返回 null 会被提交给服务器，
-        // 而服务端的报错信息完全看不出是这儿出的问题。
-        final n = num.tryParse(text);
-        return n?.round() ?? node.value;
-      case ParamType.float:
-        final n = num.tryParse(text);
-        return n?.toDouble() ?? node.value;
-      case ParamType.boolType:
-        return _widgetValues[k] ?? false;
-      case ParamType.enumType:
-        return _widgetValues[k];
-      case ParamType.text:
-      case ParamType.image:
-        return _controllers[k]?.text;
-    }
+    return resolveParamValue(
+      node: node,
+      text: _controllers[k]?.text ?? '',
+      widgetValue: _widgetValues[k],
+    );
   }
 
   Future<void> _handleExecute() async {
@@ -998,9 +999,9 @@ class _RunViewState extends ConsumerState<RunView> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _buildParamBlock(node)),
+                Expanded(child: _buildParamBlock(node, paired: true)),
                 const SizedBox(width: 12),
-                Expanded(child: _buildParamBlock(partner)),
+                Expanded(child: _buildParamBlock(partner, paired: true)),
               ],
             ),
           ),
@@ -1025,24 +1026,33 @@ class _RunViewState extends ConsumerState<RunView> {
     List<WorkflowNode> params,
     int i,
   ) {
-    if (node.paramType != ParamType.intType &&
-        node.paramType != ParamType.float) {
-      return null;
-    }
     final expected = kPairParamKeys[node.key];
     if (expected == null) return null;
     if (i + 1 >= params.length) return null;
     final next = params[i + 1];
     if (next.key != expected) return null;
-    if (next.paramType != ParamType.intType &&
-        next.paramType != ParamType.float) {
-      return null;
-    }
+    if (!_pairable(node) || !_pairable(next)) return null;
     return next;
   }
 
+  /// 能不能占半列：短控件才可以（数值、下拉、单行文本）。
+  /// 布尔整行更好点、图片要宽度、种子带骰子按钮，都不并排。
+  bool _pairable(WorkflowNode node) {
+    switch (node.paramType) {
+      case ParamType.intType:
+      case ParamType.float:
+      case ParamType.enumType:
+      case ParamType.text:
+        return true;
+      case ParamType.boolType:
+      case ParamType.seed:
+      case ParamType.image:
+        return false;
+    }
+  }
+
   /// 单个参数：别名 + 参数键 chip + 控件
-  Widget _buildParamBlock(WorkflowNode node) {
+  Widget _buildParamBlock(WorkflowNode node, {bool paired = false}) {
     // 布尔参数合成一行：别名 + 状态 + 开关。
     // 分成「标签行 + 开关行」时，开关行的「开启/关闭」跟上面的别名说的是同一件事，
     // 白占一行 40px，而开关本身已经把状态摆在那里了。
@@ -1062,7 +1072,10 @@ class _RunViewState extends ConsumerState<RunView> {
                 ),
               ),
             ),
-            if (node.key != 'text' && node.key != 'value')
+            // 别名就是参数名时再挂一个同名 chip 只是重复
+            if (node.key != 'text' &&
+                node.key != 'value' &&
+                node.alias != node.key)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -1077,7 +1090,7 @@ class _RunViewState extends ConsumerState<RunView> {
           ],
         ),
         const SizedBox(height: 6),
-        _buildInputControl(node),
+        _buildInputControl(node, paired: paired),
       ],
     );
   }
@@ -1124,22 +1137,81 @@ class _RunViewState extends ConsumerState<RunView> {
     return classType;
   }
 
-  Widget _buildInputControl(WorkflowNode node) {
+  /// 下拉控件。enumType 与「服务器说是 COMBO 的 text 参数」共用这一份渲染。
+  ///
+  /// 拿到服务器真实选项时，下拉里**只有**真实选项 —— 工作流里写的那个模型
+  /// 如果服务器上没有，就不再塞进选项里凑数，用户点开菜单自己看得出来，
+  /// 提交时也会被拦下（拦截只针对模型/采样器类键，见 _missingOnServerNodes）。
+  Widget _enumControl(WorkflowNode node) {
+    final k = nodeParamKey(node.id, node.key);
+    final l10n = AppLocalizations.of(context);
+    final view = _enumView(node);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<String>(
+          // 选项是在页面显示之后才到的。initialValue 只在创建时生效一次，
+          // 所以必须让 key 跟着选项走，否则真选项到了下拉也不刷新。
+          key: ValueKey(
+            '$k:${view.fromServer ? 's' : 'f'}:${view.options.length}',
+          ),
+          initialValue: view.selected,
+          hint: Text(l10n.runSelectPlaceholder),
+          isExpanded: true,
+          decoration: ParamFieldStyle.decoration(context),
+          items: view.options
+              .map(
+                (o) => DropdownMenuItem(
+                  value: o,
+                  child: Text(o, overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
+          onChanged: (val) {
+            if (val != null) setState(() => _widgetValues[k] = val);
+          },
+        ),
+        if (view.missingOnServer) ...[
+          const SizedBox(height: 4),
+          Text(
+            l10n.runModelMissing,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildInputControl(WorkflowNode node, {bool paired = false}) {
     // 同一节点可有多个参数，控制器/状态统一用 id:key 复合键
     final k = nodeParamKey(node.id, node.key);
     final l10n = AppLocalizations.of(context);
+
+    // 说明书写着 COMBO 就直接给下拉。
+    // 工作流 JSON 里 type / device / weight_dtype 只是一串字符，光看「值」推断
+    // 不出它是枚举，所以不能只按 paramType 决定控件形态。
+    // ⚠️ 图片上传参数永远例外 —— 那串文件名必须留给上传控件，
+    //    变成下拉用户就传不了新图了。
+    final spec = _specFor(node);
+    if (spec != null && spec.isCombo && !kImageParamKeys.contains(node.key)) {
+      // 非 enumType 的参数没有 _widgetValues 初值，这里补一次；
+      // _resolveValue 会优先读它，否则提交时会把下拉选的值丢掉。
+      _widgetValues.putIfAbsent(k, () => node.value?.toString() ?? '');
+      return _enumControl(node);
+    }
+
     switch (node.paramType) {
       case ParamType.text:
+        // 只有提示词类需要多行；`default`、`filename_prefix` 这种短值
+        // 给两行纯粹是白占高度（按 key 判，不按内容判 —— 内容一变就得重建）
+        final isPrompt = node.key == 'text' || node.key == 'value';
         return TextField(
           controller: _controllers[k],
-          maxLines: 6,
-          minLines: 2,
-          decoration: InputDecoration(
+          maxLines: isPrompt ? 6 : 1,
+          minLines: isPrompt ? 2 : 1,
+          decoration: ParamFieldStyle.decoration(
+            context,
             hintText: AppLocalizations.of(context).runTextHint,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            isDense: true,
-            filled: true,
-            fillColor: Colors.white,
           ),
         );
       case ParamType.seed:
@@ -1173,63 +1245,24 @@ class _RunViewState extends ConsumerState<RunView> {
           ],
         );
       case ParamType.intType:
-        return _numberField(node, decimal: false, hint: l10n.runIntHint);
+        return _numberField(
+          node,
+          decimal: false,
+          hint: l10n.runIntHint,
+          paired: paired,
+        );
       case ParamType.float:
-        return _numberField(node, decimal: true, hint: l10n.runFloatHint);
+        return _numberField(
+          node,
+          decimal: true,
+          hint: l10n.runFloatHint,
+          paired: paired,
+        );
       case ParamType.boolType:
         // 正常路径走 _buildBoolBlock（别名与开关并成一行），这里只留开关本身
         return Align(alignment: Alignment.centerLeft, child: _boolSwitch(k));
       case ParamType.enumType:
-        // 拿到服务器的真实选项时，下拉里**只有**真实选项 ——
-        // 工作流里写的那个模型如果服务器上没有，就不再塞进选项里凑数，
-        // 用户点开菜单自己看得出来，提交时也会被拦下。
-        final l10n = AppLocalizations.of(context);
-        final view = _enumView(node);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DropdownButtonFormField<String>(
-              // 选项是在页面显示之后才到的。initialValue 只在创建时生效一次，
-              // 所以必须让 key 跟着选项走，否则真选项到了下拉也不刷新。
-              key: ValueKey(
-                '$k:${view.fromServer ? 's' : 'f'}:${view.options.length}',
-              ),
-              initialValue: view.selected,
-              hint: Text(l10n.runSelectPlaceholder),
-              isExpanded: true,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                isDense: true,
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-              ),
-              items: view.options
-                  .map(
-                    (o) => DropdownMenuItem(
-                      value: o,
-                      child: Text(o, overflow: TextOverflow.ellipsis),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _widgetValues[k] = val);
-              },
-            ),
-            if (view.missingOnServer) ...[
-              const SizedBox(height: 4),
-              Text(
-                l10n.runModelMissing,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ],
-        );
+        return _enumControl(node);
       case ParamType.image:
         // 图片卡：缩略图 96 + 两个按钮并排，不再把按钮压在图下面
         final hasImage = _formData[k] != null;

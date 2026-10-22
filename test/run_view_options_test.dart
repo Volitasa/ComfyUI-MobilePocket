@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:comfyui_mobilepocket/providers/connection_provider.dart';
 import 'package:comfyui_mobilepocket/services/object_info_service.dart';
 import 'package:comfyui_mobilepocket/ui/builder/run_view.dart';
+import 'package:comfyui_mobilepocket/ui/widgets/param_field.dart';
 
 const String _baseUrl = 'http://test.local:8190';
 
@@ -471,6 +472,258 @@ void main() {
 
       // 折叠后卡片里的控件都不在了，只剩卡头
       expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    });
+  });
+
+  group('运行页：控件形态', () {
+    String intRangeBody(String classType, String key, int min, int max) =>
+        jsonEncode({
+          classType: {
+            'input': {
+              'required': {
+                key: [
+                  'INT',
+                  {'default': 20, 'min': min, 'max': max},
+                ],
+              },
+            },
+          },
+        });
+
+    String floatRangeBody(
+      String classType,
+      String key,
+      double min,
+      double max,
+      double step,
+    ) => jsonEncode({
+      classType: {
+        'input': {
+          'required': {
+            key: [
+              'FLOAT',
+              {'default': 1.0, 'min': min, 'max': max, 'step': step},
+            ],
+          },
+        },
+      },
+    });
+
+    List<Map<String, dynamic>> param(
+      String key,
+      String alias,
+      String paramType,
+      dynamic value, {
+      String id = '3',
+      String classType = 'KSampler',
+      String title = 'K采样器',
+    }) => [
+      {
+        'id': id,
+        'classType': classType,
+        'key': key,
+        'alias': alias,
+        'exposed': true,
+        'title': title,
+        'paramType': paramType,
+        'options': <String>[],
+        'value': value,
+      },
+    ];
+
+    testWidgets('steps 1–10000 档位太多 → 不给滑块，改输入框', (tester) async {
+      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, 10000)});
+      await _pumpRunView(
+        tester,
+        mapping: param('steps', '采样步数', 'intType', 10),
+      );
+
+      expect(find.byType(Slider), findsNothing);
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('denoise 0–1（100 档）→ 保留滑块', (tester) async {
+      _installServer({
+        'KSampler': floatRangeBody('KSampler', 'denoise', 0, 1, 0.01),
+      });
+      await _pumpRunView(
+        tester,
+        mapping: param('denoise', '重绘幅度', 'float', 1.0),
+      );
+
+      expect(find.byType(Slider), findsOneWidget);
+    });
+
+    testWidgets('两列里的数值即使档位少也不画滑块（滑轨只有 ~70dp）', (tester) async {
+      // steps 与 cfg 相邻 → 并排；steps 1–100 本来够资格画滑块
+      _installServer({
+        'KSampler': jsonEncode({
+          'KSampler': {
+            'input': {
+              'required': {
+                'steps': [
+                  'INT',
+                  {'default': 20, 'min': 1, 'max': 100},
+                ],
+                'cfg': [
+                  'FLOAT',
+                  {'default': 8, 'min': 0, 'max': 100, 'step': 0.1},
+                ],
+              },
+            },
+          },
+        }),
+      });
+      await _pumpRunView(
+        tester,
+        mapping: [
+          ...param('steps', '采样步数', 'intType', 20),
+          {
+            'id': '3',
+            'classType': 'KSampler',
+            'key': 'cfg',
+            'alias': 'CFG 强度',
+            'exposed': true,
+            'title': 'K采样器',
+            'paramType': 'float',
+            'options': <String>[],
+            'value': 8.0,
+          },
+        ],
+      );
+
+      expect(find.byType(Slider), findsNothing);
+      expect(find.byType(TextField), findsNWidgets(2));
+    });
+
+    testWidgets('采样器与调度器并排同一行', (tester) async {
+      _installServer({});
+      await _pumpRunView(
+        tester,
+        mapping: [
+          ...param('sampler_name', '采样器', 'enumType', 'euler'),
+          {
+            'id': '3',
+            'classType': 'KSampler',
+            'key': 'scheduler',
+            'alias': '调度器',
+            'exposed': true,
+            'title': 'K采样器',
+            'paramType': 'enumType',
+            'options': <String>['simple'],
+            'value': 'simple',
+          },
+        ],
+      );
+
+      final dropdowns = tester
+          .widgetList<DropdownButtonFormField<String>>(
+            find.byType(DropdownButtonFormField<String>),
+          )
+          .toList();
+      expect(dropdowns.length, 2);
+      final a = tester.getCenter(find.byWidget(dropdowns[0]));
+      final b = tester.getCenter(find.byWidget(dropdowns[1]));
+      // 同一行：高度一致、左右分开
+      expect((a.dy - b.dy).abs(), lessThan(1.0));
+      expect(b.dx, greaterThan(a.dx));
+    });
+
+    testWidgets('CLIP 的 type / device 说明书写着 COMBO → 渲染下拉而不是文本框', (
+      tester,
+    ) async {
+      _installServer({
+        'CLIPLoader': jsonEncode({
+          'CLIPLoader': {
+            'input': {
+              'required': {
+                'type': [
+                  ['stable_diffusion', 'sd3', 'lumina2', 'qwen_image'],
+                ],
+              },
+              'optional': {
+                'device': [
+                  ['default', 'cpu'],
+                ],
+              },
+            },
+          },
+        }),
+      });
+      await _pumpRunView(
+        tester,
+        mapping: [
+          ...param(
+            'type',
+            'type',
+            'text',
+            'lumina2',
+            id: '9',
+            classType: 'CLIPLoader',
+            title: '加载CLIP',
+          ),
+          {
+            'id': '9',
+            'classType': 'CLIPLoader',
+            'key': 'device',
+            'alias': 'device',
+            'exposed': true,
+            'title': '加载CLIP',
+            'paramType': 'text',
+            'options': <String>[],
+            'value': 'default',
+          },
+        ],
+      );
+
+      // 两个都成了下拉，不再有文本框
+      expect(find.byType(DropdownButtonFormField<String>), findsNWidgets(2));
+      expect(find.byType(TextField), findsNothing);
+
+      // 下拉里是服务器真选项，且当前值已被选中
+      await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+      await tester.pumpAndSettle();
+      expect(find.text('qwen_image'), findsWidgets);
+      expect(find.text('lumina2'), findsWidgets);
+    });
+
+    testWidgets('短文本参数只占一行', (tester) async {
+      _installServer({});
+      await _pumpRunView(
+        tester,
+        mapping: param(
+          'filename_prefix',
+          'filename_prefix',
+          'text',
+          'ComfyUI',
+          id: '12',
+          classType: 'SaveImage',
+          title: '保存图像',
+        ),
+      );
+
+      final field = tester.getSize(find.byType(TextField));
+      // 单行控件压到 InputDecorator 的下限 48，不再白占两行
+      expect(field.height, lessThanOrEqualTo(ParamFieldStyle.height));
+    });
+
+    testWidgets('提示词仍是多行', (tester) async {
+      _installServer({});
+      await _pumpRunView(
+        tester,
+        mapping: param(
+          'text',
+          '正向提示词',
+          'text',
+          'a cat',
+          id: '6',
+          classType: 'CLIPTextEncode',
+          title: '正向提示词',
+        ),
+      );
+
+      final field = tester.getSize(find.byType(TextField));
+      expect(field.height, greaterThan(ParamFieldStyle.height + 12));
     });
   });
 }

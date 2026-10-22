@@ -27,6 +27,14 @@ const Set<String> kRangeParamKeys = {
   'upscale_by',
 };
 
+/// 服务端是 COMBO、但工作流 JSON 里只存了一个字符串的参数。
+///
+/// 光看「值」推断不出它们是枚举（`"lumina2"` 和普通文本长得一样），
+/// 所以要为它们所在的节点问一次说明书，把控件渲染成下拉。
+/// ⚠️ 它们**不参与**「服务器上没有这个值就拦提交」的判断 —— 那套只认
+/// [kDynamicOptionKeys]（模型 / 采样器），否则服务器版本不同就会误拦。
+const Set<String> kExtraComboKeys = {'type', 'device', 'weight_dtype'};
+
 const Set<String> kDynamicOptionKeys = {
   // 模型加载
   'ckpt_name',
