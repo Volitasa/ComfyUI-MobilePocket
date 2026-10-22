@@ -277,22 +277,31 @@ class WorkflowNodeParser {
 
       final forceTypes = rule?.forceTypes ?? const <String, ParamType>{};
 
+      // 先收出「这个节点真正会生成参数的键」，再确定每个键的类型。
+      // 需要这个数量是为了别名回退：节点标题只有在一个参数时才有区分度。
+      final resolved = <String, ParamType>{};
       inputs.forEach((key, rawValue) {
         if (isLinkReference(rawValue)) return; // 连线引用不暴露
-
         final type = resolveType(key, rawValue, forceTypes);
-        if (type == null) return;
+        if (type != null) resolved[key] = type;
+      });
 
-        final exposed = _defaultExposed(rule, key);
-
+      resolved.forEach((key, type) {
+        final rawValue = inputs[key];
         nodes.add(
           WorkflowNode(
             id: nodeId,
             classType: classType,
             key: key,
-            alias: defaultAlias(key, title, classType, l),
+            alias: defaultAlias(
+              key,
+              title,
+              classType,
+              l,
+              onlyParam: resolved.length == 1,
+            ),
             title: title,
-            exposed: exposed,
+            exposed: _defaultExposed(rule, key),
             paramType: type,
             options: type == ParamType.enumType
                 ? enumOptions(rawValue)
@@ -370,22 +379,20 @@ class WorkflowNodeParser {
     }
   }
 
-  /// 默认别名：优先内置别名；文本类用节点标题；都没有时用参数名。
+  /// 默认别名：内置别名表 → **单参数节点**的标题 → 真实参数名（key）。
   ///
-  /// 最后退回参数名而不是标题 —— 同一节点下有多个参数时，
-  /// 标题没法区分它们，参数名至少能。
+  /// 节点标题只在「这个节点只有一个参数」时才有区分度：
+  /// 提示词节点叫「正向提示词」很合适，但 CLIPLoader 上三个参数全叫「加载CLIP」
+  /// 就是纯噪音（用户看不出哪个是 type、哪个是 device）。
+  /// 多参数节点一律回退到服务端的真实参数名，与「服务端叫什么就显示什么」一致。
   static String defaultAlias(
     String key,
     String title,
     String classType,
-    AppLocalizations l,
-  ) {
+    AppLocalizations l, {
+    bool onlyParam = false,
+  }) {
     final t = title.trim();
-    final isDefaultTitle = !isMeaningfulTitle(title, classType);
-
-    if (key == 'text' || key == 'value') {
-      return isDefaultTitle ? l.aliasPrompt : t;
-    }
 
     final alias = <String, String>{
       'seed': l.aliasSeed,
@@ -411,7 +418,7 @@ class WorkflowNodeParser {
     }[key];
 
     if (alias != null) return alias;
-    if (!isDefaultTitle) return t;
+    if (onlyParam && isMeaningfulTitle(title, classType)) return t;
     return key;
   }
 }

@@ -335,8 +335,6 @@
       "value": { "type": "String" }
     }
   },
-  "aliasPrompt": "提示词",
-  "@aliasPrompt": { "description": "默认别名：提示词" },
   "aliasSeed": "随机种子",
   "@aliasSeed": { "description": "默认别名：种子" },
   "aliasImage": "参考图片",

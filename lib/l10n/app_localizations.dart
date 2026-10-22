@@ -854,12 +854,6 @@ abstract class AppLocalizations {
   /// **'类型: {type} · 当前值: {value}'**
   String paramSummaryTypeValue(String type, String value);
 
-  /// 默认别名：提示词
-  ///
-  /// In zh, this message translates to:
-  /// **'提示词'**
-  String get aliasPrompt;
-
   /// 默认别名：种子
   ///
   /// In zh, this message translates to:

@@ -190,11 +190,16 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
           _extractableNodes = nodes.map((n) {
             final saved = savedByKey[nodeParamKey(n.id, n.key)];
             if (saved == null) return n;
+            // 旧版会把「节点标题」当成没收录参数的别名（多参数节点上于是全叫
+            // 加载CLIP / UNet加载器）。那不是用户改的，按未自定义处理，
+            // 让新的默认别名（真实参数名）生效 —— 重新保存一次配置即可自愈。
+            final customizedAlias =
+                saved.alias.isNotEmpty && saved.alias != saved.title;
             return WorkflowNode(
               id: n.id,
               classType: n.classType,
               key: n.key,
-              alias: saved.alias.isNotEmpty ? saved.alias : n.alias,
+              alias: customizedAlias ? saved.alias : n.alias,
               exposed: saved.exposed,
               title: n.title,
               paramType: n.paramType,

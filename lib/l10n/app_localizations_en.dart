@@ -439,9 +439,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aliasPrompt => 'Prompt';
-
-  @override
   String get aliasSeed => 'Random seed';
 
   @override

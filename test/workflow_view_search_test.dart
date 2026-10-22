@@ -19,6 +19,15 @@ const Map<String, dynamic> _workflow = {
     'class_type': 'KSampler',
     'inputs': {'seed': 1, 'steps': 20},
   },
+  '9': {
+    'class_type': 'CLIPLoader',
+    'inputs': {
+      'clip_name': 'qwen.safetensors',
+      'type': 'lumina2',
+      'device': 'default',
+    },
+    '_meta': {'title': '加载CLIP'},
+  },
 };
 
 /// 两个节点的已保存配置：用来验证「单行参数」与「搜索无命中」。
@@ -48,7 +57,10 @@ List<Map<String, dynamic>> _mappingConfig() => [
 ];
 
 /// 用「快照模式」进配置页：不请求服务器，配置直接来自快照里的 mappingConfig。
-Future<void> _pumpConfig(WidgetTester tester) async {
+Future<void> _pumpConfig(
+  WidgetTester tester, {
+  List<Map<String, dynamic>>? mapping,
+}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(
@@ -60,7 +72,7 @@ Future<void> _pumpConfig(WidgetTester tester) async {
         'createdAt': 1760000000000,
         'serverId': 'srv_1',
         'workflowJson': _workflow,
-        'mappingConfig': _mappingConfig(),
+        'mappingConfig': mapping ?? _mappingConfig(),
       },
     ]),
   );
@@ -111,5 +123,40 @@ void main() {
     await tester.enterText(find.byType(TextField).first, '');
     await tester.pumpAndSettle();
     expect(find.byType(ParamConfigTile), findsWidgets);
+  });
+
+  testWidgets('旧配置里「别名 = 节点标题」的坏值会自愈成真实参数名', (tester) async {
+    await _pumpConfig(
+      tester,
+      mapping: [
+        {
+          'id': '9',
+          'classType': 'CLIPLoader',
+          'key': 'type',
+          'alias': '加载CLIP',
+          'exposed': true,
+          'title': '加载CLIP',
+          'paramType': 'text',
+          'options': <String>[],
+          'value': 'lumina2',
+        },
+        {
+          'id': '9',
+          'classType': 'CLIPLoader',
+          'key': 'device',
+          'alias': '加载CLIP',
+          'exposed': true,
+          'title': '加载CLIP',
+          'paramType': 'text',
+          'options': <String>[],
+          'value': 'default',
+        },
+      ],
+    );
+
+    // 参数行改用真实参数名；「加载CLIP」只剩卡片头那一个
+    expect(find.text('加载CLIP'), findsOneWidget);
+    expect(find.text('type'), findsOneWidget);
+    expect(find.text('device'), findsOneWidget);
   });
 }

@@ -135,7 +135,6 @@
   "paramTypeDefault": "Parameter",
   "paramSummaryType": "Type: {type}",
   "paramSummaryTypeValue": "Type: {type} · Current: {value}",
-  "aliasPrompt": "Prompt",
   "aliasSeed": "Random seed",
   "aliasImage": "Reference image",
   "aliasSteps": "Sampling steps",

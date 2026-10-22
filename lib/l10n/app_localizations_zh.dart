@@ -430,9 +430,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get aliasPrompt => '提示词';
-
-  @override
   String get aliasSeed => '随机种子';
 
   @override

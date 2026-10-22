@@ -153,4 +153,47 @@ void main() {
       expect(nodes, isEmpty);
     });
   });
+
+  group('默认别名：只在单参数节点用节点标题', () {
+    test('多参数节点里未收录的参数回退成真实参数名', () {
+      final nodes = WorkflowNodeParser.parse(
+        _node('9', 'CLIPLoader', {
+          'clip_name': 'qwen_3_4b.safetensors',
+          'type': 'lumina2',
+          'device': 'default',
+        }, title: '加载CLIP'),
+        l: l,
+      );
+      final byKey = {for (final n in nodes) n.key: n.alias};
+      // clip_name 在别名表里，仍然是「CLIP 模型」
+      expect(byKey['clip_name'], isNot('加载CLIP'));
+      // 另外两个没收录 → 用真实参数名，而不是全叫「加载CLIP」
+      expect(byKey['type'], 'type');
+      expect(byKey['device'], 'device');
+    });
+
+    test('单参数节点仍用节点标题（提示词这类才有区分度）', () {
+      final nodes = WorkflowNodeParser.parse(
+        _node('6', 'CLIPTextEncode', {'text': 'a cat'}, title: '正向提示词'),
+        l: l,
+      );
+      expect(nodes.single.alias, '正向提示词');
+    });
+
+    test('标题是自动生成的无意义名字时，单参数也用参数名', () {
+      final nodes = WorkflowNodeParser.parse(
+        _node('6', 'CLIPTextEncode', {'text': 'a cat'}, title: 'Node 6'),
+        l: l,
+      );
+      expect(nodes.single.alias, 'text');
+    });
+
+    test('内置别名表优先于节点标题', () {
+      final nodes = WorkflowNodeParser.parse(
+        _node('3', 'KSampler', {'steps': 20}, title: '我的采样器'),
+        l: l,
+      );
+      expect(nodes.single.alias, '采样步数');
+    });
+  });
 }
