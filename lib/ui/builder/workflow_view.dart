@@ -63,9 +63,16 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     super.dispose();
   }
 
+  /// 只解析一次：_initData 可能被 didChangeDependencies 触发多次
+  bool _started = false;
+
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 不放在 initState 里：_parseWorkflow 要用 AppLocalizations（InheritedWidget），
+    // 而 initState 阶段还不允许查 —— 快照模式在那一帧同步解析，debug 下直接断言崩溃。
+    if (_started) return;
+    _started = true;
     _initData();
   }
 
@@ -290,10 +297,10 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     return classType;
   }
 
-  // 配置面板里单个参数行：勾选 + 别名编辑 + 类型/当前值摘要
+  // 配置面板里单个参数行：勾选 + 别名编辑 + 类型/当前值摘要。
   //
-  // 紧凑版：勾选行 44 + 别名输入框 36（常显，不藏进二级入口），
-  // 类型说明与当前值合并成行尾一行小字。详见 ParamConfigTile。
+  // 紧凑版：合成一行 44px —— 别名由输入框本身显示（无边框、聚焦才描边），
+  // 类型与当前值合并成行尾 11px 小字，聚焦编辑别名时让出宽度。详见 ParamConfigTile。
   Widget _buildParamRow(WorkflowNode node) {
     final controllerKey = nodeParamKey(node.id, node.key);
     final controller = _aliasControllers.putIfAbsent(
@@ -303,7 +310,6 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: ParamConfigTile(
-        alias: node.alias,
         summary: _describeParam(node, AppLocalizations.of(context)),
         exposed: node.exposed,
         onChanged: (val) {
@@ -421,19 +427,26 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     );
   }
 
-  void _handleSaveMapping() {
+  Future<void> _handleSaveMapping() async {
+    final l = AppLocalizations.of(context);
+    // await 之后 context 可能已经失效，先把要用的两样取出来
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     if (_isSnapshotMode) {
       // 只写回快照：此刻原工作流未必还在，不能去改线上的 mapping 配置
       ref
           .read(snapshotProvider.notifier)
           .updateMappingConfig(widget.snapshotId!, _extractableNodes);
     } else {
-      ref
+      // 等写盘真正完成再跳转：运行页在 initState 里同步读 mapping，
+      // 抢在写入之前读就会出现「提示已保存、运行页却说没有表单」
+      await ref
           .read(workflowProvider.notifier)
           .saveMappingConfig(widget.workflowId, _extractableNodes);
     }
-    Navigator.pushReplacement(
-      context,
+    if (!mounted) return;
+    navigator.pushReplacement(
       MaterialPageRoute(
         builder: (_) => RunView(
           workflowId: widget.workflowId,
@@ -441,9 +454,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         ),
       ),
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).configSaved)),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(l.configSaved)));
   }
 
   @override
@@ -511,6 +522,19 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                         groups.putIfAbsent(n.id, () => []).add(n);
                       }
                       final groupIds = groups.keys.toList();
+                      // 有参数、但一个都没命中：说明是搜空了。
+                      // 不提示的话整片留白，看着像页面坏了。
+                      if (groupIds.isEmpty) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Text(
+                              AppLocalizations.of(context).configSearchEmpty,
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        );
+                      }
                       return ListView.builder(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -540,16 +564,18 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             elevation: 0,
+                            // 与运行页同一套：圆角 12 + 同样的描边色，
+                            // 配置页与运行页来回切的时候看不出是两套皮肤
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              side: BorderSide(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Colors.grey.shade200),
                             ),
                             child: Column(
                               children: [
                                 // 节点分组头部：类名 + 参数统计 + 展开/收起
                                 InkWell(
                                   borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(8),
+                                    top: Radius.circular(12),
                                   ),
                                   onTap: () => setState(() {
                                     if (expanded) {
@@ -661,7 +687,8 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              // 底部按钮四周收紧：按钮本身 56 高已经够好点，外面不必再垫一圈 16
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton(
@@ -669,7 +696,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: Colors.green,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   onPressed: _handleSaveMapping,

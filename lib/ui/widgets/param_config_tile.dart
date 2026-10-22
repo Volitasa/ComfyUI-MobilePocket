@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 
-/// 配置页里单个参数的行：勾选 + 别名输入框。
+/// 配置页里单个参数的行：勾选 + 别名输入 + 当前值摘要，**一行 44px**。
 ///
-/// 紧凑版（方案 A2）：勾选行 44 + 别名输入框 36，比原来的
-/// 「勾选行 48 + 副标题一行 + 缩进 40 的输入框 44」省掉约 20px / 参数。
-/// 别名输入框**保持常显** —— 运行页的字段标签就是它，藏起来等于让人忘了
-/// 自己能改名字；这里只是把它从「独占一行、缩进 40」压成「贴着卡片左缘、
-/// 36 高」。
+/// 别名只出现一次 —— 输入框本身就是显示别名的地方（平时无边框、聚焦才描一圈），
+/// 所以扫读时不会出现「同一串字上下叠两行」，几十行并排也不像填报表。
 ///
-/// 类型说明不再单独占一行：与当前值合并成行尾的一行小字。
-class ParamConfigTile extends StatelessWidget {
+/// 代价：整行不再是点击热区，切换勾选只能点左侧 36×44 的勾选框；
+/// 点别名文字/输入框只会聚焦，不会顺手把参数勾上或取消。
+class ParamConfigTile extends StatefulWidget {
   const ParamConfigTile({
     super.key,
-    required this.alias,
     required this.summary,
     required this.exposed,
     required this.onChanged,
@@ -21,13 +18,9 @@ class ParamConfigTile extends StatelessWidget {
     this.onAliasChanged,
   });
 
-  /// 勾选行高度：44 是紧凑与「点得中」的折中，不再往下压。
+  /// 行高：44 是紧凑与「点得中」的折中，不再往下压。
   static const double rowHeight = 44;
 
-  /// 别名输入框高度。
-  static const double fieldHeight = 36;
-
-  final String alias;
   final String summary;
   final bool exposed;
   final ValueChanged<bool?> onChanged;
@@ -38,73 +31,101 @@ class ParamConfigTile extends StatelessWidget {
   final ValueChanged<String>? onAliasChanged;
 
   @override
+  State<ParamConfigTile> createState() => _ParamConfigTileState();
+}
+
+class _ParamConfigTileState extends State<ParamConfigTile> {
+  final FocusNode _focusNode = FocusNode();
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  /// 聚焦时把行尾摘要收起来：别名正在被改，这时候腾出的宽度比读值有用。
+  void _handleFocusChange() {
+    if (_focused == _focusNode.hasFocus) return;
+    setState(() => _focused = _focusNode.hasFocus);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: rowHeight,
-          child: InkWell(
-            onTap: () => onChanged(!exposed),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 36,
-                  child: Checkbox(
-                    value: exposed,
-                    onChanged: onChanged,
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    alias,
-                    style: const TextStyle(fontSize: 14, height: 1.2),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // 当前值只占行尾一小段，长值截断，不把别名挤没
-                Flexible(
-                  child: Text(
-                    summary,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      height: 1.2,
-                      color: Colors.grey,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.end,
-                  ),
-                ),
-              ],
+    final theme = Theme.of(context);
+    return SizedBox(
+      height: ParamConfigTile.rowHeight,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 36,
+            child: Checkbox(
+              value: widget.exposed,
+              onChanged: widget.onChanged,
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: SizedBox(
-            height: fieldHeight,
+          Expanded(
             child: TextField(
-              controller: aliasController,
-              onChanged: onAliasChanged,
+              controller: widget.aliasController,
+              focusNode: _focusNode,
+              onChanged: widget.onAliasChanged,
               style: const TextStyle(fontSize: 14, height: 1.2),
               decoration: InputDecoration(
                 isDense: true,
-                hintText: aliasHint,
-                border: const OutlineInputBorder(),
+                hintText: widget.aliasHint,
+                hintStyle: const TextStyle(
+                  fontSize: 14,
+                  height: 1.2,
+                  color: Colors.grey,
+                ),
+                // 平时看不出是输入框，聚焦才描边：可编辑性靠「点一下就有光标」传达，
+                // 而不是让几十个边框把页面变成表单。
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.primary,
+                    width: 1,
+                  ),
+                ),
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 8,
+                  horizontal: 6,
                   vertical: 8,
                 ),
               ),
             ),
           ),
-        ),
-      ],
+          // 当前值只占行尾一小段，长值截断，不把别名挤没；
+          // 编辑别名时整段让出去。
+          if (!_focused && widget.summary.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 120),
+              child: Text(
+                widget.summary,
+                style: const TextStyle(
+                  fontSize: 11,
+                  height: 1.2,
+                  color: Colors.grey,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

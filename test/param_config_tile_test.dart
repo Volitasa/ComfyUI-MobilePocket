@@ -20,7 +20,6 @@ Future<void> _pump(
         body: Column(
           children: [
             ParamConfigTile(
-              alias: alias,
               summary: summary,
               exposed: exposed,
               onChanged: onChanged ?? (_) {},
@@ -36,24 +35,26 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('一个参数只占 80px：勾选行 44 + 别名框 36', (tester) async {
+  testWidgets('一个参数只占一行 44px，别名只显示一次', (tester) async {
     await _pump(tester);
 
     final tile = tester.getSize(find.byType(ParamConfigTile));
-    // 旧版：勾选行 48 + 副标题 + 缩进 40 的输入框 44 ≈ 104，这里必须明显更矮
-    expect(tile.height, lessThanOrEqualTo(82));
+    // 旧版是勾选行 44 + 别名输入框 36 的两行（≈82）；现在是单行
+    expect(tile.height, lessThanOrEqualTo(44));
 
-    // 输入框压到 36，同时不能压到点不进去
+    // 输入框就是别名的唯一展示位：整屏里只该有一处这段文字
+    expect(find.text('VAE 模型'), findsOneWidget);
+
+    // 输入框在行内垂直居中，不能被压成一条缝
     final field = tester.getSize(find.byType(TextField));
-    expect(field.height, lessThanOrEqualTo(40));
+    expect(field.height, greaterThanOrEqualTo(28));
   });
 
-  testWidgets('点整行切换勾选，点输入框不切换', (tester) async {
+  testWidgets('点勾选框切换，点输入框只聚焦不切换', (tester) async {
     final toggles = <bool?>[];
     await _pump(tester, exposed: false, onChanged: toggles.add);
 
-    // 点整行（别名文字与输入框里都有这四个字，不能直接按文字定位）
-    await tester.tap(find.byType(InkWell));
+    await tester.tap(find.byType(Checkbox));
     await tester.pump();
     expect(toggles, [true]);
 
@@ -80,6 +81,17 @@ void main() {
     expect(controller.text, '换脸模型');
     // 保存配置用的是 node.alias，控制器文本必须回写出去
     expect(edits, ['换脸模型']);
+  });
+
+  testWidgets('编辑别名时把行尾摘要让出去', (tester) async {
+    await _pump(tester, summary: '整数 · 10');
+    expect(find.text('整数 · 10'), findsOneWidget);
+
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+
+    // 正在改名字，这时候腾出的宽度比读当前值有用
+    expect(find.text('整数 · 10'), findsNothing);
   });
 
   testWidgets('别名与当前值都超长也不报错，各自截断', (tester) async {
