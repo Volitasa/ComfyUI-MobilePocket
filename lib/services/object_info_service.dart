@@ -114,9 +114,12 @@ class NodeInputSpec {
   const NodeInputSpec({
     required this.isCombo,
     this.options = const [],
+    this.rawOptions = const [],
     this.min,
     this.max,
     this.step,
+    this.declaredType,
+    this.advanced = false,
   });
 
   /// 是否是「确实拿到了选项列表的 COMBO」。
@@ -127,8 +130,24 @@ class NodeInputSpec {
   /// 为 false 时一律当作「没数据」，退回工作流里的当前值，不做任何校验。
   final bool isCombo;
 
-  /// COMBO 的真实选项。可能为空（服务器上确实一个都没有）。
+  /// COMBO 的选项（**显示用字符串**）。可能为空（服务器上确实一个都没有）。
   final List<String> options;
+
+  /// COMBO 的**原始**选项，保留服务器返回的类型。
+  ///
+  /// ⚠️ 与 [options] **一一对应**（同下标）。提交时用它 —— 例如
+  /// `["auto", 8, 10]` 选 8，提交的是整数 `8` 而不是 `"8"`。
+  /// 缺失（旧数据 / 解析前）时由 [rawOf] 退回 [options] 的对应项。
+  final List<dynamic> rawOptions;
+
+  /// 说明书里声明的类型名（`'COMBO'` / `'INT'` / `'FLOAT'` / `'STRING'` /
+  /// `'BOOLEAN'` / `'COMFY_DYNAMICCOMBO_V3'` …）。连线类型与无法识别时为 null。
+  final String? declaredType;
+
+  /// 是否被服务器标为高级参数（解析 `meta['advanced']`，optional 段里常见）。
+  ///
+  /// ⚠️ 只用于**展示**（折叠 / 弱化），**不参与**默认勾选判定（方案 §4）。
+  final bool advanced;
 
   /// 数值下限（INT / FLOAT 的元数据）。没给就是 null。
   final double? min;
@@ -152,6 +171,17 @@ class NodeInputSpec {
   /// 这类只有上下限、不画滑块。
   bool get hasSliderRange =>
       hasBounds && max!.abs() <= 1e9 && min!.abs() <= 1e9;
+
+  /// 由显示值取**原始值**（保留 int / bool 等类型）；找不到时原样返回 [display]。
+  ///
+  /// ⚠️ 这是「下拉提交原始类型」的唯一入口 —— 不能用 [options] 里的字符串去提交
+  /// （例如 `bit_depth` 的 `["auto", 8, 10]` 会变成 `"8"`）。见方案 §3.6。
+  dynamic rawOf(String? display) {
+    if (display == null) return null;
+    final i = options.indexOf(display);
+    if (i < 0 || i >= rawOptions.length) return display;
+    return rawOptions[i];
+  }
 
   bool contains(String? value) =>
       value != null && value.isNotEmpty && options.contains(value);
@@ -179,6 +209,61 @@ NumberIssue? checkNumberAgainstSpec({
 
 /// 单个节点的全部输入定义（参数名 → 定义）
 typedef NodeSpec = Map<String, NodeInputSpec>;
+
+/// 取一个节点说明书的**结果状态**。
+enum ObjectInfoFetchStatus {
+  /// 请求没成功（超时 / 断网 / 非 200 / 解析失败）—— 我们对服务器一无所知。
+  failure,
+
+  /// 请求成功，但服务器回了 `{}` —— 它**确实不认识**这个节点。
+  empty,
+
+  /// 请求成功且拿到了定义。
+  ok,
+}
+
+/// 取说明书的结果。**三态**：区分「我们不知道」与「服务器上确实没有」。
+///
+/// 之所以不能有「空 Map 代表没数据」这一个状态，是因为方案 §3.7 的两条规则
+/// 要求相反的行为：
+/// - `failure`（没取到）→ **不拦**，让服务器报错，比误拦好；
+/// - `empty`（服务器不认识这个节点）→ **拦**，提示"服务器缺少节点：<类名>"。
+///
+/// 本机 ComfyUI 实测：未知节点返回 **HTTP 200 + `{}`**，与网络失败混淆不得。
+class ObjectInfoFetchResult {
+  const ObjectInfoFetchResult._(this.status, this.spec);
+
+  /// 请求失败：拿不到任何信息，不能据此判断服务器认不认识这个节点。
+  const ObjectInfoFetchResult.failure()
+    : this._(ObjectInfoFetchStatus.failure, const {});
+
+  /// 服务器明确回应"没有这个节点"（200 + `{}`）。
+  const ObjectInfoFetchResult.empty()
+    : this._(ObjectInfoFetchStatus.empty, const {});
+
+  /// 拿到了定义。
+  const ObjectInfoFetchResult.ok(NodeSpec spec)
+    : this._(ObjectInfoFetchStatus.ok, spec);
+
+  final ObjectInfoFetchStatus status;
+
+  /// 参数定义；[status] 不是 `ok` 时为空 Map。
+  final NodeSpec spec;
+
+  /// 请求是否失败（等价于"我们不知道"）。
+  bool get isFailure => status == ObjectInfoFetchStatus.failure;
+
+  /// 服务器是否明确说"不认识这个节点"。
+  ///
+  /// ⚠️ 与 [isFailure] 是两回事：只有**确实问到了**才算缺失。
+  bool get isMissingOnServer => status == ObjectInfoFetchStatus.empty;
+
+  /// 是否拿到了定义。
+  bool get hasSpec => status == ObjectInfoFetchStatus.ok;
+
+  @override
+  String toString() => 'ObjectInfoFetchResult(${status.name}, ${spec.length})';
+}
 
 /// 取服务器上的节点说明书（ComfyUI 的 `/object_info`）。
 ///
@@ -253,15 +338,28 @@ class ObjectInfoService {
     if (raw is! List || raw.isEmpty) return null;
     final type = raw[0];
     final meta = raw.length > 1 ? raw[1] : null;
+    final advanced = _isAdvanced(meta);
+
+    // 把服务器给的原始选项转成「(显示串, 原始值)」对。
+    // ⚠️ 必须同步过滤空串，否则 options 与 rawOptions 的下标会错位。
+    final pairs = <({String display, dynamic raw})>[];
+    void collect(List<dynamic> list) {
+      for (final e in list) {
+        final display = e?.toString() ?? '';
+        if (display.isEmpty) continue;
+        pairs.add((display: display, raw: e));
+      }
+    }
 
     // 形态 A：选项直接就是一个列表 —— ["euler","heun",…]
     if (type is List) {
+      collect(type);
       return NodeInputSpec(
         isCombo: true,
-        options: type
-            .map((e) => e?.toString() ?? '')
-            .where((e) => e.isNotEmpty)
-            .toList(),
+        declaredType: 'COMBO',
+        advanced: advanced,
+        options: pairs.map((p) => p.display).toList(),
+        rawOptions: pairs.map((p) => p.raw).toList(),
       );
     }
 
@@ -273,14 +371,15 @@ class ObjectInfoService {
       if (rawOptions is! List) {
         // 声明了 COMBO 却没给选项：不猜，当成没数据。
         // 否则空列表会被当成「服务器上一个都没有」，误拦提交。
-        return const NodeInputSpec(isCombo: false);
+        return NodeInputSpec(isCombo: false, declaredType: type);
       }
+      collect(rawOptions);
       return NodeInputSpec(
         isCombo: true,
-        options: rawOptions
-            .map((e) => e?.toString() ?? '')
-            .where((e) => e.isNotEmpty)
-            .toList(),
+        declaredType: type,
+        advanced: advanced,
+        options: pairs.map((p) => p.display).toList(),
+        rawOptions: pairs.map((p) => p.raw).toList(),
       );
     }
 
@@ -288,6 +387,8 @@ class ObjectInfoService {
     if (type == 'INT' || type == 'FLOAT') {
       return NodeInputSpec(
         isCombo: false,
+        declaredType: type,
+        advanced: advanced,
         min: _asDouble(meta?['min']),
         max: _asDouble(meta?['max']),
         step: _asDouble(meta?['step']),
@@ -296,7 +397,16 @@ class ObjectInfoService {
 
     // 形态 C（COMFY_DYNAMICCOMBO_V3）与 STRING / 连线类型等，
     // 一律当作「没有下拉选项」。
-    return const NodeInputSpec(isCombo: false);
+    return NodeInputSpec(isCombo: false, declaredType: type, advanced: advanced);
+  }
+
+  /// 解析 `meta['advanced']`。说明书里它是 bool，宽松起见也认字符串 `'true'`。
+  ///
+  /// ⚠️ 只影响展示（如把高级参数折叠起来），**不参与**默认勾选判定（方案 §4）。
+  static bool _isAdvanced(dynamic meta) {
+    if (meta is! Map) return false;
+    final v = meta['advanced'];
+    return v == true || v == 'true';
   }
 
   /// 说明书里的数字可能是数字，也可能是字符串（实测 `max` 就有超 int64 的
@@ -308,22 +418,40 @@ class ObjectInfoService {
     return v == null || !v.isFinite ? null : v;
   }
 
-  /// 向服务器取一个节点的说明书。失败返回空 Map，不抛异常。
+  /// 向服务器取一个节点的说明书。**永不抛异常**。
+  ///
+  /// 返回三态（[ObjectInfoFetchResult]）：
+  /// - `failure` 请求没成功 —— 不知道服务器认不认识这个节点；
+  /// - `empty`   服务器 200 回了 `{}` —— **确实不认识**；
+  /// - `ok`      拿到了定义。
+  ///
+  /// ⚠️ 这三种状态不能合并。合并了，§3.7 的「缺节点拦 / 取数失败不拦」
+  /// 就只剩二选一，必然有一条是错的（详见 [ObjectInfoFetchResult] 注释）。
   ///
   /// [baseUrl] 是当前生效的服务器地址（主/备中连通的那个）。
-  Future<NodeSpec> fetchNodeSpec(String baseUrl, String classType) async {
-    if (baseUrl.isEmpty || classType.isEmpty) return const {};
+  Future<ObjectInfoFetchResult> fetchNodeSpec(
+    String baseUrl,
+    String classType,
+  ) async {
+    if (baseUrl.isEmpty || classType.isEmpty) {
+      return const ObjectInfoFetchResult.failure();
+    }
     try {
       final uri = Uri.parse(
         '$baseUrl/object_info/${Uri.encodeComponent(classType)}',
       );
       final response = await client.get(uri).timeout(timeout);
-      if (response.statusCode != 200) return const {};
-      return parseNodeSpec(response.body, classType);
+      if (response.statusCode != 200) {
+        return const ObjectInfoFetchResult.failure();
+      }
+      final spec = parseNodeSpec(response.body, classType);
+      return spec.isEmpty
+          ? const ObjectInfoFetchResult.empty()
+          : ObjectInfoFetchResult.ok(spec);
     } catch (_) {
-      // 超时 / 断网 / 服务器没这个节点 —— 都当作「没数据」。
+      // 超时 / 断网 / 服务器异常 —— 一律当作「没取到」。
       // 拿不到说明书不能让表单打不开，也不该弹任何错误。
-      return const {};
+      return const ObjectInfoFetchResult.failure();
     }
   }
 }

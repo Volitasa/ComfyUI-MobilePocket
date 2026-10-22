@@ -81,7 +81,7 @@ class ObjectInfoNotifier extends Notifier<ObjectInfoState> {
     var allResolved = true;
     for (var i = 0; i < todo.length; i += _maxConcurrent) {
       final batch = todo.skip(i).take(_maxConcurrent).toList();
-      final specs = await Future.wait(
+      final results = await Future.wait(
         batch.map(
           (classType) =>
               ObjectInfoService.instance.fetchNodeSpec(baseUrl, classType),
@@ -90,9 +90,10 @@ class ObjectInfoNotifier extends Notifier<ObjectInfoState> {
       for (var j = 0; j < batch.length; j++) {
         final classType = batch[j];
         _inFlight.remove(_key(serverId, classType));
-        if (specs[j].isEmpty) allResolved = false;
+        if (!results[j].hasSpec) allResolved = false;
         // 空的也写进去：否则下次进页面会再问一遍，白等一次超时。
-        state = state._withNode(serverId, classType, specs[j]);
+        // TODO(C3)：区分 failure（可重试）与 empty（服务器不认识，提交时拦下）。
+        state = state._withNode(serverId, classType, results[j].spec);
       }
     }
     return allResolved;
