@@ -458,6 +458,12 @@
   "@runChangeImage": { "description": "运行页：更换图片按钮" },
   "runPickImage": "选择图片",
   "@runPickImage": { "description": "运行页：选择图片按钮" },
+  "runFoldMenu": "展开与折叠",
+  "@runFoldMenu": { "description": "运行页：节点卡片展开/折叠菜单" },
+  "runExpandAll": "展开全部",
+  "@runExpandAll": { "description": "运行页：展开全部节点卡片" },
+  "runCollapseAll": "折叠全部",
+  "@runCollapseAll": { "description": "运行页：折叠全部节点卡片" },
 
   "parseStatusConnecting": "正在连接服务器…",
   "@parseStatusConnecting": { "description": "解析页：初始状态" },

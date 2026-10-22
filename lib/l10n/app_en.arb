@@ -197,6 +197,9 @@
   "runUsingServerImage": "Using image: {name}",
   "runChangeImage": "Change image",
   "runPickImage": "Choose image",
+  "runFoldMenu": "Expand / collapse",
+  "runExpandAll": "Expand all",
+  "runCollapseAll": "Collapse all",
 
   "parseStatusConnecting": "Connecting to the server...",
   "parseLoadTimeout": "Timed out loading the ComfyUI frontend. Check the server connection",

@@ -338,35 +338,60 @@ class _RunViewState extends ConsumerState<RunView> {
         final parsed = num.tryParse(value.text.trim());
         // 超出范围（或手输成了别的）时夹回边界，滑块必须有合法位置
         final current = (parsed ?? min).toDouble().clamp(min, max);
-        return Row(
+        // 滑块本身拖不出范围，但右手那个数值框可以手输 ——
+        // 越界一样要看得见，不能因为「有滑块」就不提示。
+        final error = _numberError(node);
+        final errorColor = Theme.of(context).colorScheme.error;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Slider(
-                value: current,
-                min: min,
-                max: max,
-                divisions: usableDivisions,
-                onChanged: (v) => controller.text = _fmtValue(v, decimal),
-              ),
-            ),
-            SizedBox(
-              width: 56,
-              child: TextField(
-                controller: controller,
-                textAlign: TextAlign.end,
-                keyboardType: decimal
-                    ? const TextInputType.numberWithOptions(decimal: true)
-                    : TextInputType.number,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 8,
+            Row(
+              children: [
+                Expanded(
+                  child: Slider(
+                    value: current,
+                    min: min,
+                    max: max,
+                    divisions: usableDivisions,
+                    onChanged: (v) => controller.text = _fmtValue(v, decimal),
                   ),
                 ),
-              ),
+                SizedBox(
+                  // 72 是「位数多一点的整数 + 小数」放得下的宽度；
+                  // 原来 56 遇到 1000000 这种就开始横向滚动了
+                  width: 72,
+                  child: TextField(
+                    controller: controller,
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(fontSize: 13),
+                    keyboardType: decimal
+                        ? const TextInputType.numberWithOptions(decimal: true)
+                        : TextInputType.number,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 8,
+                      ),
+                      enabledBorder: error == null
+                          ? null
+                          : OutlineInputBorder(
+                              borderSide: BorderSide(color: errorColor),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
             ),
+            if (error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, left: 4),
+                child: Text(
+                  error,
+                  style: TextStyle(fontSize: 11, color: errorColor),
+                ),
+              ),
           ],
         );
       },
@@ -718,6 +743,20 @@ class _RunViewState extends ConsumerState<RunView> {
     }
   }
 
+  /// 把全部节点卡片一次性展开或折叠：节点一多，先折叠看全貌比逐张点快得多。
+  void _setAllExpanded(bool expand) {
+    final ids = _formConfig.map((n) => n.id).toSet();
+    setState(() {
+      if (expand) {
+        _collapsedNodeIds.clear();
+        _expandedNodeIds.addAll(ids);
+      } else {
+        _expandedNodeIds.clear();
+        _collapsedNodeIds.addAll(ids);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final displayName = resolveWorkflowName(
@@ -725,6 +764,8 @@ class _RunViewState extends ConsumerState<RunView> {
       widget.workflowId,
       localLabel: AppLocalizations.of(context).workflowLocalImport,
     );
+    // 只有一张卡时「展开/折叠全部」没有意义，不摆
+    final hasManyCards = _formConfig.map((n) => n.id).toSet().length > 1;
 
     return Scaffold(
       appBar: AppBar(
@@ -733,6 +774,22 @@ class _RunViewState extends ConsumerState<RunView> {
           style: const TextStyle(fontSize: 16),
         ),
         actions: [
+          if (hasManyCards)
+            PopupMenuButton<bool>(
+              tooltip: AppLocalizations.of(context).runFoldMenu,
+              icon: const Icon(Icons.unfold_more),
+              onSelected: _setAllExpanded,
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: true,
+                  child: Text(AppLocalizations.of(context).runExpandAll),
+                ),
+                PopupMenuItem(
+                  value: false,
+                  child: Text(AppLocalizations.of(context).runCollapseAll),
+                ),
+              ],
+            ),
           // 只在表单里确实有模型/采样器下拉时才出现，纯提示词的工作流不该
           // 摆一个点不动的按钮。
           if (_optionClassTypes.isNotEmpty)
@@ -807,7 +864,7 @@ class _RunViewState extends ConsumerState<RunView> {
                             }),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
+                                horizontal: 12,
                                 vertical: 10,
                               ),
                               child: Row(
@@ -846,7 +903,7 @@ class _RunViewState extends ConsumerState<RunView> {
                           ),
                           if (expanded)
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                               child: Column(
                                 children: [
                                   const Divider(height: 1),
@@ -864,7 +921,7 @@ class _RunViewState extends ConsumerState<RunView> {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
@@ -986,6 +1043,11 @@ class _RunViewState extends ConsumerState<RunView> {
 
   /// 单个参数：别名 + 参数键 chip + 控件
   Widget _buildParamBlock(WorkflowNode node) {
+    // 布尔参数合成一行：别名 + 状态 + 开关。
+    // 分成「标签行 + 开关行」时，开关行的「开启/关闭」跟上面的别名说的是同一件事，
+    // 白占一行 40px，而开关本身已经把状态摆在那里了。
+    if (node.paramType == ParamType.boolType) return _buildBoolBlock(node);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1017,6 +1079,40 @@ class _RunViewState extends ConsumerState<RunView> {
         const SizedBox(height: 6),
         _buildInputControl(node),
       ],
+    );
+  }
+
+  /// 布尔参数的一行版：别名在左、状态小字在右、开关收尾。
+  Widget _buildBoolBlock(WorkflowNode node) {
+    final k = nodeParamKey(node.id, node.key);
+    final on = _widgetValues[k] == true;
+    final l = AppLocalizations.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            node.alias,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          on ? l.runBoolOn : l.runBoolOff,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        _boolSwitch(k),
+      ],
+    );
+  }
+
+  /// 开关本身。单独抽出来是为了让「参数块」与「一行版」共用同一份状态读写，
+  /// 不至于两处各写一份 setState。
+  Widget _boolSwitch(String k) {
+    return Switch(
+      value: _widgetValues[k] == true,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      onChanged: (val) => setState(() => _widgetValues[k] = val),
     );
   }
 
@@ -1063,11 +1159,16 @@ class _RunViewState extends ConsumerState<RunView> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
+            const SizedBox(width: 8),
+            // 只留图标：带文字的按钮在窄屏会把种子输入框挤成一条缝，
+            // 而这一行里真正要看的是那串数字。
+            IconButton(
               onPressed: () => _generateSeed(k),
-              icon: const Icon(Icons.casino, size: 18),
-              label: Text(AppLocalizations.of(context).runRandom),
+              icon: const Icon(Icons.casino, size: 20),
+              tooltip: AppLocalizations.of(context).runRandom,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
             ),
           ],
         );
@@ -1076,17 +1177,8 @@ class _RunViewState extends ConsumerState<RunView> {
       case ParamType.float:
         return _numberField(node, decimal: true, hint: l10n.runFloatHint);
       case ParamType.boolType:
-        return SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(
-            (_widgetValues[k] == true)
-                ? AppLocalizations.of(context).runBoolOn
-                : AppLocalizations.of(context).runBoolOff,
-            style: const TextStyle(fontSize: 14),
-          ),
-          value: _widgetValues[k] == true,
-          onChanged: (val) => setState(() => _widgetValues[k] = val),
-        );
+        // 正常路径走 _buildBoolBlock（别名与开关并成一行），这里只留开关本身
+        return Align(alignment: Alignment.centerLeft, child: _boolSwitch(k));
       case ParamType.enumType:
         // 拿到服务器的真实选项时，下拉里**只有**真实选项 ——
         // 工作流里写的那个模型如果服务器上没有，就不再塞进选项里凑数，

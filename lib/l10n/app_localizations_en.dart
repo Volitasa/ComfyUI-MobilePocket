@@ -601,6 +601,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get runPickImage => 'Choose image';
 
   @override
+  String get runFoldMenu => 'Expand / collapse';
+
+  @override
+  String get runExpandAll => 'Expand all';
+
+  @override
+  String get runCollapseAll => 'Collapse all';
+
+  @override
   String get parseStatusConnecting => 'Connecting to the server...';
 
   @override

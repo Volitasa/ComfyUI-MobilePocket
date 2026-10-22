@@ -1148,6 +1148,24 @@ abstract class AppLocalizations {
   /// **'选择图片'**
   String get runPickImage;
 
+  /// 运行页：节点卡片展开/折叠菜单
+  ///
+  /// In zh, this message translates to:
+  /// **'展开与折叠'**
+  String get runFoldMenu;
+
+  /// 运行页：展开全部节点卡片
+  ///
+  /// In zh, this message translates to:
+  /// **'展开全部'**
+  String get runExpandAll;
+
+  /// 运行页：折叠全部节点卡片
+  ///
+  /// In zh, this message translates to:
+  /// **'折叠全部'**
+  String get runCollapseAll;
+
   /// 解析页：初始状态
   ///
   /// In zh, this message translates to:

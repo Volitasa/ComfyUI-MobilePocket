@@ -382,4 +382,95 @@ void main() {
       expect(find.text('20'), findsWidgets);
     });
   });
+
+  group('运行页：密度与卡片', () {
+    String intRangeBody(String classType, String key, int min, int max) =>
+        jsonEncode({
+          classType: {
+            'input': {
+              'required': {
+                key: [
+                  'INT',
+                  {'default': 20, 'min': min, 'max': max},
+                ],
+              },
+            },
+          },
+        });
+
+    List<Map<String, dynamic>> oneParam(
+      String key,
+      String alias,
+      String paramType,
+      dynamic value,
+    ) => [
+      {
+        'id': '3',
+        'classType': 'KSampler',
+        'key': key,
+        'alias': alias,
+        'exposed': true,
+        'title': '',
+        'paramType': paramType,
+        'options': <String>[],
+        'value': value,
+      },
+    ];
+
+    testWidgets('布尔参数与别名同一行', (tester) async {
+      await _pumpRunView(
+        tester,
+        mapping: oneParam('enabled', '启用高清修复', 'boolType', true),
+      );
+
+      expect(find.byType(Switch), findsOneWidget);
+      // 旧的 SwitchListTile 会自己带一行「开启 / 关闭」标题，白白多占 40px
+      expect(find.byType(SwitchListTile), findsNothing);
+
+      // 同一行：别名与开关的中心点在同一高度上
+      final aliasY = tester.getCenter(find.text('启用高清修复')).dy;
+      final switchY = tester.getCenter(find.byType(Switch)).dy;
+      expect((aliasY - switchY).abs(), lessThan(1.0));
+    });
+
+    testWidgets('随机种子只留图标，不再用带文字的按钮挤输入框', (tester) async {
+      await _pumpRunView(tester, mapping: oneParam('seed', '随机种子', 'seed', 42));
+
+      expect(find.byTooltip('随机'), findsOneWidget);
+      // 按钮文字版会把输入框挤窄，现在只留图标（提示走 tooltip）
+      expect(find.text('随机'), findsNothing);
+    });
+
+    testWidgets('滑块模式下手输越界也要提示', (tester) async {
+      _installServer({'KSampler': intRangeBody('KSampler', 'steps', 1, 100)});
+      await _pumpRunView(
+        tester,
+        mapping: oneParam('steps', '采样步数', 'intType', 20),
+      );
+
+      expect(find.byType(Slider), findsOneWidget);
+
+      // 滑块拖不出范围，但右边的数值框能手输
+      await tester.enterText(find.byType(TextField).first, '999');
+      await tester.pump();
+
+      expect(find.text('范围 1 – 100'), findsOneWidget);
+    });
+
+    testWidgets('节点多于一张卡时提供折叠全部', (tester) async {
+      _installServer({});
+      // 默认配置两个节点（大模型 + 采样器）
+      await _pumpRunView(tester);
+
+      expect(find.byTooltip('展开与折叠'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('展开与折叠'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('折叠全部'));
+      await tester.pumpAndSettle();
+
+      // 折叠后卡片里的控件都不在了，只剩卡头
+      expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    });
+  });
 }

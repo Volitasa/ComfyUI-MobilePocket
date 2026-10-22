@@ -589,6 +589,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get runPickImage => '选择图片';
 
   @override
+  String get runFoldMenu => '展开与折叠';
+
+  @override
+  String get runExpandAll => '展开全部';
+
+  @override
+  String get runCollapseAll => '折叠全部';
+
+  @override
   String get parseStatusConnecting => '正在连接服务器…';
 
   @override
