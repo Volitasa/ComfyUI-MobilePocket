@@ -124,6 +124,17 @@
   "configSelectedCount": "{count}/{total} selected",
   "configParamCount": "{total} parameters",
   "configSaveButton": "Save form configuration",
+  "configSpecsFetching": "Fetching node info...",
+  "@configSpecsFetching": { "description": "Config: fetching node specs from server" },
+  "configSpecsDegraded": "Node info unavailable; controls inferred from parameter names",
+  "@configSpecsDegraded": { "description": "Config: degraded after spec fetch failure/timeout" },
+  "configNodeMissingOnServer": "Missing node on server: {classType}",
+  "@configNodeMissingOnServer": {
+    "description": "Config: node class not found on server",
+    "placeholders": { "classType": { "type": "String" } }
+  },
+  "configParamMissingOnServer": "Parameter not found on server",
+  "@configParamMissingOnServer": { "description": "Config: param missing from node spec" },
   "paramAliasHint": "e.g. description of the subject",
   "paramTypeText": "Text",
   "paramTypeSeed": "Seed",

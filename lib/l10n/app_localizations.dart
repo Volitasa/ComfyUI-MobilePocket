@@ -788,6 +788,30 @@ abstract class AppLocalizations {
   /// **'保存表单配置'**
   String get configSaveButton;
 
+  /// 配置页：正在向服务器取节点说明书
+  ///
+  /// In zh, this message translates to:
+  /// **'正在获取节点信息...'**
+  String get configSpecsFetching;
+
+  /// 配置页：取说明书失败或超时后的降级提示
+  ///
+  /// In zh, this message translates to:
+  /// **'未获取到服务器节点信息，已按参数名推断控件'**
+  String get configSpecsDegraded;
+
+  /// 配置页：该节点在服务器上不存在
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器缺少节点：{classType}'**
+  String configNodeMissingOnServer(String classType);
+
+  /// 配置页：说明书里找不到该参数
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器上没有这个参数'**
+  String get configParamMissingOnServer;
+
   /// 配置页：别名输入框占位提示
   ///
   /// In zh, this message translates to:

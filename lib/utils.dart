@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import 'models/workflow_entry.dart';
@@ -125,6 +127,41 @@ bool isDefaultExposed(String key, String classType) {
 
 /// 参数在表单/控制器中的唯一键：同一节点可有多个参数，node.id 会冲突。
 String nodeParamKey(String nodeId, String key) => '$nodeId:$key';
+
+/// 配置页向服务器取节点说明书的**整体预算**（方案 §3.1）。
+///
+/// 超时即定型（已拿到的照常采用），顶部提示降级。说明书是加分项，
+/// 不能让配置页一直转圈等网络。
+const Duration kConfigSpecBudget = Duration(seconds: 2);
+
+/// 在 [budget] 内等 [task] 完成；超时返回 null。
+///
+/// ⚠️ 超时**不取消** [task] —— 请求仍在飞，结果回来后照常写进缓存
+/// （下次进页面直接命中）。既不会卡住当前页面，也不浪费那次请求。
+///
+/// ⚠️ 但超时用的 Timer **必须取消**：用 `Future.any([task, delayed])` 的话，
+/// task 先完成时那个 2 秒 Timer 还挂着，widget 树销毁后就会被测试框架
+/// 判为「Timer is still pending」，把所有含该页面的组件测试一起拖挂。
+Future<T?> waitWithin<T>(Future<T> task, Duration budget) {
+  final completer = Completer<T?>();
+  final timer = Timer(budget, () {
+    if (!completer.isCompleted) completer.complete(null);
+  });
+
+  void finish(void Function() action) {
+    if (completer.isCompleted) return;
+    timer.cancel();
+    action();
+  }
+
+  task.then(
+    (value) => finish(() => completer.complete(value)),
+    onError: (Object error, StackTrace stack) =>
+        finish(() => completer.completeError(error, stack)),
+  );
+
+  return completer.future;
+}
 
 /// 把「会修改 provider 的动作」推到下一个事件再执行。
 ///

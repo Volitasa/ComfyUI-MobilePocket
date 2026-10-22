@@ -2,6 +2,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../models/workflow_node.dart';
 import '../utils.dart';
+import 'object_info_service.dart';
 
 /// 语义上一定是**小数**的参数名。
 ///
@@ -107,6 +108,33 @@ class NodeRule {
   final Set<String>? defaultExposedKeys;
 
   bool matches(String classType) => classTypes.contains(classType);
+}
+
+/// 工作流与服务器说明书的「对不上」情况。**只在内存里，不落盘**（方案 §3.2）。
+///
+/// 存在的意义是配置页标黄：让用户知道某参数在服务器上可能不存在，
+/// 但**不阻止**勾选与提交（方案 §3.7：缺参数只标黄、不拦）。
+class SpecIssues {
+  const SpecIssues({
+    this.missingNodeTypes = const {},
+    this.missingParamKeys = const {},
+  });
+
+  /// 服务器不认识的节点类名（问到了，但响应是 `{}`）。
+  final Set<String> missingNodeTypes;
+
+  /// 说明书里找不到的参数，键为 `nodeParamKey(id, key)`。
+  final Set<String> missingParamKeys;
+
+  bool get isEmpty => missingNodeTypes.isEmpty && missingParamKeys.isEmpty;
+  bool get isNotEmpty => !isEmpty;
+
+  /// 该节点是否整个在服务器上不存在。
+  bool isNodeMissing(String classType) => missingNodeTypes.contains(classType);
+
+  /// 该参数是否在说明书里找不到。
+  bool isParamMissing(String nodeId, String key) =>
+      missingParamKeys.contains(nodeParamKey(nodeId, key));
 }
 
 /// 内置规则表。
@@ -260,6 +288,7 @@ class WorkflowNodeParser {
     Map<String, dynamic> jsonMap, {
     required AppLocalizations l,
     List<NodeRule>? rules,
+    Map<String, NodeSpec>? specs,
   }) {
     final nodes = <WorkflowNode>[];
 
@@ -288,6 +317,7 @@ class WorkflowNodeParser {
 
       resolved.forEach((key, type) {
         final rawValue = inputs[key];
+        final spec = specs?[classType]?[key];
         nodes.add(
           WorkflowNode(
             id: nodeId,
@@ -307,6 +337,13 @@ class WorkflowNodeParser {
                 ? enumOptions(rawValue)
                 : const [],
             value: normalizeValue(type, rawValue),
+            control: resolveControl(
+              key: key,
+              rawValue: rawValue,
+              paramType: type,
+              spec: spec,
+            ),
+            bounds: spec?.toBounds(),
           ),
         );
       });
@@ -324,9 +361,133 @@ class WorkflowNodeParser {
   /// 之所以不退回「没收录就只认 text/value」：那样过滤掉的从来不是噪音，
   /// 而是大量真实可调的社区节点参数（理由见 [NodeRule.keys]）。
   static bool _defaultExposed(NodeRule? rule, String key) {
-    if (rule == null) return highFreqParams.contains(key);
-    if (rule.keys == null || rule.defaultExposedKeys == null) return true;
-    return rule.defaultExposedKeys!.contains(key);
+    if (rule != null) {
+      // 节点规则：指定了集合就只勾集合内的；两个集合都没指定才全勾。
+      // ⚠️ 这里修掉了一个既存缺陷：原写法
+      // `if (rule.keys == null || rule.defaultExposedKeys == null) return true;`
+      // 会把「只给了 defaultExposedKeys、没给 keys」的规则短路成「全勾」，
+      // 与规则字面意思相反（ControlNetApplyAdvanced / IPAdapter /
+      // IPAdapterFaceID / IPAdapterNoise 四条规则中招）。
+      final defaults = rule.defaultExposedKeys ?? rule.keys;
+      if (defaults != null) return defaults.contains(key);
+      return true;
+    }
+    // 参数规则（任意节点通用）
+    return highFreqParams.contains(key);
+  }
+
+  /// 扫一遍工作流，收集出现过的**全部** `class_type`（去重、保持出现顺序）。
+  ///
+  /// 配置页用它决定「要向服务器问哪些节点的说明书」。
+  /// 口径与 [parse] 一致（只认带 `inputs` 的条目），避免问到解析时本就会跳过的东西。
+  static List<String> collectClassTypes(Map<String, dynamic> jsonMap) {
+    final types = <String>[];
+    final seen = <String>{};
+    jsonMap.forEach((_, nodeData) {
+      if (nodeData is! Map) return;
+      final classType = nodeData['class_type'] as String?;
+      final inputs = nodeData['inputs'] as Map<String, dynamic>?;
+      if (classType == null || inputs == null) return;
+      if (seen.add(classType)) types.add(classType);
+    });
+    return types;
+  }
+
+  /// 由「说明书声明 + 当前值 + 强制类型」决定这个参数该用什么控件（§3.4）。
+  ///
+  /// 判定顺序（**第 0 条自定义卡由调用方 `matchParamCard` 先行拦截**）：
+  /// 1. 图片参数 → [ParamControl.upload]（高于说明书结论，服务器说它是选择题也不听）
+  /// 2. `COMBO`   → [ParamControl.select]
+  /// 3. `BOOLEAN` → [ParamControl.toggle]
+  /// 4. `INT` / `FLOAT` 且档位 ≤ [kSliderMaxDivisions] → [ParamControl.slider]
+  /// 5. `INT` / `FLOAT` → [ParamControl.number]
+  /// 6. `STRING` → [ParamControl.text]
+  /// 7. 没有说明书 → 由 [ParamType] 推断
+  ///
+  /// ⚠️ 只在**配置页**调用一次；运行页只读落盘的 `control`，因此
+  /// 运行页的控件形态不会随网络结果变化（§1.1 原则 1 / 2）。
+  ///
+  /// [sliderAllowed] 为 false 时滑块一律降级为数值框（两列布局用）。
+  static ParamControl? resolveControl({
+    required String key,
+    required dynamic rawValue,
+    required ParamType? paramType,
+    NodeInputSpec? spec,
+    bool sliderAllowed = true,
+  }) {
+    // 1) 图片上传：永远优先于说明书结论
+    if (kImageParamKeys.contains(key) && rawValue is String) {
+      return ParamControl.upload;
+    }
+
+    switch (spec?.declaredType) {
+      case 'COMBO':
+        // 声明了 COMBO 却没给选项 → 不当下拉，落到第 7 条按 paramType 推断
+        if (spec!.isCombo) return ParamControl.select;
+        break;
+      case 'BOOLEAN':
+        return ParamControl.toggle;
+      case 'INT':
+      case 'FLOAT':
+        final d = spec!.divisionsFor(decimal: paramType == ParamType.float);
+        if (d != null && d <= kSliderMaxDivisions) {
+          return sliderAllowed ? ParamControl.slider : ParamControl.number;
+        }
+        return ParamControl.number;
+    }
+
+    // 7) 没有说明书（或声明无法识别）→ 按推断的类型给控件
+    return _controlFromParamType(paramType);
+  }
+
+  /// 由推断出的 [ParamType] 给出控件形态。
+  static ParamControl? _controlFromParamType(ParamType? type) {
+    switch (type) {
+      case ParamType.text:
+        return ParamControl.text;
+      case ParamType.seed:
+        return ParamControl.seed;
+      case ParamType.image:
+        return ParamControl.upload;
+      case ParamType.intType:
+      case ParamType.float:
+        return ParamControl.number;
+      case ParamType.boolType:
+        return ParamControl.toggle;
+      case ParamType.enumType:
+        return ParamControl.select;
+      case null:
+        return null;
+    }
+  }
+
+  /// 计算「服务器说明书里缺了什么」，供配置页标黄用（方案 §3.7）。
+  ///
+  /// ⚠️ **不落盘** —— 每次打开都能现算，存着还要管过期（方案 §3.2）。
+  /// 只统计**确实问到了**的情况：取数失败的一律不算缺失。
+  static SpecIssues computeIssues(
+    List<WorkflowNode> nodes,
+    Map<String, NodeSpec> specs,
+  ) {
+    final missingNodes = <String>{};
+    final missingParams = <String>{};
+
+    for (final n in nodes) {
+      final spec = specs[n.classType];
+      if (spec == null) continue; // 没问到 → 不知道，不算缺失
+      if (spec.isEmpty) {
+        missingNodes.add(n.classType); // 问到了但服务器不认识这个节点
+        continue;
+      }
+      if (!spec.containsKey(n.key)) {
+        missingParams.add(nodeParamKey(n.id, n.key));
+      }
+    }
+
+    return SpecIssues(
+      missingNodeTypes: missingNodes,
+      missingParamKeys: missingParams,
+    );
   }
 
   /// 参数类型判定优先级：强制类型 > 种子 > 上传框 > 按值推断。

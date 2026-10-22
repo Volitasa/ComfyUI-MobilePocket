@@ -393,6 +393,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get configSaveButton => '保存表单配置';
 
   @override
+  String get configSpecsFetching => '正在获取节点信息...';
+
+  @override
+  String get configSpecsDegraded => '未获取到服务器节点信息，已按参数名推断控件';
+
+  @override
+  String configNodeMissingOnServer(String classType) {
+    return '服务器缺少节点：$classType';
+  }
+
+  @override
+  String get configParamMissingOnServer => '服务器上没有这个参数';
+
+  @override
   String get paramAliasHint => '例如: 画面主体描述';
 
   @override

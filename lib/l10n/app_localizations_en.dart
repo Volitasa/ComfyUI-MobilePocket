@@ -402,6 +402,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get configSaveButton => 'Save form configuration';
 
   @override
+  String get configSpecsFetching => 'Fetching node info...';
+
+  @override
+  String get configSpecsDegraded =>
+      'Node info unavailable; controls inferred from parameter names';
+
+  @override
+  String configNodeMissingOnServer(String classType) {
+    return 'Missing node on server: $classType';
+  }
+
+  @override
+  String get configParamMissingOnServer => 'Parameter not found on server';
+
+  @override
   String get paramAliasHint => 'e.g. description of the subject';
 
   @override

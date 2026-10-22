@@ -59,9 +59,13 @@ void main() {
       expect(_exposed(nodes), contains('denoise'));
     });
 
-    test('规则没写 keys 但写了默认勾选时沿用「全部默认勾」，与改前一致', () {
-      // ControlNetApplyAdvanced 形态：keys 为 null、defaultExposedKeys 非 null。
-      // 收紧兜底不能顺手改掉这类节点的既有行为
+    test('只给了 defaultExposedKeys 的规则：只勾指定的那几个', () {
+      // ControlNetApplyAdvanced 形态：keys 为 null、defaultExposedKeys = {'strength'}。
+      //
+      // ⚠️ 这里锁的是**修掉的一个既存缺陷**：原写法
+      // `if (rule.keys == null || rule.defaultExposedKeys == null) return true;`
+      // 会把「只给了 defaultExposedKeys」的规则短路成「全勾」，与规则字面意思相反。
+      // 除本条外，IPAdapter / IPAdapterFaceID / IPAdapterNoise 三条规则同样中招。
       final nodes = WorkflowNodeParser.parse(
         _node('5', 'ControlNetApplyAdvanced', {
           'strength': 1,
@@ -70,7 +74,26 @@ void main() {
         }),
         l: l,
       );
-      expect(_exposed(nodes), _keys(nodes));
+      expect(_exposed(nodes), ['strength']);
+      // 其余参数照样可见，用户想调可以自己勾（只是不默认勾）
+      expect(_keys(nodes), contains('start_percent'));
+      expect(_keys(nodes), contains('end_percent'));
+    });
+
+    test('同时给了 keys 与 defaultExposedKeys：以 defaultExposedKeys 为准', () {
+      // Text Concatenate 形态：keys 三个、默认勾三个里的两个
+      final nodes = WorkflowNodeParser.parse(
+        _node('6', 'Text Concatenate', {
+          'delimiter': ',',
+          'clean_whitespace': true,
+          'text_a': 'a',
+          'text_b': 'b',
+        }),
+        l: l,
+      );
+      expect(_exposed(nodes), ['delimiter', 'text_a', 'text_b']);
+      // clean_whitespace 在 keys 里但不在默认勾选中 → 不勾
+      expect(_exposed(nodes), isNot(contains('clean_whitespace')));
     });
   });
 

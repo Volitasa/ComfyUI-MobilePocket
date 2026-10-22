@@ -7,6 +7,9 @@ import '../../providers/workflow_provider.dart';
 import '../../services/workflow_node_parser.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
+import '../../providers/connection_provider.dart';
+import '../../providers/object_info_provider.dart';
+import '../../services/object_info_service.dart';
 import '../../utils.dart';
 import '../widgets/compact_search_field.dart';
 import '../widgets/param_config_tile.dart';
@@ -35,6 +38,15 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   final Set<String> _collapsedNodeIds = {};
   // 搜索关键字：只影响列表过滤，不改数据
   String _keyword = '';
+
+  /// 本次拿到的服务器说明书（classType → 定义）。**只放内存，不落盘**（方案 §3.2）。
+  Map<String, NodeSpec> _specs = const {};
+
+  /// 本次取数是否降级过（超时 / 拿不到）→ 顶部提示，不阻塞使用。
+  bool _specsDegraded = false;
+
+  /// 工作流与说明书对不上的地方（缺节点 / 缺参数），供标黄用。不落盘。
+  SpecIssues _specIssues = const SpecIssues();
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -89,6 +101,11 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   Future<void> _initData() async {
     final notifier = ref.read(workflowProvider.notifier);
 
+    // 三个分支只负责把「要解析的 JSON」弄到手，取说明书与解析统一放后面，
+    // 免得某条路径漏掉定型。
+    Map<String, dynamic>? jsonMap;
+    List<WorkflowNode>? savedConfig;
+
     if (_isSnapshotMode) {
       final snapshot = ref
           .read(snapshotProvider.notifier)
@@ -104,10 +121,8 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         return;
       }
       // 用快照里保存的配置作为「已保存配置」，不读线上的 mapping_
-      _parseWorkflow(
-        snapshot.workflowJson,
-        savedConfig: snapshot.mappingConfig,
-      );
+      jsonMap = snapshot.workflowJson;
+      savedConfig = snapshot.mappingConfig;
     } else if (_isLocal || _isParsed) {
       // 本地资产与解析缓存都持久化在本地，重启后依然可用
       final entry = _persisted;
@@ -132,7 +147,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
             .read(workflowProvider.notifier)
             .setWorkflowData(entry, workflowId: widget.workflowId),
       );
-      _parseWorkflow(entry);
+      jsonMap = entry;
     } else {
       final success = await notifier.fetchWorkflowContent(widget.workflowId);
       if (!success) {
@@ -145,13 +160,70 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         Navigator.pop(context);
         return;
       }
-      _parseWorkflow(ref.read(workflowProvider).currentWorkflowData!);
+      jsonMap = ref.read(workflowProvider).currentWorkflowData!;
     }
+
+    // 取服务器说明书（§3.1）：扫出全部 class_type → 去重 → 并发取 → 整体预算 2s。
+    // 取齐才解析；超预算就按已拿到的定型，绝不让页面一直转圈。
+    _specs = await _loadSpecs(jsonMap);
+    _parseWorkflow(jsonMap, savedConfig: savedConfig);
+    _specIssues = WorkflowNodeParser.computeIssues(_extractableNodes, _specs);
 
     if (!mounted) return;
     setState(() {
       _isReady = true;
     });
+  }
+
+  /// 向服务器取本工作流用到的节点说明书（§3.1）。
+  ///
+  /// 按 `class_type` 去重后并发取（provider 内部并发 4），整体预算
+  /// [kConfigSpecBudget]。**超时即定型**：已返回的部分照常采用，
+  /// 未返回的按 §3.3 保留旧 `control`（有旧值）或走推断（没有旧值）。
+  ///
+  /// 拿不到说明书不能让表单打不开，也不该弹任何错误。
+  Future<Map<String, NodeSpec>> _loadSpecs(
+    Map<String, dynamic> jsonMap,
+  ) async {
+    final classTypes = WorkflowNodeParser.collectClassTypes(jsonMap);
+    if (classTypes.isEmpty) return const {};
+
+    final config = ref.read(connectionProvider);
+    final baseUrl = config.comfyUrl;
+    final serverId = config.activeServerId;
+    if (!config.isConnected ||
+        baseUrl.isEmpty ||
+        serverId == null ||
+        serverId.isEmpty) {
+      _specsDegraded = true;
+      return const {};
+    }
+
+    var completed = false;
+    // 让出当前帧再写 provider：_initData 可能由 didChangeDependencies 同步触发。
+    final task = () async {
+      await scheduleProviderWrite(() async {
+        await ref.read(objectInfoProvider.notifier).ensureLoaded(
+          serverId: serverId,
+          baseUrl: baseUrl,
+          classTypes: classTypes,
+        );
+      });
+      completed = true;
+    }();
+
+    // 整体预算：超时就走，不等了。
+    // 请求仍在飞，回来后会写进缓存，下次进页面直接命中。
+    final finished = await waitWithin(task, kConfigSpecBudget);
+
+    // ⚠️ 超时不是失败：已返回的那部分照常采用（§3.3），只提示降级。
+    if (finished == null || !completed) _specsDegraded = true;
+
+    final state = ref.read(objectInfoProvider);
+    return <String, NodeSpec>{
+      for (final t in classTypes)
+        if (state.hasNode(serverId, t)) t: state.byServer[serverId]![t]!,
+    };
   }
 
   void _parseWorkflow(
@@ -160,6 +232,9 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
     /// 直接指定「已保存配置」（快照模式用），优先级高于从 prefs 读
     List<WorkflowNode>? savedConfig,
+
+    /// 服务器说明书（classType → 定义）。仅用于定型，不落盘。
+    Map<String, NodeSpec>? specs,
   }) {
     // 解析规则已抽到 services/workflow_node_parser.dart：
     // 那边是一张手写的数据化规则表（认哪些节点 / 暴露哪些参数 / 各是什么类型），
@@ -167,6 +242,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     final nodes = WorkflowNodeParser.parse(
       jsonMap,
       l: AppLocalizations.of(context),
+      specs: specs,
     );
 
     // 默认优先使用历史保存的配置，但以最新解析为基准做合并：
@@ -195,16 +271,20 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
             // 让新的默认别名（真实参数名）生效 —— 重新保存一次配置即可自愈。
             final customizedAlias =
                 saved.alias.isNotEmpty && saved.alias != saved.title;
-            return WorkflowNode(
-              id: n.id,
-              classType: n.classType,
-              key: n.key,
+
+            // ⚠️ 必须用 copyWith：手工构造只传旧字段会静默清空
+            // `control` / `bounds`（方案 §8.1 陷阱 1）。
+            final merged = n.copyWith(
               alias: customizedAlias ? saved.alias : n.alias,
               exposed: saved.exposed,
-              title: n.title,
-              paramType: n.paramType,
-              options: n.options,
-              value: n.value,
+            );
+
+            // 参数集合 / paramType / 当前值取新解析（保证旧配置自动补齐新参数、
+            // 类型不回退）；`control` / `bounds` 本次取到说明书就用新的，
+            // 没取到则保留旧值 —— 不能把服务器结论降级成推断（§3.3）。
+            return merged.copyWith(
+              control: n.control ?? saved.control,
+              bounds: n.bounds ?? saved.bounds,
             );
           }).toList();
         }
@@ -223,6 +303,9 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     });
 
     // 快照用快照里的 JSON；本地从本地库读；线上则重新拉取最新内容
+    // （与 _initData 同一套路：先只管把 JSON 弄到手，取数与解析统一放后面）
+    Map<String, dynamic>? jsonMap;
+
     if (_isSnapshotMode) {
       final snapshot = ref
           .read(snapshotProvider.notifier)
@@ -237,7 +320,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         );
         return;
       }
-      _parseWorkflow(snapshot.workflowJson, useSavedConfig: false);
+      jsonMap = snapshot.workflowJson;
     } else if (_isLocal || _isParsed) {
       final entry = _persisted;
       if (entry == null) {
@@ -259,7 +342,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
             .read(workflowProvider.notifier)
             .setWorkflowData(entry, workflowId: widget.workflowId),
       );
-      _parseWorkflow(entry, useSavedConfig: false);
+      jsonMap = entry;
     } else {
       final ok = await ref
           .read(workflowProvider.notifier)
@@ -274,11 +357,13 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         );
         return;
       }
-      _parseWorkflow(
-        ref.read(workflowProvider).currentWorkflowData!,
-        useSavedConfig: false,
-      );
+      jsonMap = ref.read(workflowProvider).currentWorkflowData!;
     }
+
+    // 与 _initData 同样的定型流程（重新解析也要重新问一次服务器）
+    _specs = await _loadSpecs(jsonMap);
+    _parseWorkflow(jsonMap, useSavedConfig: false);
+    _specIssues = WorkflowNodeParser.computeIssues(_extractableNodes, _specs);
 
     if (!mounted) return;
     // 清掉旧的别名控制器，避免与新解析出的节点错位
@@ -326,23 +411,47 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         aliasHint: AppLocalizations.of(context).paramAliasHint,
         // 保存时用的是 node.alias，控制器文本必须回写，否则改了不生效
         onAliasChanged: (val) => node.alias = val,
+        warning: _warningFor(node),
       ),
     );
   }
 
+  /// 该参数的行级告警文案；没问题返回 null。
+  ///
+  /// ⚠️ 只标黄、**不拦** —— 缺参数通常只是服务器节点版本不同，
+  /// 照旧提交原值比拦下来更有用（方案 §3.7）。拦截逻辑在 C4。
+  String? _warningFor(WorkflowNode node) {
+    final l = AppLocalizations.of(context);
+    if (_specIssues.isNodeMissing(node.classType)) {
+      return l.configNodeMissingOnServer(node.classType);
+    }
+    if (_specIssues.isParamMissing(node.id, node.key)) {
+      return l.configParamMissingOnServer;
+    }
+    return null;
+  }
+
   // 配置面板里参数卡片的一行摘要：类型 + 当前值
   String _describeParam(WorkflowNode node, AppLocalizations l) {
-    final typeName =
-        {
-          ParamType.text: l.paramTypeText,
-          ParamType.seed: l.paramTypeSeed,
-          ParamType.image: l.paramTypeImage,
-          ParamType.intType: l.paramTypeInt,
-          ParamType.float: l.paramTypeFloat,
-          ParamType.boolType: l.paramTypeBool,
-          ParamType.enumType: l.paramTypeEnum,
-        }[node.paramType] ??
-        l.paramTypeDefault;
+    // ⚠️ 有 `control` 时按**控件形态**显示类型名，否则会出现
+    // 「摘要写着"文本"，运行页却是个下拉框」的不一致（方案 §8.1 陷阱 3）。
+    final control = node.control;
+    final String typeName;
+    if (control == ParamControl.select) {
+      typeName = l.paramTypeEnum;
+    } else {
+      typeName =
+          {
+            ParamType.text: l.paramTypeText,
+            ParamType.seed: l.paramTypeSeed,
+            ParamType.image: l.paramTypeImage,
+            ParamType.intType: l.paramTypeInt,
+            ParamType.float: l.paramTypeFloat,
+            ParamType.boolType: l.paramTypeBool,
+            ParamType.enumType: l.paramTypeEnum,
+          }[node.paramType] ??
+          l.paramTypeDefault;
+    }
 
     final v = node.value;
     String valueStr = '';
@@ -467,7 +576,9 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     if (!_isReady) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(AppLocalizations.of(context).configParsingTitle),
+          // 这一步是在向服务器问节点说明书（决定控件形态），
+          // 取不到会在 2s 后降级 —— 文案说清在等什么，别只写「解析中」
+          title: Text(AppLocalizations.of(context).configSpecsFetching),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -499,6 +610,24 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
           // 相互间距统一 8，避免三块各自一个边距。
           if (_extractableNodes.isNotEmpty) _buildSearchField(),
           if (_extractableNodes.isNotEmpty) _buildToolbar(),
+          // 取说明书超时 / 拿不到：形状是推断出来的，明确告诉用户，
+          // 但不阻塞勾选与保存（说明书只是加分项）。
+          if (_specsDegraded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 14, color: Colors.orange),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context).configSpecsDegraded,
+                      style: const TextStyle(color: Colors.orange, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Text(

@@ -16,6 +16,7 @@ class ParamConfigTile extends StatefulWidget {
     required this.aliasController,
     required this.aliasHint,
     this.onAliasChanged,
+    this.warning,
   });
 
   /// 行高：44 是紧凑与「点得中」的折中，不再往下压。
@@ -29,6 +30,16 @@ class ParamConfigTile extends StatefulWidget {
 
   /// 别名改动回写（保存配置时用的就是 `node.alias`，不是控制器里的文本）。
   final ValueChanged<String>? onAliasChanged;
+
+  /// 行级告警文案（如"服务器上没有这个参数"）。为空则不显示。
+  ///
+  /// ⚠️ 只标黄、**不拦** —— 缺参数通常只是服务器节点版本不同，
+  /// 照旧提交原值比拦下来更有用（方案 §3.7）。拦截逻辑在 C4。
+  final String? warning;
+
+  /// 行尾显示的小字：有告警时优先显示告警，否则显示类型与当前值摘要。
+  String get trailingText =>
+      (warning != null && warning!.isNotEmpty) ? warning! : summary;
 
   @override
   State<ParamConfigTile> createState() => _ParamConfigTileState();
@@ -106,21 +117,37 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
             ),
           ),
           // 当前值只占行尾一小段，长值截断，不把别名挤没；
-          // 编辑别名时整段让出去。
-          if (!_focused && widget.summary.isNotEmpty) ...[
+          // 编辑别名时整段让出去。有告警时行尾让给告警（黄色）。
+          if (!_focused && widget.trailingText.isNotEmpty) ...[
             const SizedBox(width: 8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 120),
-              child: Text(
-                widget.summary,
-                style: const TextStyle(
-                  fontSize: 11,
-                  height: 1.2,
-                  color: Colors.grey,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.end,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.warning != null &&
+                      widget.warning!.isNotEmpty) ...[
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 12,
+                      color: Colors.orange,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  Flexible(
+                    child: Text(
+                      widget.trailingText,
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.2,
+                        color: widget.warning != null ? Colors.orange : Colors.grey,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

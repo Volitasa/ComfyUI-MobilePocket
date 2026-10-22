@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../models/workflow_node.dart';
+
 /// 允许向服务器取真实选项的参数名。
 ///
 /// 范围刻意收得很窄：**只有模型节点的模型参数 + 采样器/调度器**。
@@ -34,6 +36,12 @@ const Set<String> kRangeParamKeys = {
 /// ⚠️ 它们**不参与**「服务器上没有这个值就拦提交」的判断 —— 那套只认
 /// [kDynamicOptionKeys]（模型 / 采样器），否则服务器版本不同就会误拦。
 const Set<String> kExtraComboKeys = {'type', 'device', 'weight_dtype'};
+
+/// 档位数上限：`(max - min) / step` 超过它就画数值输入框而不是滑块。
+///
+/// 见方案 §3.4 第 4 条。种子这类 max 是天文数字的参数，
+/// 画成滑块没有意义（拖一格跳几亿）。
+const int kSliderMaxDivisions = 100;
 
 const Set<String> kDynamicOptionKeys = {
   // 模型加载
@@ -171,6 +179,26 @@ class NodeInputSpec {
   /// 这类只有上下限、不画滑块。
   bool get hasSliderRange =>
       hasBounds && max!.abs() <= 1e9 && min!.abs() <= 1e9;
+
+  /// 档位数：`(max - min) / step`。拿不到可靠范围时返回 null。
+  ///
+  /// ⚠️ 只在**配置页定型**时算一次，用来判断「滑块还是输入框」（§3.4 第 4 条）。
+  /// 运行页**不许**再用它决定形态 —— 运行时刷新的 bounds 只用于越界提示与滑块刻度，
+  /// 否则档位数跨过阈值就会 number ↔ slider 跳变（违反 §1.1 原则 2）。
+  int? divisionsFor({required bool decimal}) {
+    if (!hasBounds) return null;
+    final s = (step != null && step! > 0) ? step! : (decimal ? 0.01 : 1);
+    if (s <= 0) return null;
+    final d = ((max! - min!) / s).round();
+    return d > 0 ? d : null;
+  }
+
+  /// 转成可落盘的 [ParamBounds]；没有可依据的范围时返回 null。
+  ///
+  /// ⚠️ `step` 原样保留（可能为 null）—— 兜底值由消费方按「是否小数」决定，
+  /// 不在这里把「没给 step」固化成一个猜测值。
+  ParamBounds? toBounds() =>
+      hasBounds ? ParamBounds(min: min, max: max, step: step) : null;
 
   /// 由显示值取**原始值**（保留 int / bool 等类型）；找不到时原样返回 [display]。
   ///

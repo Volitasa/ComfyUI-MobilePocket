@@ -304,6 +304,17 @@
   },
   "configSaveButton": "保存表单配置",
   "@configSaveButton": { "description": "配置页底部保存按钮" },
+  "configSpecsFetching": "正在获取节点信息...",
+  "@configSpecsFetching": { "description": "配置页：正在向服务器取节点说明书" },
+  "configSpecsDegraded": "未获取到服务器节点信息，已按参数名推断控件",
+  "@configSpecsDegraded": { "description": "配置页：取说明书失败或超时后的降级提示" },
+  "configNodeMissingOnServer": "服务器缺少节点：{classType}",
+  "@configNodeMissingOnServer": {
+    "description": "配置页：该节点在服务器上不存在",
+    "placeholders": { "classType": { "type": "String" } }
+  },
+  "configParamMissingOnServer": "服务器上没有这个参数",
+  "@configParamMissingOnServer": { "description": "配置页：说明书里找不到该参数" },
   "paramAliasHint": "例如: 画面主体描述",
   "@paramAliasHint": { "description": "配置页：别名输入框占位提示" },
   "paramTypeText": "文本",
