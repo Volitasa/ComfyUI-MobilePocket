@@ -217,7 +217,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('请先选择模型'), findsOneWidget);
+      expect(find.textContaining('请重新选择'), findsOneWidget);
     });
 
     testWidgets('选过一个真实模型后，标注消失', (tester) async {

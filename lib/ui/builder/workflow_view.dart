@@ -221,8 +221,15 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
     final state = ref.read(objectInfoProvider);
     return <String, NodeSpec>{
+      // 缓存里存的是 NodeSpecEntry（说明书 + 取数状态），定型只要规格那一半。
+      //
+      // ⚠️ **取数失败的条目必须排除**：它的 spec 也是空 Map，交给
+      // `computeIssues` 会被当成「服务器不认识这个节点」而误标黄。
+      // 空 spec 只有在**确实问到了**（status == empty）时才算缺节点（方案 §3.7）。
       for (final t in classTypes)
-        if (state.hasNode(serverId, t)) t: state.byServer[serverId]![t]!,
+        if (state.statusFor(serverId, t) != null &&
+            state.statusFor(serverId, t) != ObjectInfoFetchStatus.failure)
+          t: state.byServer[serverId]![t]!.spec,
     };
   }
 

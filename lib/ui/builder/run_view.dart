@@ -15,6 +15,7 @@ import '../../providers/ws_event_provider.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/object_info_provider.dart';
 import '../../services/object_info_service.dart';
+import '../../services/submit_check.dart';
 import '../../services/workflow_node_parser.dart';
 import '../../utils.dart';
 import '../main_screen.dart';
@@ -308,6 +309,17 @@ class _RunViewState extends ConsumerState<RunView> {
         .specFor(serverId, node.classType, node.key);
   }
 
+  /// 与 [_specFor] 相同，但用 `read` —— **构建之外**的路径（提交取值、收集参数）用。
+  ///
+  /// `ref.watch` 只能在 build 里调，放进按钮回调会直接断言失败。
+  NodeInputSpec? _specForRead(WorkflowNode node) {
+    final serverId = ref.read(connectionProvider).activeServerId;
+    if (serverId == null) return null;
+    return ref
+        .read(objectInfoProvider)
+        .specFor(serverId, node.classType, node.key);
+  }
+
   /// 数值输入框的红字提示。**只提示、不拦提交** —— 越界时让用户自己看见，
   /// 由他决定要不要改（有时就是要故意超范围试一下）。
   String? _numberError(WorkflowNode node) {
@@ -546,29 +558,23 @@ class _RunViewState extends ConsumerState<RunView> {
     );
   }
 
-  /// 拿到真实选项、但当前值不在其中的下拉 —— 也就是服务器上没有的那个模型。
+  /// 提交前的「服务器侧」检查（方案 §3.7）。返回**第一条**该拦下的问题。
   ///
-  /// 没拿到服务器数据时不算缺失：那只是我们不知道，不是服务器上没有。
-  List<WorkflowNode> _missingOnServerNodes() {
+  /// 判定规则全在 [checkBeforeSubmit] 里（纯函数、可单测），这里只负责
+  /// 把 provider 的取数状态、说明书、控件当前值喂给它。
+  SubmitBlock? _preSubmitIssue() {
     final serverId = ref.read(connectionProvider).activeServerId;
-    if (serverId == null) return const [];
+    if (serverId == null) return null;
 
-    final missing = <WorkflowNode>[];
-    for (final node in _formConfig) {
-      // 形态看 `control`（与运行页渲染同源），不再看推断出的 `paramType`
-      if (_controlFor(node, paired: false) != ParamControl.select) continue;
-      // 🔴 只拦模型 / 采样器类键：`type` / `device` / `weight_dtype` 这类
-      // 在不同服务器版本上选项本就会变，全拦会大面积误伤（方案 §3.7）。
-      if (!kDynamicOptionKeys.contains(node.key)) continue;
-      final spec = ref
-          .read(objectInfoProvider)
-          .specFor(serverId, node.classType, node.key);
-      if (spec == null || !spec.hasOptions) continue;
-      final current = _widgetValues[nodeParamKey(node.id, node.key)]
-          ?.toString();
-      if (!spec.contains(current)) missing.add(node);
-    }
-    return missing;
+    final objectInfo = ref.read(objectInfoProvider);
+    return checkBeforeSubmit(
+      config: _formConfig,
+      statusOf: (classType) => objectInfo.statusFor(serverId, classType),
+      specOf: (classType, key) => objectInfo.specFor(serverId, classType, key),
+      controlOf: (node) => _controlFor(node, paired: false),
+      currentOf: (node) =>
+          _widgetValues[nodeParamKey(node.id, node.key)]?.toString(),
+    );
   }
 
   /// 收集当前表单值，供「再次运行」预填
@@ -664,10 +670,17 @@ class _RunViewState extends ConsumerState<RunView> {
   // 把控件里的值解析成提交用的 Dart 类型（纯函数在 utils.dart，便于单测）
   dynamic _resolveValue(WorkflowNode node) {
     final k = nodeParamKey(node.id, node.key);
+    // ⚠️ 这里在 build 之外（按钮回调 / 收集参数），必须用 read 版取说明书：
+    // `ref.watch` 只能在 build 里用，放回调里会直接断言失败。
+    final spec = _specForRead(node);
     return resolveParamValue(
       node: node,
+      // 形态按 control 来 —— 与渲染同一个入口，两处不会打架
+      control: _controlFor(node, paired: false, spec: spec),
       text: _controllers[k]?.text ?? '',
       widgetValue: _widgetValues[k],
+      // 下拉提交原始值（`bit_depth` 选 8 提交整数 8，不是 "8"）
+      spec: spec,
     );
   }
 
@@ -685,11 +698,14 @@ class _RunViewState extends ConsumerState<RunView> {
     }
     final workflowData = wfState.currentWorkflowData!;
 
-    // 工作流里写的模型在服务器上已经没有了 → 先把人拦下来让他选一个。
+    // 服务器侧前置检查（方案 §3.7）：缺节点 / 缺选项先拦下来。
     // 不然请求发出去也是失败，服务器只会回一句看不懂的 node_errors。
-    if (_missingOnServerNodes().isNotEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l.runSelectModelFirst)));
+    final issue = _preSubmitIssue();
+    if (issue != null) {
+      final text = issue.classType != null
+          ? l.runNodeMissingOnServer(issue.classType!)
+          : l.runOptionMissingOnServer(issue.alias!);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
       return;
     }
 

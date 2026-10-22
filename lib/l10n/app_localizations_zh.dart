@@ -1151,7 +1151,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get runModelMissing => '服务器没有此模型';
 
   @override
-  String get runSelectModelFirst => '请先选择模型';
+  String runNodeMissingOnServer(String classType) {
+    return '服务器缺少节点：$classType';
+  }
+
+  @override
+  String runOptionMissingOnServer(String name) {
+    return '「$name」的当前值服务器上没有，请重新选择';
+  }
 
   @override
   String get runRefreshModels => '刷新模型列表';

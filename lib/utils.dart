@@ -4,6 +4,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import 'models/workflow_entry.dart';
 import 'models/workflow_node.dart';
+import 'services/object_info_service.dart';
 
 // 通用工具函数
 
@@ -259,34 +260,49 @@ bool isMeaningfulTitle(String title, String classType) {
 /// 把控件的当前状态解析成「要提交给服务器的值」。
 ///
 /// 抽成纯函数是为了能单测：这里最容易出的错是「界面看着改了、提交时没带上」。
-/// 典型就是「服务器说这是 COMBO 的 text 参数」（type / device / weight_dtype）——
-/// 它的选中值存在下拉状态里，不在文本控制器里，只看 text 就会把改动丢掉。
+///
+/// ⚠️ **必须按 [control] 分派，不能看 `node.paramType`**（方案 §3.6）。
+/// 两者会打架，而且是静默出错：参数值在工作流里是整数（`paramType == intType`）、
+/// 说明书却说是 COMBO 时，运行页渲染成下拉；`select` 不建
+/// `TextEditingController`，所以 [text] 恒为空 —— 若还按 `intType` 走
+/// `num.tryParse('')`，就会退回 `node.value`，**用户选的新值被丢掉且不报错**
+/// （`bit_depth: 8` + 选项 `["auto", 8, 10]`，选 10 提交的还是 8）。
+///
+/// [widgetValue] 是下拉 / 开关的当前值，[text] 是输入框里的文本。
+/// [spec] 只用来把下拉的**显示值**换成**原始值**：`bit_depth` 的
+/// `["auto", 8, 10]` 选 8 要提交整数 `8`，而不是字符串 `"8"`。
 dynamic resolveParamValue({
   required WorkflowNode node,
+  required ParamControl control,
   required String text,
   dynamic widgetValue,
+  NodeInputSpec? spec,
 }) {
-  switch (node.paramType) {
-    case ParamType.seed:
+  switch (control) {
+    case ParamControl.seed:
       final n = num.tryParse(text);
       return n?.round() ??
           (node.value is num ? (node.value as num).round() : 0);
-    case ParamType.intType:
+    case ParamControl.number:
+    case ParamControl.slider:
       // 解析不出来时退回工作流原值 —— 返回 null 会被提交给服务器，
       // 而服务端的报错信息完全看不出是这儿出的问题。
       final n = num.tryParse(text);
-      return n?.round() ?? node.value;
-    case ParamType.float:
-      final n = num.tryParse(text);
-      return n?.toDouble() ?? node.value;
-    case ParamType.boolType:
+      if (n == null) return node.value;
+      // 小数还是整数沿用推断出的 paramType（与输入框的小键盘、滑块刻度同源）
+      return node.paramType == ParamType.float ? n.toDouble() : n.round();
+    case ParamControl.toggle:
       return widgetValue ?? false;
-    case ParamType.enumType:
-      return widgetValue;
-    case ParamType.text:
+    case ParamControl.select:
+      // 下拉提交**原始值**：显示的是 `toString()` 后的串，服务器要的是原类型。
+      // rawOf 找不到时原样返回显示值，不会把值弄丢。
+      return spec?.rawOf(widgetValue?.toString()) ?? widgetValue;
+    case ParamControl.upload:
+      // 图片另走上传分支（`_handleExecute` 里判 upload）；
+      // 走到这儿说明没人重新选图，保留服务器上那个文件名。
+      return widgetValue ?? text;
+    case ParamControl.text:
       // 有些 text 参数其实是服务器的 COMBO，选中值在 widgetValue 里
       return widgetValue ?? text;
-    case ParamType.image:
-      return text;
   }
 }

@@ -2,6 +2,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/object_info_service.dart';
 
+/// 一个节点的一次取数结果：**说明书 + 它是怎么来的**。
+///
+/// ⚠️ `spec` 单独存不下来三态 —— `failure`（断网 / 超时）与 `empty`
+/// （服务器 200 返回 `{}`，即不认识这个节点）拿到的都是一张空 Map。
+/// 方案 §3.7 对这两种情况的处理**相反**（前者不拦、后者拦），
+/// 所以状态必须跟着说明书一起存，否则两态在 provider 层又被抹平。
+class NodeSpecEntry {
+  const NodeSpecEntry({required this.spec, required this.status});
+
+  final NodeSpec spec;
+  final ObjectInfoFetchStatus status;
+
+  /// 没取到（断网 / 超时 / 非 200）—— 我们**不知道**服务器认不认识这个节点。
+  bool get isFailure => status == ObjectInfoFetchStatus.failure;
+
+  /// 服务器明确说不认识这个节点（200 + `{}`）。
+  bool get isMissingOnServer => status == ObjectInfoFetchStatus.empty;
+}
+
 /// 节点说明书缓存：服务器 → 类名 → 参数名 → 定义。
 ///
 /// ⚠️ **只放内存，不落盘。** 实测一个 `LoadImage.image` 就是 139 项文件名，
@@ -13,30 +32,42 @@ import '../services/object_info_service.dart';
 class ObjectInfoState {
   const ObjectInfoState({this.byServer = const {}});
 
-  final Map<String, Map<String, NodeSpec>> byServer;
+  final Map<String, Map<String, NodeSpecEntry>> byServer;
 
   /// 该服务器的这个节点是否已经问过（问过但空的也算问过）。
   ///
   /// 「问过」与「问到了」是两回事：问过但没问到，意味着服务器不认识这个节点，
   /// 这时候绝不能反过来判定「服务器上没有这个模型」。
   bool hasNode(String serverId, String classType) =>
-      (byServer[serverId]?[classType]) != null;
+      byServer[serverId]?[classType] != null;
+
+  /// 这个节点的取数是**怎么**来的；null 表示还没问过。
+  ///
+  /// 提交前检查靠它区分「缺节点（拦）」与「取数失败（不拦）」（方案 §3.7）。
+  ObjectInfoFetchStatus? statusFor(String serverId, String classType) =>
+      byServer[serverId]?[classType]?.status;
 
   /// 取参数定义；没问过或没这个参数时返回 null。
   NodeInputSpec? specFor(String serverId, String classType, String key) =>
-      byServer[serverId]?[classType]?[key];
+      byServer[serverId]?[classType]?.spec[key];
 
-  ObjectInfoState _withNode(String serverId, String classType, NodeSpec spec) {
-    final server = Map<String, NodeSpec>.from(byServer[serverId] ?? const {});
-    server[classType] = spec;
+  ObjectInfoState _withNode(
+    String serverId,
+    String classType,
+    NodeSpecEntry entry,
+  ) {
+    final server = Map<String, NodeSpecEntry>.from(
+      byServer[serverId] ?? const {},
+    );
+    server[classType] = entry;
     return ObjectInfoState(
-      byServer: Map<String, Map<String, NodeSpec>>.from(byServer)
+      byServer: Map<String, Map<String, NodeSpecEntry>>.from(byServer)
         ..[serverId] = server,
     );
   }
 
   ObjectInfoState _withoutServer(String serverId) => ObjectInfoState(
-    byServer: Map<String, Map<String, NodeSpec>>.from(byServer)
+    byServer: Map<String, Map<String, NodeSpecEntry>>.from(byServer)
       ..remove(serverId),
   );
 }
@@ -92,7 +123,12 @@ class ObjectInfoNotifier extends Notifier<ObjectInfoState> {
         _inFlight.remove(_key(serverId, classType));
         if (!results[j].hasSpec) allResolved = false;
         // 空的也写进去：否则下次进页面会再问一遍，白等一次超时。
-        state = state._withNode(serverId, classType, results[j].spec);
+        // 但**状态要一起写**，否则「取数失败」与「服务器不认识」就分不开了。
+        state = state._withNode(
+          serverId,
+          classType,
+          NodeSpecEntry(spec: results[j].spec, status: results[j].status),
+        );
       }
     }
     return allResolved;
@@ -126,7 +162,11 @@ class ObjectInfoNotifier extends Notifier<ObjectInfoState> {
         final classType = batch[j];
         if (!results[j].hasSpec) allResolved = false;
         // 覆盖写入，不预清桶 —— 全程不出现「没有选项」的中间态。
-        state = state._withNode(serverId, classType, results[j].spec);
+        state = state._withNode(
+          serverId,
+          classType,
+          NodeSpecEntry(spec: results[j].spec, status: results[j].status),
+        );
       }
     }
     return allResolved;

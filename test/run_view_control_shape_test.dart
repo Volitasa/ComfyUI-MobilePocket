@@ -424,11 +424,11 @@ void main() {
       // 会标注「服务器上没有」，但……
       expect(find.text('服务器没有此模型'), findsOneWidget);
 
-      // ……提交照常放行（按钮没被禁用，也没弹「请先选择模型」）
+      // ……提交照常放行（按钮没被禁用，也没弹「请重新选择」）
       await tester.tap(find.text('立即生成'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
-      expect(find.text('请先选择模型'), findsNothing);
+      expect(find.textContaining('请重新选择'), findsNothing);
     });
 
     testWidgets('连进两次运行页，第二次下拉选项仍然刷新', (tester) async {

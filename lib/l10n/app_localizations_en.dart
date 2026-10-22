@@ -1195,7 +1195,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get runModelMissing => 'This model is not on the server';
 
   @override
-  String get runSelectModelFirst => 'Select a model first';
+  String runNodeMissingOnServer(String classType) {
+    return 'Missing node on server: $classType';
+  }
+
+  @override
+  String runOptionMissingOnServer(String name) {
+    return '$name is not on the server. Please choose another value.';
+  }
 
   @override
   String get runRefreshModels => 'Refresh model list';

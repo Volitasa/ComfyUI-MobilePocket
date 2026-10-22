@@ -399,8 +399,16 @@
   "@runSelectPlaceholder": { "description": "Run page: placeholder when no dropdown value is selected" },
   "runModelMissing": "This model is not on the server",
   "@runModelMissing": { "description": "Run page: the model in the workflow is missing on the server" },
-  "runSelectModelFirst": "Select a model first",
-  "@runSelectModelFirst": { "description": "Run page: submit blocked because the model is missing" },
+  "runNodeMissingOnServer": "Missing node on server: {classType}",
+  "@runNodeMissingOnServer": {
+    "description": "Run page: server does not know this node (fetched OK but empty)",
+    "placeholders": { "classType": { "type": "String" } }
+  },
+  "runOptionMissingOnServer": "{name} is not on the server. Please choose another value.",
+  "@runOptionMissingOnServer": {
+    "description": "Run page: dropdown value is not among server options",
+    "placeholders": { "name": { "type": "String" } }
+  },
   "runRefreshModels": "Refresh model list",
   "@runRefreshModels": { "description": "Run page: manually refetch server model list" },
   "runOptionsRefreshed": "Refreshed",

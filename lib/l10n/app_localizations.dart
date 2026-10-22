@@ -2156,11 +2156,17 @@ abstract class AppLocalizations {
   /// **'服务器没有此模型'**
   String get runModelMissing;
 
-  /// 运行页：提交时因模型不存在被拦下
+  /// 运行页：提交时服务器不认识该节点（取数成功但返回空）
   ///
   /// In zh, this message translates to:
-  /// **'请先选择模型'**
-  String get runSelectModelFirst;
+  /// **'服务器缺少节点：{classType}'**
+  String runNodeMissingOnServer(String classType);
+
+  /// 运行页：提交时下拉当前值不在服务器选项里
+  ///
+  /// In zh, this message translates to:
+  /// **'「{name}」的当前值服务器上没有，请重新选择'**
+  String runOptionMissingOnServer(String name);
 
   /// 运行页：手动重新拉取服务器模型列表
   ///

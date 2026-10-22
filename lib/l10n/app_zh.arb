@@ -800,8 +800,16 @@
   "@runSelectPlaceholder": { "description": "运行页：下拉未选中时的占位提示" },
   "runModelMissing": "服务器没有此模型",
   "@runModelMissing": { "description": "运行页：工作流里的模型在服务器上找不到" },
-  "runSelectModelFirst": "请先选择模型",
-  "@runSelectModelFirst": { "description": "运行页：提交时因模型不存在被拦下" },
+  "runNodeMissingOnServer": "服务器缺少节点：{classType}",
+  "@runNodeMissingOnServer": {
+    "description": "运行页：提交时服务器不认识该节点（取数成功但返回空）",
+    "placeholders": { "classType": { "type": "String" } }
+  },
+  "runOptionMissingOnServer": "「{name}」的当前值服务器上没有，请重新选择",
+  "@runOptionMissingOnServer": {
+    "description": "运行页：提交时下拉当前值不在服务器选项里",
+    "placeholders": { "name": { "type": "String" } }
+  },
   "runRefreshModels": "刷新模型列表",
   "@runRefreshModels": { "description": "运行页：手动重新拉取服务器模型列表" },
   "runOptionsRefreshed": "已刷新",
