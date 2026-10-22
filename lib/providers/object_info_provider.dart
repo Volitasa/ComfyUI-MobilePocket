@@ -92,7 +92,40 @@ class ObjectInfoNotifier extends Notifier<ObjectInfoState> {
         _inFlight.remove(_key(serverId, classType));
         if (!results[j].hasSpec) allResolved = false;
         // 空的也写进去：否则下次进页面会再问一遍，白等一次超时。
-        // TODO(C3)：区分 failure（可重试）与 empty（服务器不认识，提交时拦下）。
+        state = state._withNode(serverId, classType, results[j].spec);
+      }
+    }
+    return allResolved;
+  }
+
+  /// **写入式刷新**：不管缓存里有没有，都重取一遍并直接覆盖。
+  ///
+  /// 与 [ensureLoaded]（补缺式，已缓存就跳过）和 [refresh]（先清整桶再取）
+  /// 的区别是：这里全程**不出现空档**。
+  ///
+  /// ⚠️ 运行页首帧后刷新候选值必须用这个 —— 用 `refresh()` 会先把已有选项
+  /// 清成「只剩当前值」再刷回来，观感上闪一下（方案 §3.5）。
+  Future<bool> refreshInPlace({
+    required String serverId,
+    required String baseUrl,
+    required Iterable<String> classTypes,
+  }) async {
+    final todo = classTypes.where((t) => t.isNotEmpty).toList();
+    if (todo.isEmpty) return true;
+
+    var allResolved = true;
+    for (var i = 0; i < todo.length; i += _maxConcurrent) {
+      final batch = todo.skip(i).take(_maxConcurrent).toList();
+      final results = await Future.wait(
+        batch.map(
+          (classType) =>
+              ObjectInfoService.instance.fetchNodeSpec(baseUrl, classType),
+        ),
+      );
+      for (var j = 0; j < batch.length; j++) {
+        final classType = batch[j];
+        if (!results[j].hasSpec) allResolved = false;
+        // 覆盖写入，不预清桶 —— 全程不出现「没有选项」的中间态。
         state = state._withNode(serverId, classType, results[j].spec);
       }
     }

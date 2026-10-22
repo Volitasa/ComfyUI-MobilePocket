@@ -138,6 +138,13 @@ class NodeInputSpec {
   /// 为 false 时一律当作「没数据」，退回工作流里的当前值，不做任何校验。
   final bool isCombo;
 
+  /// 是否**拿到了可用的选项列表**（`options` 非空）。
+  ///
+  /// 与 [isCombo] 判据相同，说的是「有没有选项」而不是「服务器是不是声明成了
+  /// COMBO」—— 运行页判断「能不能以服务器选项为准」时用的是这一条，
+  /// 这样运行页里就不需要出现 `isCombo`（方案 §11 约束 7）。
+  bool get hasOptions => options.isNotEmpty;
+
   /// COMBO 的选项（**显示用字符串**）。可能为空（服务器上确实一个都没有）。
   final List<String> options;
 
@@ -425,7 +432,11 @@ class ObjectInfoService {
 
     // 形态 C（COMFY_DYNAMICCOMBO_V3）与 STRING / 连线类型等，
     // 一律当作「没有下拉选项」。
-    return NodeInputSpec(isCombo: false, declaredType: type, advanced: advanced);
+    return NodeInputSpec(
+      isCombo: false,
+      declaredType: type,
+      advanced: advanced,
+    );
   }
 
   /// 解析 `meta['advanced']`。说明书里它是 bool，宽松起见也认字符串 `'true'`。

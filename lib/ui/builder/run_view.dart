@@ -143,8 +143,12 @@ class _RunViewState extends ConsumerState<RunView> {
       // 预填优先，否则退回配置里保存的默认值
       final dynamic initial = hasInitial ? fromParams : node.value;
 
-      switch (node.paramType) {
-        case ParamType.seed:
+      // ⚠️ 按 `control` 分派，与渲染同源：`control` 说是开关就是开关，
+      // 哪怕 `paramType` 被推断成了 text（说明书声明 BOOLEAN、工作流里
+      // 却存成了字符串时就会这样）。否则开关读不到初值，明明工作流里
+      // 是「开」，首帧却显示成「关」。
+      switch (_controlFor(node, paired: false)) {
+        case ParamControl.seed:
           // 原样沿用：工作流本身可能就设了固定种子，且用户未必想换，
           // 替他随机反而是帮倒忙。只有完全没有初值时才生成。
           final seed = initial is int
@@ -156,21 +160,19 @@ class _RunViewState extends ConsumerState<RunView> {
             _generateSeed(k);
           }
           break;
-        case ParamType.text:
+        case ParamControl.text:
           _controllers[k] = TextEditingController(
             text: initial?.toString() ?? '',
           );
           break;
-        case ParamType.intType:
+        case ParamControl.number:
+        case ParamControl.slider:
           _controllers[k] = TextEditingController(text: _numToString(initial));
           break;
-        case ParamType.float:
-          _controllers[k] = TextEditingController(text: _numToString(initial));
+        case ParamControl.toggle:
+          _widgetValues[k] = _isTrueLike(initial);
           break;
-        case ParamType.boolType:
-          _widgetValues[k] = initial ?? false;
-          break;
-        case ParamType.enumType:
+        case ParamControl.select:
           // 下拉当前值：取 value，若为空则取 options 第一项
           final opts = node.options;
           final current = initial?.toString();
@@ -178,7 +180,7 @@ class _RunViewState extends ConsumerState<RunView> {
               ? current
               : (opts.isNotEmpty ? opts.first : (current ?? ''));
           break;
-        case ParamType.image:
+        case ParamControl.upload:
           // 图片初值为服务器上已有的文件名，仅作展示，不预载图片
           if (initial is String && initial.isNotEmpty) {
             _widgetValues[k] = initial;
@@ -221,21 +223,63 @@ class _RunViewState extends ConsumerState<RunView> {
 
   /// 本表单里，哪些下拉需要向服务器问真实选项（按所属节点类名去重）。
   ///
-  /// 只认模型类与采样类参数（名单见 [kDynamicOptionKeys]）：
-  /// 图片上传参数绝不在内，否则下拉会变成一串服务器文件名，用户就传不了新图了。
+  /// 新配置一律看 [WorkflowNode.control]：**凡是下拉都要问选项**。
+  /// 旧的键名名单（`kDynamicOptionKeys ∪ kExtraComboKeys`）只在「没有 `control`」
+  /// 的旧配置上兜底 —— 那份名单是「配置页还没定型」时代的启发式，必然漏键；
+  /// 现在形态已落盘就别再拿它当口径，否则 `aspect_ratio` / `color_space` /
+  /// `bit_depth` 这类被定成 `select` 的参数永远刷不回选项，
+  /// 下拉里只剩当前值一项，等于白定型（方案 §8.1 陷阱 5）。
+  ///
+  /// 图片上传参数不在内（它的 `control` 是 `upload`），否则下拉会变成一串
+  /// 服务器文件名，用户就传不了新图了。
   Set<String> _collectOptionClassTypes() {
     final types = <String>{};
     for (final node in _formConfig) {
-      if (node.paramType == ParamType.image) continue;
-      // 模型/采样器类键，加上「服务端是 COMBO、工作流里只有一串字符」的键，
-      // 都要问一次说明书 —— 前者决定下拉选项，后者决定控件形态。
-      if (!kDynamicOptionKeys.contains(node.key) &&
-          !kExtraComboKeys.contains(node.key)) {
-        continue;
+      final control = node.control;
+      if (control != null) {
+        if (control != ParamControl.select) continue;
+      } else {
+        // 旧配置：形态只能靠推断，`ckpt_name` 这种「推断成文本、服务端实为
+        // COMBO」的参数若不看名单就刷不到选项 —— 这里保留原行为。
+        if (node.paramType == ParamType.image) continue;
+        if (!kDynamicOptionKeys.contains(node.key) &&
+            !kExtraComboKeys.contains(node.key)) {
+          continue;
+        }
       }
       types.add(node.classType);
     }
     return types;
+  }
+
+  /// 这个参数该用什么控件 —— **运行页形态的唯一权威**（方案 §1.1 原则 2、§3.5）。
+  ///
+  /// 只读配置页落盘的 [WorkflowNode.control]，**不做任何网络查询**，
+  /// 因此取数成功 / 失败 / 取回不同版本，都不会让控件形态变一下。
+  ///
+  /// 旧配置、旧快照没有 `control` → 退回 [WorkflowNodeParser.resolveControl]
+  /// 现算一次：用的是配置页同一份判定表，所以不存在两页形态错配的窗口。
+  ///
+  /// [spec] 只在 `control` 为 null 时起作用（兜底推断要用）。build 路径传
+  /// [_specFor] 的结果；initState 里拿不到，传 null 即可。
+  ///
+  /// [paired] 为 true 表示占半列：半列宽放不下滑块，一律退回输入框。
+  ParamControl _controlFor(
+    WorkflowNode node, {
+    required bool paired,
+    NodeInputSpec? spec,
+  }) {
+    final resolved =
+        node.control ??
+        WorkflowNodeParser.resolveControl(
+          key: node.key,
+          rawValue: node.value,
+          paramType: node.paramType,
+          spec: spec,
+        ) ??
+        ParamControl.text;
+    if (paired && resolved == ParamControl.slider) return ParamControl.number;
+    return resolved;
   }
 
   /// 哪些节点需要为数值参数问 min/max（名单见 [kRangeParamKeys]）。
@@ -312,6 +356,10 @@ class _RunViewState extends ConsumerState<RunView> {
     required bool decimal,
     required String hint,
     bool paired = false,
+    // ⚠️ 是否允许画滑块，由配置页定好的 `control` 决定（方案 §8.1 约束 9）。
+    // 不能在这里再算一遍「档位够不够」—— 请求回来的 bounds 一变，
+    // 档位数跨过 100 就会让控件在输入框与滑块之间跳变。
+    bool allowSlider = true,
   }) {
     final k = nodeParamKey(node.id, node.key);
     final controller = _controllers[k];
@@ -319,7 +367,7 @@ class _RunViewState extends ConsumerState<RunView> {
 
     final spec = _specFor(node);
     // 半列宽放不下「滑块 + 数值」，两列时一律用输入框
-    if (!paired && _sliderUsable(spec, decimal)) {
+    if (allowSlider && !paired && _sliderUsable(spec, decimal)) {
       return _sliderField(node, controller, spec!, decimal: decimal);
     }
 
@@ -426,10 +474,16 @@ class _RunViewState extends ConsumerState<RunView> {
     return s == s.roundToDouble() ? s.toInt().toString() : s.toString();
   }
 
-  /// 进页面时问一次服务器，把下拉的真实选项取回来。
+  /// 进页面后问一次服务器，把下拉的真实选项取回来。
   ///
   /// 拿不到就当作没问过：界面退回原样（下拉里仍是工作流当前的那个值），
   /// 不弹错误、不卡住页面。
+  ///
+  /// ⚠️ **必须走写入式刷新，不能用 `ensureLoaded`**：后者是「补缺式」的
+  /// （缓存命中就跳过），连进两次页面第二次一个请求都不发，跟方案 §3.5
+  /// 「每次进入都重取」的承诺相反 —— 电脑上刚装的模型就永远拉不到。
+  /// 也不能用 `refresh()`：它会先把整桶清空，首帧的完整选项会先缩成
+  /// 「只剩当前值」再涨回去，观感上闪一下。
   void _ensureOptionData() {
     final classTypes = <String>{..._optionClassTypes, ..._rangeClassTypes};
     if (classTypes.isEmpty) return;
@@ -441,7 +495,7 @@ class _RunViewState extends ConsumerState<RunView> {
     scheduleProviderWrite(() {
       ref
           .read(objectInfoProvider.notifier)
-          .ensureLoaded(
+          .refreshInPlace(
             serverId: serverId,
             baseUrl: config.comfyUrl,
             classTypes: classTypes,
@@ -458,7 +512,7 @@ class _RunViewState extends ConsumerState<RunView> {
 
     final ok = await ref
         .read(objectInfoProvider.notifier)
-        .refresh(
+        .refreshInPlace(
           serverId: serverId,
           baseUrl: config.comfyUrl,
           classTypes: <String>{..._optionClassTypes, ..._rangeClassTypes},
@@ -480,9 +534,9 @@ class _RunViewState extends ConsumerState<RunView> {
         : ref
               .watch(objectInfoProvider)
               .specFor(serverId, node.classType, node.key);
-    // 只有「确实拿到了 COMBO 选项」才以服务器为准；
+    // 只有「确实拿到了选项」才以服务器为准；
     // 问过但没问到（服务器不认识这个节点）等同于没数据。
-    final usable = spec != null && spec.isCombo ? spec : null;
+    final usable = spec != null && spec.hasOptions ? spec : null;
 
     return resolveEnumOptions(
       hasServerData: usable != null,
@@ -501,12 +555,15 @@ class _RunViewState extends ConsumerState<RunView> {
 
     final missing = <WorkflowNode>[];
     for (final node in _formConfig) {
-      if (node.paramType != ParamType.enumType) continue;
+      // 形态看 `control`（与运行页渲染同源），不再看推断出的 `paramType`
+      if (_controlFor(node, paired: false) != ParamControl.select) continue;
+      // 🔴 只拦模型 / 采样器类键：`type` / `device` / `weight_dtype` 这类
+      // 在不同服务器版本上选项本就会变，全拦会大面积误伤（方案 §3.7）。
       if (!kDynamicOptionKeys.contains(node.key)) continue;
       final spec = ref
           .read(objectInfoProvider)
           .specFor(serverId, node.classType, node.key);
-      if (spec == null || !spec.isCombo) continue;
+      if (spec == null || !spec.hasOptions) continue;
       final current = _widgetValues[nodeParamKey(node.id, node.key)]
           ?.toString();
       if (!spec.contains(current)) missing.add(node);
@@ -519,7 +576,7 @@ class _RunViewState extends ConsumerState<RunView> {
     final params = <String, dynamic>{};
     for (final node in _formConfig) {
       final k = nodeParamKey(node.id, node.key);
-      if (node.paramType == ParamType.image) {
+      if (_controlFor(node, paired: false) == ParamControl.upload) {
         // 图片只记录服务端文件名（原图可能已被服务端清理）
         final v = _widgetValues[k];
         if (v is String && v.isNotEmpty) params[k] = v;
@@ -652,7 +709,7 @@ class _RunViewState extends ConsumerState<RunView> {
 
         final paramKey = nodeParamKey(node.id, node.key);
 
-        if (node.paramType == ParamType.image) {
+        if (_controlFor(node, paired: false) == ParamControl.upload) {
           // 图片：只有用户重新选择了本地图片才上传；否则沿用工作流里的原值
           final picked = _formData[paramKey];
           if (picked != null) {
@@ -1037,16 +1094,20 @@ class _RunViewState extends ConsumerState<RunView> {
 
   /// 能不能占半列：短控件才可以（数值、下拉、单行文本）。
   /// 布尔整行更好点、图片要宽度、种子带骰子按钮，都不并排。
+  ///
+  /// ⚠️ 判定改按 [ParamControl]（方案 §8.1 陷阱 2）：`paramType` 只是推断结果，
+  /// 而真正在屏幕上占多宽的是控件。比如 `type` / `device` 推断成 text、运行页却是
+  /// 下拉，两者判定口径不同就会导致「明明是短下拉却不并排」。
   bool _pairable(WorkflowNode node) {
-    switch (node.paramType) {
-      case ParamType.intType:
-      case ParamType.float:
-      case ParamType.enumType:
-      case ParamType.text:
+    switch (_controlFor(node, paired: false, spec: _specFor(node))) {
+      case ParamControl.number:
+      case ParamControl.slider:
+      case ParamControl.select:
+      case ParamControl.text:
         return true;
-      case ParamType.boolType:
-      case ParamType.seed:
-      case ParamType.image:
+      case ParamControl.upload:
+      case ParamControl.toggle:
+      case ParamControl.seed:
         return false;
     }
   }
@@ -1056,7 +1117,10 @@ class _RunViewState extends ConsumerState<RunView> {
     // 布尔参数合成一行：别名 + 状态 + 开关。
     // 分成「标签行 + 开关行」时，开关行的「开启/关闭」跟上面的别名说的是同一件事，
     // 白占一行 40px，而开关本身已经把状态摆在那里了。
-    if (node.paramType == ParamType.boolType) return _buildBoolBlock(node);
+    if (_controlFor(node, paired: paired, spec: _specFor(node)) ==
+        ParamControl.toggle) {
+      return _buildBoolBlock(node);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1187,26 +1251,52 @@ class _RunViewState extends ConsumerState<RunView> {
     final k = nodeParamKey(node.id, node.key);
     final l10n = AppLocalizations.of(context);
 
-    // 说明书写着 COMBO 就直接给下拉。
-    // 工作流 JSON 里 type / device / weight_dtype 只是一串字符，光看「值」推断
-    // 不出它是枚举，所以不能只按 paramType 决定控件形态。
-    // ⚠️ 图片上传参数永远例外 —— 那串文件名必须留给上传控件，
-    //    变成下拉用户就传不了新图了。
-    final spec = _specFor(node);
-    if (spec != null && spec.isCombo && !kImageParamKeys.contains(node.key)) {
-      // 非 enumType 的参数没有 _widgetValues 初值，这里补一次；
-      // _resolveValue 会优先读它，否则提交时会把下拉选的值丢掉。
-      // ⚠️ 必须取控制器里的文本（「再次运行」时它装着上次的预填值），
-      //    不能直接取 node.value —— 否则预填会被工作流原值顶掉。
-      _widgetValues.putIfAbsent(
-        k,
-        () => _controllers[k]?.text ?? node.value?.toString() ?? '',
-      );
-      return _enumControl(node);
-    }
-
-    switch (node.paramType) {
-      case ParamType.text:
+    // ⚠️ 形态的**唯一权威**是配置页定好的 `control`：运行页**只读它**，
+    // 请求回来的数据只能改「下拉候选值」和「校验用的 bounds」，
+    // 绝不能反过来改变控件（方案 §1.1 原则 1 / 2、§3.5）。
+    //
+    // 没有 `control`（升级前保存的旧配置 / 旧快照）时退回 `resolveControl`
+    // 现算一次 —— 用的是同一份判定表，所以不存在两页形态错配的窗口。
+    final control = _controlFor(node, paired: paired, spec: _specFor(node));
+    switch (control) {
+      case ParamControl.upload:
+        return _imageUploader(node);
+      case ParamControl.select:
+        // 非 enumType 的参数没有 _widgetValues 初值，这里补一次；
+        // _resolveValue 会优先读它，否则提交时会把下拉选的值丢掉。
+        // ⚠️ 必须取控制器里的文本（「再次运行」时它装着上次的预填值），
+        //    不能直接取 node.value —— 否则预填会被工作流原值顶掉。
+        _widgetValues.putIfAbsent(
+          k,
+          () => _controllers[k]?.text ?? node.value?.toString() ?? '',
+        );
+        return _enumControl(node);
+      case ParamControl.toggle:
+        _widgetValues.putIfAbsent(k, () => _isTrueLike(node.value));
+        return Align(alignment: Alignment.centerLeft, child: _boolSwitch(k));
+      case ParamControl.number:
+        return _numberField(
+          node,
+          decimal: node.paramType == ParamType.float,
+          hint: node.paramType == ParamType.float
+              ? l10n.runFloatHint
+              : l10n.runIntHint,
+          paired: paired,
+          allowSlider: false,
+        );
+      case ParamControl.slider:
+        return _numberField(
+          node,
+          decimal: node.paramType == ParamType.float,
+          hint: node.paramType == ParamType.float
+              ? l10n.runFloatHint
+              : l10n.runIntHint,
+          paired: paired,
+          allowSlider: true,
+        );
+      case ParamControl.seed:
+        return _seedControl(node);
+      case ParamControl.text:
         // 只有提示词类需要多行；`default`、`filename_prefix` 这种短值
         // 给两行纯粹是白占高度（按 key 判，不按内容判 —— 内容一变就得重建）
         final isPrompt = node.key == 'text' || node.key == 'value';
@@ -1219,126 +1309,132 @@ class _RunViewState extends ConsumerState<RunView> {
             hintText: AppLocalizations.of(context).runTextHint,
           ),
         );
-      case ParamType.seed:
-        return Row(
+    }
+  }
+
+  /// 图片上传卡：缩略图 96 + 两个按钮并排，不再把按钮压在图下面。
+  ///
+  /// ⚠️ 只要是图片参数就一定走这里（方案 §8.1 约束 3）：服务器说明书说它是
+  /// COMBO 也不听 —— 否则下拉里会是一串服务器文件名，用户就传不了新图了。
+  Widget _imageUploader(WorkflowNode node) {
+    final k = nodeParamKey(node.id, node.key);
+    final hasImage = _formData[k] != null;
+    final serverImage = _widgetValues[k] as String?;
+    final l = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasImage)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.memory(
+              _formData[k]['bytes'],
+              height: 96,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          )
+        else if (serverImage != null && serverImage.isNotEmpty) ...[
+          // 工作流自带的服务器图片：从 /view 拉预览
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              _serverImageUrl(serverImage),
+              height: 96,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                height: 96,
+                width: double.infinity,
+                color: Colors.grey.shade100,
+                child: const Center(
+                  child: Icon(Icons.broken_image, color: Colors.grey),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l.runUsingServerImage(serverImage),
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+        const SizedBox(height: 8),
+        Row(
           children: [
             Expanded(
-              child: TextField(
-                controller: _controllers[k],
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  isDense: true,
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
+              child: OutlinedButton.icon(
+                onPressed: () => _pickImage(k),
+                icon: const Icon(Icons.image, size: 18),
+                label: Text(hasImage ? l.runChangeImage : l.runPickImage),
               ),
             ),
-            const SizedBox(width: 8),
-            // 只留图标：带文字的按钮在窄屏会把种子输入框挤成一条缝，
-            // 而这一行里真正要看的是那串数字。
-            IconButton(
-              onPressed: () => _generateSeed(k),
-              icon: const Icon(Icons.casino, size: 20),
-              tooltip: AppLocalizations.of(context).runRandom,
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            ),
-          ],
-        );
-      case ParamType.intType:
-        return _numberField(
-          node,
-          decimal: false,
-          hint: l10n.runIntHint,
-          paired: paired,
-        );
-      case ParamType.float:
-        return _numberField(
-          node,
-          decimal: true,
-          hint: l10n.runFloatHint,
-          paired: paired,
-        );
-      case ParamType.boolType:
-        // 正常路径走 _buildBoolBlock（别名与开关并成一行），这里只留开关本身
-        return Align(alignment: Alignment.centerLeft, child: _boolSwitch(k));
-      case ParamType.enumType:
-        return _enumControl(node);
-      case ParamType.image:
-        // 图片卡：缩略图 96 + 两个按钮并排，不再把按钮压在图下面
-        final hasImage = _formData[k] != null;
-        final serverImage = _widgetValues[k] as String?;
-        final l = AppLocalizations.of(context);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (hasImage)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.memory(
-                  _formData[k]['bytes'],
-                  height: 96,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+            // 换了本地图之后还能退回工作流里那张
+            if (hasImage && serverImage != null && serverImage.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => setState(() => _formData.remove(k)),
+                  child: Text(l.runUseServerImage),
                 ),
-              )
-            else if (serverImage != null && serverImage.isNotEmpty) ...[
-              // 工作流自带的服务器图片：从 /view 拉预览
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  _serverImageUrl(serverImage),
-                  height: 96,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    height: 96,
-                    width: double.infinity,
-                    color: Colors.grey.shade100,
-                    child: const Center(
-                      child: Icon(Icons.broken_image, color: Colors.grey),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                l.runUsingServerImage(serverImage),
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                overflow: TextOverflow.ellipsis,
               ),
             ],
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pickImage(k),
-                    icon: const Icon(Icons.image, size: 18),
-                    label: Text(hasImage ? l.runChangeImage : l.runPickImage),
-                  ),
-                ),
-                // 换了本地图之后还能退回工作流里那张
-                if (hasImage &&
-                    serverImage != null &&
-                    serverImage.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => setState(() => _formData.remove(k)),
-                      child: Text(l.runUseServerImage),
-                    ),
-                  ),
-                ],
-              ],
-            ),
           ],
-        );
+        ),
+      ],
+    );
+  }
+
+  /// 种子：数字框 + 骰子按钮。
+  ///
+  /// 只留图标：带文字的按钮在窄屏会把种子输入框挤成一条缝，
+  /// 而这一行里真正要看的是那串数字。
+  Widget _seedControl(WorkflowNode node) {
+    final k = nodeParamKey(node.id, node.key);
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _controllers[k],
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              isDense: true,
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          onPressed: () => _generateSeed(k),
+          icon: const Icon(Icons.casino, size: 20),
+          tooltip: AppLocalizations.of(context).runRandom,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        ),
+      ],
+    );
+  }
+
+  /// 值是否算「真」：bool 直接判，数字非零为真，字符串认 true/yes/on/1。
+  ///
+  /// ⚠️ 只在一种情况下有意义：服务器说明书声明为 BOOLEAN，但工作流里
+  /// 写成了字符串或数字。此时 `paramType` 会被推断成 text，initState
+  /// 只建了文本控制器、没准备 `_widgetValues`，开关得自己兜个初值，
+  /// 否则明明工作流里是「开」，界面上却显示成「关」。
+  bool _isTrueLike(dynamic v) {
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) {
+      final s = v.trim().toLowerCase();
+      return s == 'true' || s == 'yes' || s == 'on' || s == '1';
     }
+    return false;
   }
 
   // 组装服务器图片的查看 URL（用于工作流自带参考图的预览）

@@ -182,9 +182,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   /// 未返回的按 §3.3 保留旧 `control`（有旧值）或走推断（没有旧值）。
   ///
   /// 拿不到说明书不能让表单打不开，也不该弹任何错误。
-  Future<Map<String, NodeSpec>> _loadSpecs(
-    Map<String, dynamic> jsonMap,
-  ) async {
+  Future<Map<String, NodeSpec>> _loadSpecs(Map<String, dynamic> jsonMap) async {
     final classTypes = WorkflowNodeParser.collectClassTypes(jsonMap);
     if (classTypes.isEmpty) return const {};
 
@@ -203,11 +201,13 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     // 让出当前帧再写 provider：_initData 可能由 didChangeDependencies 同步触发。
     final task = () async {
       await scheduleProviderWrite(() async {
-        await ref.read(objectInfoProvider.notifier).ensureLoaded(
-          serverId: serverId,
-          baseUrl: baseUrl,
-          classTypes: classTypes,
-        );
+        await ref
+            .read(objectInfoProvider.notifier)
+            .ensureLoaded(
+              serverId: serverId,
+              baseUrl: baseUrl,
+              classTypes: classTypes,
+            );
       });
       completed = true;
     }();
@@ -617,12 +617,19 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, size: 14, color: Colors.orange),
+                  const Icon(
+                    Icons.info_outline,
+                    size: 14,
+                    color: Colors.orange,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       AppLocalizations.of(context).configSpecsDegraded,
-                      style: const TextStyle(color: Colors.orange, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
