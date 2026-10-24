@@ -77,13 +77,29 @@ const Set<String> kImageParamKeys = {'image', 'image_path'};
 /// - 社区节点的类名五花八门，靠枚举类名必然漏，但
 ///   「某一类节点该暴露哪几个参数」是稳定的，适合写死。
 ///
-/// 每条规则只回答三个问题：认哪些类名、暴露哪些参数、参数各是什么类型。
+/// 参数的用途分类。**只用于界面分段**，不影响收录与默认勾选。
+///
+/// 规则表刻意不裁剪识别范围（见 [NodeRule.keys]），所以分类不是过滤器 ——
+/// 它只是给已经列出来的参数找一个好找的位置：提示词归提示词、采样归采样。
+/// 认不出来的落进 [other]，照样出现在列表末尾，一个都不少。
+enum ParamCategory {
+  prompt, // 提示词 / 文本
+  sampling, // 采样器、调度器
+  size, // 画布尺寸、放大
+  model, // 模型 / LoRA / 权重加载
+  control, // ControlNet、IPAdapter、换脸、去背等附加控制
+  other,
+}
+
+/// 每条规则只回答四个问题：认哪些类名、暴露哪些参数、参数各是什么类型、
+/// 以及它们归到哪个用途段。
 class NodeRule {
   const NodeRule({
     required this.classTypes,
     this.keys,
     this.forceTypes = const {},
     this.defaultExposedKeys,
+    this.category = ParamCategory.other,
   });
 
   /// 该规则覆盖的 class_type。写多个是为了容纳变体名
@@ -106,6 +122,9 @@ class NodeRule {
 
   /// 默认勾选的参数名。为 null 时全部默认勾选（见 [keys]）。
   final Set<String>? defaultExposedKeys;
+
+  /// 用途分类。见 [ParamCategory]：只决定在界面上摆在哪一段。
+  final ParamCategory category;
 
   bool matches(String classType) => classTypes.contains(classType);
 }
@@ -143,21 +162,29 @@ class SpecIssues {
 /// 在不同机器上装的类名不一样，分组写在一起才好维护。
 const List<NodeRule> kDefaultNodeRules = [
   // ── 采样器 ───────────────────────────────────────────────
-  NodeRule(classTypes: {'KSampler'}, forceTypes: {'denoise': ParamType.float}),
   NodeRule(
+    category: ParamCategory.sampling,
+    classTypes: {'KSampler'},
+    forceTypes: {'denoise': ParamType.float},
+  ),
+  NodeRule(
+    category: ParamCategory.sampling,
     classTypes: {'KSamplerAdvanced'},
     forceTypes: {'denoise': ParamType.float},
   ),
   NodeRule(
+    category: ParamCategory.sampling,
     classTypes: {'SamplerCustom', 'SamplerCustomAdvanced'},
     forceTypes: {'denoise': ParamType.float},
   ),
   NodeRule(
+    category: ParamCategory.sampling,
     classTypes: {'BasicScheduler'},
     keys: {'steps', 'scheduler', 'denoise'},
     defaultExposedKeys: {'steps', 'scheduler', 'denoise'},
   ),
   NodeRule(
+    category: ParamCategory.sampling,
     classTypes: {'KSamplerSelect'},
     keys: {'sampler_name'},
     defaultExposedKeys: {'sampler_name'},
@@ -165,6 +192,7 @@ const List<NodeRule> kDefaultNodeRules = [
 
   // ── 文本 / 提示词 ──────────────────────────────────────
   NodeRule(
+    category: ParamCategory.prompt,
     classTypes: {
       'CLIPTextEncode',
       'Text Multiline',
@@ -175,31 +203,43 @@ const List<NodeRule> kDefaultNodeRules = [
     },
   ),
   NodeRule(
+    category: ParamCategory.prompt,
     classTypes: {'Text Concatenate'},
     keys: {'delimiter', 'clean_whitespace', 'text_a', 'text_b'},
     defaultExposedKeys: {'delimiter', 'text_a', 'text_b'},
   ),
 
   // ── 尺寸 / 放大 ──────────────────────────────────────
-  NodeRule(classTypes: {'EmptyLatentImage'}),
-  NodeRule(classTypes: {'EmptySD3LatentImage', 'EmptyFluxLatentImage'}),
-  NodeRule(classTypes: {'LatentUpscale'}),
-  NodeRule(classTypes: {'LatentUpscaleBy'}),
-  NodeRule(classTypes: {'ImageScaleBy'}),
-  NodeRule(classTypes: {'ImageUpscaleWithModel'}),
-  NodeRule(classTypes: {'UpscaleModelLoader'}),
+  NodeRule(category: ParamCategory.size, classTypes: {'EmptyLatentImage'}),
+  NodeRule(
+    category: ParamCategory.size,
+    classTypes: {'EmptySD3LatentImage', 'EmptyFluxLatentImage'},
+  ),
+  NodeRule(category: ParamCategory.size, classTypes: {'LatentUpscale'}),
+  NodeRule(category: ParamCategory.size, classTypes: {'LatentUpscaleBy'}),
+  NodeRule(category: ParamCategory.size, classTypes: {'ImageScaleBy'}),
+  NodeRule(category: ParamCategory.size, classTypes: {'ImageUpscaleWithModel'}),
+  NodeRule(category: ParamCategory.size, classTypes: {'UpscaleModelLoader'}),
 
   // ── 模型加载 ──────────────────────────────────────────
-  NodeRule(classTypes: {'CheckpointLoaderSimple'}),
   NodeRule(
+    category: ParamCategory.model,
+    classTypes: {'CheckpointLoaderSimple'},
+  ),
+  NodeRule(
+    category: ParamCategory.model,
     classTypes: {'UNETLoader', 'UnetLoaderGGUF', 'UnetLoaderGGUFAdvanced'},
   ),
-  NodeRule(classTypes: {'CLIPLoader', 'CLIPLoaderGGUF'}),
-  NodeRule(classTypes: {'VAELoader'}),
-  NodeRule(classTypes: {'CLIPVisionLoader'}),
+  NodeRule(
+    category: ParamCategory.model,
+    classTypes: {'CLIPLoader', 'CLIPLoaderGGUF'},
+  ),
+  NodeRule(category: ParamCategory.model, classTypes: {'VAELoader'}),
+  NodeRule(category: ParamCategory.model, classTypes: {'CLIPVisionLoader'}),
 
   // ── LoRA / 补丁加载 ────────────────────────────────────
   NodeRule(
+    category: ParamCategory.model,
     classTypes: {'LoraLoader', 'LoraLoaderModelOnly', 'ModelPatchLoader'},
     forceTypes: {
       'strength_model': ParamType.float,
@@ -208,8 +248,9 @@ const List<NodeRule> kDefaultNodeRules = [
   ),
 
   // ── ControlNet ──────────────────────────────────────────
-  NodeRule(classTypes: {'ControlNetLoader'}),
+  NodeRule(category: ParamCategory.control, classTypes: {'ControlNetLoader'}),
   NodeRule(
+    category: ParamCategory.control,
     classTypes: {'ControlNetApplyAdvanced'},
     defaultExposedKeys: {'strength'},
     forceTypes: {
@@ -218,10 +259,14 @@ const List<NodeRule> kDefaultNodeRules = [
       'end_percent': ParamType.float,
     },
   ),
-  NodeRule(classTypes: {'SetUnionControlNetType'}),
+  NodeRule(
+    category: ParamCategory.control,
+    classTypes: {'SetUnionControlNetType'},
+  ),
 
   // ── IPAdapter ──────────────────────────────────────────
   NodeRule(
+    category: ParamCategory.control,
     classTypes: {'IPAdapter', 'IPAdapterFaceID'},
     defaultExposedKeys: {'weight'},
     forceTypes: {
@@ -231,27 +276,43 @@ const List<NodeRule> kDefaultNodeRules = [
     },
   ),
   NodeRule(
+    category: ParamCategory.control,
     classTypes: {'IPAdapterNoise'},
     defaultExposedKeys: {'strength'},
     forceTypes: {'strength': ParamType.float},
   ),
-  NodeRule(classTypes: {'IPAdapterUnifiedLoaderFaceID'}),
-  NodeRule(classTypes: {'IPAdapterInsightFaceLoader'}),
+  NodeRule(
+    category: ParamCategory.control,
+    classTypes: {'IPAdapterUnifiedLoaderFaceID'},
+  ),
+  NodeRule(
+    category: ParamCategory.control,
+    classTypes: {'IPAdapterInsightFaceLoader'},
+  ),
 
   // ── 换脸 / 人脸 ────────────────────────────────────────
   NodeRule(
+    category: ParamCategory.control,
     classTypes: {'ReActorFaceSwap'},
     keys: {'enabled', 'swap_model', 'facedetection', 'face_restore_visibility'},
     defaultExposedKeys: {'enabled', 'swap_model'},
   ),
 
   // ── 去背 / 掩码合成 ────────────────────────────────────
-  NodeRule(classTypes: {'RMBG'}, keys: {'model', 'sensitivity', 'process_res'}),
-  NodeRule(classTypes: {'FeatherMask'}),
-  NodeRule(classTypes: {'ImageCompositeMasked'}),
+  NodeRule(
+    category: ParamCategory.control,
+    classTypes: {'RMBG'},
+    keys: {'model', 'sensitivity', 'process_res'},
+  ),
+  NodeRule(category: ParamCategory.control, classTypes: {'FeatherMask'}),
+  NodeRule(
+    category: ParamCategory.control,
+    classTypes: {'ImageCompositeMasked'},
+  ),
 
   // ── ControlNet 预处理器（手机上最常调的是分辨率）──────
   NodeRule(
+    category: ParamCategory.control,
     classTypes: {
       'DWPreprocessor',
       'DepthAnythingV2Preprocessor',
@@ -278,6 +339,12 @@ class WorkflowNodeParser {
     }
     return null;
   }
+
+  /// 该节点类型在界面上归到哪个用途段；认不出来归 [ParamCategory.other]。
+  ///
+  /// 不落盘：分类随时能从 class_type 重算，存一份只会多一处要同步的东西。
+  static ParamCategory categoryFor(String classType, {List<NodeRule>? rules}) =>
+      ruleFor(classType, rules: rules)?.category ?? ParamCategory.other;
 
   /// 解析工作流 JSON，得到「可配置参数」列表。
   ///
