@@ -11,6 +11,7 @@ import '../models/task_status.dart';
 import '../services/gallery_store.dart';
 import '../utils.dart';
 import 'connection_provider.dart';
+import 'gallery_revision_provider.dart';
 import 'local_workflow_provider.dart';
 import 'workflow_provider.dart';
 
@@ -45,6 +46,13 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       jsonEncode(newHistory.map((e) => e.toJson()).toList()),
     );
     state = TaskState(history: newHistory);
+  }
+
+  /// 通知画廊「目录内容变过了」。
+  ///
+  /// 只在真的写盘/删盘之后调用，避免把生成过程中的进度推送也算进来。
+  void _bumpGalleryRevision() {
+    ref.read(galleryRevisionProvider.notifier).state++;
   }
 
   void createNewTask(
@@ -162,14 +170,17 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       final idx = state.history.indexWhere((t) => t.promptId == promptId);
       if (idx != -1) {
         final task = state.history[idx];
+        var removed = 0;
         for (final img in task.images) {
           final localPath = img['localPath'];
           if (localPath is String && localPath.isNotEmpty) {
-            // 等删完再移除记录：画廊页靠「记录变少」判断要刷新，
+            // 等删完再移除记录：画廊页只在文件真删掉之后才重扫，
             // 不等的话会刷在文件删除完成之前
             await GalleryStore.instance.deleteFile(localPath);
+            removed++;
           }
         }
+        if (removed > 0) _bumpGalleryRevision();
       }
     }
     final updatedList = List<TaskHistory>.from(state.history)
@@ -402,6 +413,11 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     }).toList();
     task.images = updatedImages;
     _saveHistory(List<TaskHistory>.from(state.history));
+
+    // 一个任务的多张图全部下完再统一通知一次，避免画廊被刷 N 次
+    if (downloaded.any((m) => m['localPath'] != null)) {
+      _bumpGalleryRevision();
+    }
   }
 
   // 处理 WebSocket 传来的状态更新

@@ -4,37 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
-import '../../providers/task_manager.dart';
+import '../../providers/gallery_revision_provider.dart';
 import '../../services/gallery_store.dart';
 import '../../services/media_saver.dart';
-
-/// 判断任务列表的变化是否可能影响画廊目录的内容。
-///
-/// 放在顶层是纯函数，便于单测（写在页面 State 里就没法测了）。
-///
-/// 只有两种情形会真的动到磁盘：
-/// - 记录被删（可能勾了「连带删除本地图片」）；
-/// - 新图下载完成并登记了本地路径。
-///
-/// 注意看的是 localPath 而不是「状态变已完成」：图片是任务完成后异步下载的，
-/// 状态先变、文件后到，盯着状态会刷在文件落盘之前。
-bool galleryDirectoryMayHaveChanged(TaskState? prev, TaskState next) {
-  if (prev == null) return false;
-  if (next.history.length < prev.history.length) return true;
-  return _localPathCount(next) > _localPathCount(prev);
-}
-
-/// 已下载到本地的媒体条数。
-int _localPathCount(TaskState state) {
-  var count = 0;
-  for (final task in state.history) {
-    for (final media in task.images) {
-      final path = media['localPath'];
-      if (path is String && path.isNotEmpty) count++;
-    }
-  }
-  return count;
-}
 
 /// 画廊：浏览所有本地化保存的生成图片。
 /// 图片以原始文件保存在 App 沙盒，内嵌 ComfyUI 工作流元数据，
@@ -67,10 +39,12 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
 
   @override
   Widget build(BuildContext context) {
-    // 只在「画廊目录真的可能变了」时才刷新。生成中的进度推送每秒好几次，
+    // 只在「画廊目录真的动过」时才重扫。生成中的进度推送每秒好几次，
     // 跟着全量列目录 + 整页重建纯属浪费（IndexedStack 常驻，不在前台也照跑）。
-    ref.listen(taskManagerProvider, (prev, next) {
-      if (galleryDirectoryMayHaveChanged(prev, next)) _refresh();
+    // 计数由落盘/删盘的地方负责递增，不靠比较任务状态的前后快照 —— 记录对象是
+    // 可变的，前后两帧共享同一批实例，差值永远为 0（2026-10-24 修）。
+    ref.listen(galleryRevisionProvider, (prev, next) {
+      if (prev != null && next != prev) _refresh();
     });
 
     return Scaffold(
@@ -151,29 +125,29 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
     );
   }
 
-  Future<void> _openViewer(int index) async {
-    // 查看器里可能删图，删完带结果回来，这里重扫一次把列表对齐
-    final deleted = await Navigator.push<bool>(
+  void _openViewer(int index) {
+    // 查看器里可能删图；删完由它递增画廊计数，本页自动跟着重扫，
+    // 不需要再靠返回值手动刷一次
+    Navigator.push(
       context,
-      MaterialPageRoute<bool>(
+      MaterialPageRoute(
         builder: (_) => _GalleryViewer(images: _images, initialIndex: index),
       ),
     );
-    if (deleted == true && mounted) _refresh();
   }
 }
 
 /// 画廊大图查看器
-class _GalleryViewer extends StatefulWidget {
+class _GalleryViewer extends ConsumerStatefulWidget {
   final List<File> images;
   final int initialIndex;
   const _GalleryViewer({required this.images, required this.initialIndex});
 
   @override
-  State<_GalleryViewer> createState() => _GalleryViewerState();
+  ConsumerState<_GalleryViewer> createState() => _GalleryViewerState();
 }
 
-class _GalleryViewerState extends State<_GalleryViewer> {
+class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
   late PageController _pageController;
   late int _currentIndex;
   bool _saving = false;
@@ -258,8 +232,9 @@ class _GalleryViewerState extends State<_GalleryViewer> {
     );
     if (ok == true && mounted) {
       await GalleryStore.instance.deleteFile(_current.path);
-      // 带 true 回去，画廊页据此重扫，避免列表残留已删文件
-      if (mounted) Navigator.pop(context, true);
+      // 递增计数而不是带返回值回去：画廊页据此重扫，避免列表残留已删文件
+      ref.read(galleryRevisionProvider.notifier).state++;
+      if (mounted) Navigator.pop(context);
     }
   }
 
