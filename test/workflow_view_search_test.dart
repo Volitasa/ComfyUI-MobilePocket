@@ -113,6 +113,10 @@ void main() {
   testWidgets('搜索没有命中时给出空态，而不是整片留白', (tester) async {
     await _pumpConfig(tester);
 
+    // 搜索住在「添加参数」页里 —— 主视图只放已选的几项，用不上搜索
+    await tester.tap(find.textContaining('添加参数'));
+    await tester.pumpAndSettle();
+
     await tester.enterText(find.byType(TextField).first, '不存在的参数');
     await tester.pumpAndSettle();
 
@@ -154,9 +158,14 @@ void main() {
       ],
     );
 
-    // 参数行改用真实参数名；「加载CLIP」只剩卡片头那一个
-    expect(find.text('加载CLIP'), findsOneWidget);
+    // 主视图只放已选参数、不再有节点卡片头，所以坏别名一个都不剩
+    expect(find.text('加载CLIP'), findsNothing);
     expect(find.text('type'), findsOneWidget);
     expect(find.text('device'), findsOneWidget);
+
+    // 节点身份由「添加参数」页的卡片头给出 —— 全量列表在那边
+    await tester.tap(find.textContaining('添加参数'));
+    await tester.pumpAndSettle();
+    expect(find.text('加载CLIP'), findsOneWidget);
   });
 }

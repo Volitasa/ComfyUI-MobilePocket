@@ -11,8 +11,8 @@ import '../../providers/connection_provider.dart';
 import '../../providers/object_info_provider.dart';
 import '../../services/object_info_service.dart';
 import '../../utils.dart';
-import '../widgets/compact_search_field.dart';
-import '../widgets/param_config_tile.dart';
+import 'param_picker_view.dart';
+import 'param_row_helpers.dart';
 import 'run_view.dart'; // 下一步我们将创建运行页面
 
 class WorkflowView extends ConsumerStatefulWidget {
@@ -32,12 +32,10 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   bool _isReady = false;
   List<WorkflowNode> _extractableNodes = [];
   // 别名输入框控制器统一挂到 State 上，随页面销毁一并释放（避免 build 内新建导致泄漏）
+  //
+  // ⚠️ 这份 map 要传给「添加参数」页：那边改了别名，回主视图必须是同一个控制器，
+  // 否则会出现「在添加页改了名、回主视图又变回旧的」。
   final Map<String, TextEditingController> _aliasControllers = {};
-  // 节点分组的展开/收起状态（用户手动切换）
-  final Set<String> _expandedNodeIds = {};
-  final Set<String> _collapsedNodeIds = {};
-  // 搜索关键字：只影响列表过滤，不改数据
-  String _keyword = '';
 
   /// 本次拿到的服务器说明书（classType → 定义）。**只放内存，不落盘**（方案 §3.2）。
   Map<String, NodeSpec> _specs = const {};
@@ -48,27 +46,16 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   /// 工作流与说明书对不上的地方（缺节点 / 缺参数），供标黄用。不落盘。
   SpecIssues _specIssues = const SpecIssues();
 
-  final TextEditingController _searchController = TextEditingController();
-
-  /// 当前实际显示的参数：按关键字过滤别名 / 参数名 / 节点类名。
+  /// 已放进手机表单的参数 —— 主视图只展示这批。
   ///
-  /// 过滤粒度是"参数"而非"节点"：命中哪个参数就只显示哪个参数。
-  /// 若按节点整体保留，搜一个词会把该节点的几十个参数一起带出来，搜索就没意义了。
-  /// 卡片头部的统计与全选按钮跟随可见参数走，保证"看到的就是能选的"。
-  List<WorkflowNode> get _visibleNodes => _keyword.isEmpty
-      ? _extractableNodes
-      : _extractableNodes
-            .where(
-              (n) =>
-                  n.alias.toLowerCase().contains(_keyword) ||
-                  n.key.toLowerCase().contains(_keyword) ||
-                  n.classType.toLowerCase().contains(_keyword),
-            )
-            .toList();
+  /// 整页的取舍都系在这一行上：用户来这里是**确认系统替他挑好的结果**，
+  /// 不是从几十项里做减法。全部参数一个不少地留在「添加参数」页里，
+  /// 只是不默认摆在主视图上。
+  List<WorkflowNode> get _selectedNodes =>
+      _extractableNodes.where((n) => n.exposed).toList();
 
   @override
   void dispose() {
-    _searchController.dispose();
     for (final c in _aliasControllers.values) {
       c.dispose();
     }
@@ -401,166 +388,105 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     );
   }
 
-  // 分组卡片的头部标签：优先展示节点标题（有辨识度），无有效标题回退类名
-  String _groupLabel(List<WorkflowNode> params) {
-    final classType = params.first.classType;
-    final title = params.first.title;
-    if (isMeaningfulTitle(title, classType)) {
-      return title;
-    }
-    return classType;
-  }
-
-  // 配置面板里单个参数行：勾选 + 别名编辑 + 类型/当前值摘要。
-  //
-  // 紧凑版：合成一行 44px —— 别名由输入框本身显示（无边框、聚焦才描边），
-  // 类型与当前值合并成行尾 11px 小字，聚焦编辑别名时让出宽度。详见 ParamConfigTile。
-  Widget _buildParamRow(WorkflowNode node) {
-    final controllerKey = nodeParamKey(node.id, node.key);
-    final controller = _aliasControllers.putIfAbsent(
-      controllerKey,
-      () => TextEditingController(text: node.alias),
-    );
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: ParamConfigTile(
-        summary: _describeParam(node, AppLocalizations.of(context)),
-        exposed: node.exposed,
-        onChanged: (val) {
-          setState(() {
-            node.exposed = val ?? false;
-          });
-        },
-        aliasController: controller,
-        aliasHint: AppLocalizations.of(context).paramAliasHint,
-        // 保存时用的是 node.alias，控制器文本必须回写，否则改了不生效
-        onAliasChanged: (val) => node.alias = val,
-        warning: _warningFor(node),
+  /// 打开「添加参数」页：全量参数按节点分组摆在那边，勾完返回。
+  ///
+  /// 传的是同一份 List 引用，勾选直接改在原数据上；回来只要重建一次。
+  Future<void> _openPicker() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ParamPickerView(
+          nodes: _extractableNodes,
+          aliasControllers: _aliasControllers,
+          issues: _specIssues,
+        ),
       ),
     );
+    if (!mounted) return;
+    setState(() {});
   }
 
-  /// 该参数的行级告警文案；没问题返回 null。
-  ///
-  /// ⚠️ 只标黄、**不拦** —— 缺参数通常只是服务器节点版本不同，
-  /// 照旧提交原值比拦下来更有用（方案 §3.7）。拦截逻辑在 C4。
-  String? _warningFor(WorkflowNode node) {
-    final l = AppLocalizations.of(context);
-    if (_specIssues.isNodeMissing(node.classType)) {
-      return l.configNodeMissingOnServer(node.classType);
-    }
-    if (_specIssues.isParamMissing(node.id, node.key)) {
-      return l.configParamMissingOnServer;
-    }
-    return null;
-  }
-
-  // 配置面板里参数卡片的一行摘要：类型 + 当前值
-  String _describeParam(WorkflowNode node, AppLocalizations l) {
-    // ⚠️ 有 `control` 时按**控件形态**显示类型名，否则会出现
-    // 「摘要写着"文本"，运行页却是个下拉框」的不一致（方案 §8.1 陷阱 3）。
-    final control = node.control;
-    final String typeName;
-    if (control == ParamControl.select) {
-      typeName = l.paramTypeEnum;
-    } else {
-      typeName =
-          {
-            ParamType.text: l.paramTypeText,
-            ParamType.seed: l.paramTypeSeed,
-            ParamType.image: l.paramTypeImage,
-            ParamType.intType: l.paramTypeInt,
-            ParamType.float: l.paramTypeFloat,
-            ParamType.boolType: l.paramTypeBool,
-            ParamType.enumType: l.paramTypeEnum,
-          }[node.paramType] ??
-          l.paramTypeDefault;
-    }
-
-    final v = node.value;
-    String valueStr = '';
-    if (v != null) {
-      valueStr = v.toString();
-      if (valueStr.length > 20) valueStr = '${valueStr.substring(0, 20)}…';
-    }
-    return valueStr.isEmpty
-        ? l.paramSummaryType(typeName)
-        : l.paramSummaryTypeValue(typeName, valueStr);
-  }
-
-  /// 列表上方工具条：左边统计，右边批量展开 / 折叠。
-  ///
-  /// 刻意**不做全局全选** —— 勾参数应当是"逐个看、逐个选"的事，
-  /// 一键全勾会把几十个参数全放出来，运行页直接没法用。
-  /// 全选只放在单个节点卡片内部。
-  Widget _buildToolbar() {
-    final l = AppLocalizations.of(context);
-    final exposedTotal = _extractableNodes.where((n) => n.exposed).length;
-
-    // 区块内字号统一 13：以前计数是 11、按钮是默认 14，混在一行里大小不齐。
-    const textStyle = TextStyle(fontSize: 13);
-    // 用 visualDensity 收紧按钮内边距，而不是 styleFrom(padding: …) ——
-    // 后者会把水平内边距一起清掉。
-    final buttonStyle = TextButton.styleFrom(
-      textStyle: const TextStyle(fontSize: 13),
-      visualDensity: VisualDensity.compact,
-    );
-
+  /// 顶部统计：说清「表单里现在有什么」，不解释底层机制。
+  Widget _buildSummary(AppLocalizations l) {
+    final selected = _selectedNodes.length;
+    final total = _extractableNodes.length;
+    // 一个都没选时这句话由列表区当空态说，这里不再重复一遍
+    if (selected == 0) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              exposedTotal > 0
-                  ? l.configSelectedCount(
-                      exposedTotal,
-                      _extractableNodes.length,
-                    )
-                  : l.configParamCount(_extractableNodes.length),
-              style: textStyle.copyWith(
-                color: exposedTotal > 0 ? Colors.green.shade700 : Colors.grey,
-              ),
+          Text(
+            l.configFormCount(selected, total),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.green.shade700,
             ),
           ),
-          TextButton.icon(
-            style: buttonStyle,
-            onPressed: () => setState(() {
-              _collapsedNodeIds.clear();
-              _expandedNodeIds.addAll(_extractableNodes.map((n) => n.id));
-            }),
-            icon: const Icon(Icons.unfold_more, size: 18),
-            label: Text(l.configExpandAll),
-          ),
-          TextButton.icon(
-            style: buttonStyle,
-            onPressed: () => setState(() {
-              _expandedNodeIds.clear();
-              _collapsedNodeIds.addAll(_extractableNodes.map((n) => n.id));
-            }),
-            icon: const Icon(Icons.unfold_less, size: 18),
-            label: Text(l.configCollapseAll),
+          const SizedBox(height: 2),
+          Text(
+            l.configFormHint,
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
           ),
         ],
       ),
     );
   }
 
-  /// 搜索框：按别名 / 参数名 / 节点类名过滤（只影响显示，不改数据）。
-  /// 与生成记录页共用同一个紧凑搜索框。
-  Widget _buildSearchField() {
-    final l = AppLocalizations.of(context);
+  /// 已放进表单的参数：一张卡片、一行一项，行尾是移出。
+  ///
+  /// 刻意**不做重排序**：顺序跟着工作流里的节点顺序走，和运行页一致，
+  /// 免得这里排了一遍、那边又是另一个顺序。
+  Widget _buildSelectedCard() {
+    final selected = _selectedNodes;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < selected.length; i++) ...[
+            if (i > 0) const Divider(height: 1),
+            buildParamConfigRow(
+              context,
+              node: selected[i],
+              aliasControllers: _aliasControllers,
+              issues: _specIssues,
+              onChanged: () => setState(() {}),
+              showCheckbox: false,
+              onRemove: () => setState(() => selected[i].exposed = false),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 「添加参数」入口：全量参数的唯一去处，一个都不少。
+  Widget _buildAddButton(AppLocalizations l) {
+    final rest = _extractableNodes.length - _selectedNodes.length;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: CompactSearchField(
-        controller: _searchController,
-        hintText: l.configSearchHint,
-        hasText: _keyword.isNotEmpty,
-        onChanged: (v) => setState(() => _keyword = v.trim().toLowerCase()),
-        onClear: () {
-          _searchController.clear();
-          setState(() => _keyword = '');
-        },
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: _openPicker,
+          icon: const Icon(Icons.add, size: 18),
+          label: Text(
+            rest > 0 ? l.configAddParamsCount(rest) : l.configAddParams,
+            style: const TextStyle(fontSize: 13),
+          ),
+        ),
       ),
     );
   }
@@ -613,6 +539,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       );
     }
 
+    final l = AppLocalizations.of(context);
     final displayName = resolveWorkflowName(
       ref.read(knownWorkflowEntriesProvider),
       widget.workflowId,
@@ -635,10 +562,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       ),
       body: Column(
         children: [
-          // 顶部三块顺序固定为「搜索 → 工具条 → 说明」，
-          // 相互间距统一 8，避免三块各自一个边距。
-          if (_extractableNodes.isNotEmpty) _buildSearchField(),
-          if (_extractableNodes.isNotEmpty) _buildToolbar(),
+          if (_extractableNodes.isNotEmpty) _buildSummary(l),
           // 取说明书超时 / 拿不到：形状是推断出来的，明确告诉用户，
           // 但不阻塞勾选与保存（说明书只是加分项）。
           if (_specsDegraded)
@@ -654,7 +578,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      AppLocalizations.of(context).configSpecsDegraded,
+                      l.configSpecsDegraded,
                       style: const TextStyle(
                         color: Colors.orange,
                         fontSize: 12,
@@ -664,197 +588,33 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                 ],
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Text(
-              AppLocalizations.of(context).configPanelHint,
-              // 与工具条同为 13：三块挨在一起，字号不齐会显得脏
-              style: const TextStyle(color: Colors.black54, fontSize: 13),
-            ),
-          ),
           Expanded(
             child: _extractableNodes.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32.0),
                       child: Text(
-                        AppLocalizations.of(context).configNoParams,
+                        l.configNoParams,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.grey),
                       ),
                     ),
                   )
-                : Builder(
-                    builder: (context) {
-                      // 按节点分组展示：同一节点的多个参数合并为一张卡片
-                      final groups = <String, List<WorkflowNode>>{};
-                      for (final n in _visibleNodes) {
-                        groups.putIfAbsent(n.id, () => []).add(n);
-                      }
-                      final groupIds = groups.keys.toList();
-                      // 有参数、但一个都没命中：说明是搜空了。
-                      // 不提示的话整片留白，看着像页面坏了。
-                      if (groupIds.isEmpty) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32),
-                            child: Text(
-                              AppLocalizations.of(context).configSearchEmpty,
-                              style: const TextStyle(color: Colors.grey),
-                            ),
-                          ),
-                        );
-                      }
-                      return ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        itemCount: groupIds.length,
-                        itemBuilder: (context, index) {
-                          final nodeId = groupIds[index];
-                          final params = groups[nodeId]!;
-                          final exposedCount = params
-                              .where((p) => p.exposed)
-                              .length;
-                          // 供卡片头部的「全选 / 取消全选」判断当前是否已全勾
-                          final allExposed =
-                              params.isNotEmpty &&
-                              exposedCount == params.length;
-
-                          // 默认展开含已勾选参数的节点，其余收起；用户可手动切换。
-                          // 搜索命中时一并展开 —— 否则卡片留在列表里却是收起的，
-                          // 用户不知道自己搜到了什么。手动展开/折叠的状态始终优先。
-                          final expanded = _expandedNodeIds.contains(nodeId)
-                              ? true
-                              : _collapsedNodeIds.contains(nodeId)
-                              ? false
-                              : _keyword.isNotEmpty || exposedCount > 0;
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            elevation: 0,
-                            // 与运行页同一套：圆角 12 + 同样的描边色，
-                            // 配置页与运行页来回切的时候看不出是两套皮肤
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(color: Colors.grey.shade200),
-                            ),
-                            child: Column(
-                              children: [
-                                // 节点分组头部：类名 + 参数统计 + 展开/收起
-                                InkWell(
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(12),
-                                  ),
-                                  onTap: () => setState(() {
-                                    if (expanded) {
-                                      _collapsedNodeIds.add(nodeId);
-                                      _expandedNodeIds.remove(nodeId);
-                                    } else {
-                                      _expandedNodeIds.add(nodeId);
-                                      _collapsedNodeIds.remove(nodeId);
-                                    }
-                                  }),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        AnimatedRotation(
-                                          turns: expanded ? 0 : -0.25,
-                                          duration: const Duration(
-                                            milliseconds: 150,
-                                          ),
-                                          child: const Icon(
-                                            Icons.expand_more,
-                                            size: 20,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            _groupLabel(params),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        Text(
-                                          exposedCount > 0
-                                              ? AppLocalizations.of(context)
-                                                    .configSelectedCount(
-                                                      exposedCount,
-                                                      params.length,
-                                                    )
-                                              : AppLocalizations.of(context)
-                                                    .configParamCount(
-                                                      params.length,
-                                                    ),
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: exposedCount > 0
-                                                ? Colors.green.shade700
-                                                : Colors.grey,
-                                          ),
-                                        ),
-                                        IconButton(
-                                          visualDensity: VisualDensity.compact,
-                                          iconSize: 20,
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                          tooltip: allExposed
-                                              ? AppLocalizations.of(context)
-                                                    .configNodeClearAll
-                                              : AppLocalizations.of(context)
-                                                    .configNodeSelectAll,
-                                          onPressed: () => setState(() {
-                                            for (final p in params) {
-                                              p.exposed = !allExposed;
-                                            }
-                                          }),
-                                          icon: Icon(
-                                            allExposed
-                                                ? Icons.deselect
-                                                : Icons.select_all,
-                                            size: 20,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                if (expanded)
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      10,
-                                      0,
-                                      10,
-                                      8,
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        const Divider(height: 1),
-                                        ...params.map(
-                                          (node) => _buildParamRow(node),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                : _selectedNodes.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text(
+                        l.configFormEmpty,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  )
+                : SingleChildScrollView(child: _buildSelectedCard()),
           ),
+          if (_extractableNodes.isNotEmpty) _buildAddButton(l),
+
           SafeArea(
             child: Padding(
               // 底部按钮四周收紧：按钮本身 56 高已经够好点，外面不必再垫一圈 16
