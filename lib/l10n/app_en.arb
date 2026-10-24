@@ -52,6 +52,7 @@
   "historySavedToAlbum": "Saved to your photo album",
   "historySaveFailed": "Save failed",
   "historyVideoLoadFailed": "Failed to load video",
+  "historyImageLoadFailed": "Failed to load image. Check the server connection.",
 
   "serverDefaultName": "Server",
   "serverTitle": "Server config",

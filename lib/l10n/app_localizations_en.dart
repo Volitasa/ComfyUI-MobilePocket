@@ -166,6 +166,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyVideoLoadFailed => 'Failed to load video';
 
   @override
+  String get historyImageLoadFailed =>
+      'Failed to load image. Check the server connection.';
+
+  @override
   String get serverDefaultName => 'Server';
 
   @override

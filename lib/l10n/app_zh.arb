@@ -123,6 +123,8 @@
   "@historySaveFailed": { "description": "保存失败提示" },
   "historyVideoLoadFailed": "视频加载失败",
   "@historyVideoLoadFailed": { "description": "视频加载失败" },
+  "historyImageLoadFailed": "图片加载失败，请检查服务器连接",
+  "@historyImageLoadFailed": { "description": "大图加载失败时的占位提示" },
 
   "serverDefaultName": "服务器",
   "@serverDefaultName": {

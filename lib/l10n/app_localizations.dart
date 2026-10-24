@@ -380,6 +380,12 @@ abstract class AppLocalizations {
   /// **'视频加载失败'**
   String get historyVideoLoadFailed;
 
+  /// 大图加载失败时的占位提示
+  ///
+  /// In zh, this message translates to:
+  /// **'图片加载失败，请检查服务器连接'**
+  String get historyImageLoadFailed;
+
   /// 连接没有名称时的默认名（仅在展示层兜底，不落盘）
   ///
   /// In zh, this message translates to:

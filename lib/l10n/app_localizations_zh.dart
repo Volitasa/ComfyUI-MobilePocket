@@ -164,6 +164,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get historyVideoLoadFailed => '视频加载失败';
 
   @override
+  String get historyImageLoadFailed => '图片加载失败，请检查服务器连接';
+
+  @override
   String get serverDefaultName => '服务器';
 
   @override

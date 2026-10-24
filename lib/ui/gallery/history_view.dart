@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 
 import 'dart:io';
-import 'dart:typed_data';
 
 import '../../theme.dart';
 import '../../services/media_saver.dart';
@@ -693,6 +692,14 @@ class _MediaViewerState extends State<MediaViewer> {
     super.dispose();
   }
 
+  /// 这条媒体有没有已经存到本地画廊的文件（有就直接读，不必再走网络）。
+  File? _localFileOf(Map<String, dynamic> media) {
+    final path = media['localPath'];
+    if (path is! String || path.isEmpty) return null;
+    final f = File(path);
+    return f.existsSync() ? f : null;
+  }
+
   Future<void> _saveToLocal() async {
     if (_saving) return;
     final l = AppLocalizations.of(context);
@@ -703,17 +710,12 @@ class _MediaViewerState extends State<MediaViewer> {
 
       // 优先读取已本地化的文件（避免重复下载，且与画廊页行为一致）；
       // 没有本地文件（未下载过或已被删除）时才回退网络
-      final localPath = currentMedia['localPath'];
-      Uint8List bytes;
-      if (localPath is String &&
-          localPath.isNotEmpty &&
-          File(localPath).existsSync()) {
-        bytes = await File(localPath).readAsBytes();
-      } else {
-        bytes = await http.readBytes(
-          Uri.parse(widget.urlBuilder(currentMedia)),
-        );
-      }
+      final localFile = _localFileOf(currentMedia);
+      final bytes = localFile != null
+          ? await localFile.readAsBytes()
+          : await http
+                .readBytes(Uri.parse(widget.urlBuilder(currentMedia)))
+                .timeout(const Duration(seconds: 60));
       if (!mounted) return;
 
       // 与画廊页共用保存逻辑：PNG 可选「带工作流原图」或「剔除信息」
@@ -758,8 +760,28 @@ class _MediaViewerState extends State<MediaViewer> {
           if (widget.isVideoChecker(media['filename'])) {
             return _VideoItem(url: url);
           }
+          // 与缩略图一致：已经存进画廊的图直接读本地文件，
+          // 不再为了看一眼就把整张原图从服务器重新拉一遍
+          final localFile = _localFileOf(media);
+          if (localFile != null) {
+            return InteractiveViewer(
+              child: Center(
+                child: Image.file(
+                  localFile,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) =>
+                      _LoadFailed(text: l.historyImageLoadFailed),
+                ),
+              ),
+            );
+          }
           return InteractiveViewer(
-            child: Center(child: Image.network(url, fit: BoxFit.contain)),
+            child: Center(
+              child: _RemoteImage(
+                url: url,
+                failedText: l.historyImageLoadFailed,
+              ),
+            ),
           );
         },
       ),
@@ -792,6 +814,55 @@ class _MediaViewerState extends State<MediaViewer> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 走网络加载的大图：给进度与失败提示，避免慢网下黑屏干等。
+class _RemoteImage extends StatelessWidget {
+  const _RemoteImage({required this.url, required this.failedText});
+
+  final String url;
+  final String failedText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.network(
+      url,
+      fit: BoxFit.contain,
+      loadingBuilder: (_, child, progress) {
+        // progress 为 null 表示字节已收完，直接显示图
+        if (progress == null) return child;
+        final total = progress.expectedTotalBytes;
+        return Center(
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            value: total != null && total > 0
+                ? progress.cumulativeBytesLoaded / total
+                : null,
+          ),
+        );
+      },
+      errorBuilder: (_, _, _) => _LoadFailed(text: failedText),
+    );
+  }
+}
+
+/// 加载失败的占位：说明状态，不再留一片黑。
+class _LoadFailed extends StatelessWidget {
+  const _LoadFailed({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.broken_image, size: 40, color: Colors.white70),
+        const SizedBox(height: 10),
+        Text(text, style: const TextStyle(color: Colors.white70)),
+      ],
     );
   }
 }
