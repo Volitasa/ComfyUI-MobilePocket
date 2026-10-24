@@ -10,6 +10,7 @@ import '../models/task_history.dart';
 import '../models/task_status.dart';
 import '../services/gallery_store.dart';
 import '../utils.dart';
+import '../utils/task_stop.dart';
 import 'connection_provider.dart';
 import 'gallery_revision_provider.dart';
 import 'local_workflow_provider.dart';
@@ -337,6 +338,118 @@ class TaskManagerNotifier extends Notifier<TaskState> {
     for (final e in toLocalize.entries) {
       unawaited(_localizeMedia(e.key, e.value));
     }
+  }
+
+  /// 远程停止一条还没结束的任务。
+  ///
+  /// 首选官方「按任务取消」接口：正在生成 → 中断（服务端只在**确实是这条在跑**时
+  /// 才发中断信号，不会打到别的任务）；还在排队 → 按 id 摘出队列。一个请求覆盖两种状态。
+  /// 老版本服务器没有这个路由时降级：先查一次队列，排队就删、确认在跑才中断。
+  ///
+  /// 返回 [StopOutcome.failed] 时不动任何状态——没停成就不能假装停了。
+  Future<StopOutcome> stopTask(String promptId) async {
+    final config = ref.read(connectionProvider);
+    if (!config.isConnected) return StopOutcome.offline;
+
+    try {
+      final resp = await http
+          .post(
+            Uri.parse('${config.comfyUrl}/api/jobs/$promptId/cancel'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 10));
+
+      switch (parseCancelResponse(resp.statusCode, resp.body)) {
+        case CancelResponse.stopped:
+          _markStopped(promptId);
+          return StopOutcome.stopped;
+        case CancelResponse.alreadyDone:
+          // 服务端说这条已经结束了：顺手对一次账，把本地滞后的状态纠正过来
+          unawaited(reconcilePendingTasks());
+          return StopOutcome.alreadyDone;
+        case CancelResponse.needFallback:
+          break;
+      }
+    } catch (_) {
+      return StopOutcome.failed;
+    }
+
+    return _stopViaQueueFallback(promptId, config.comfyUrl);
+  }
+
+  /// 降级路径：老服务器没有按任务取消的路由，自己查队列分情况处理。
+  Future<StopOutcome> _stopViaQueueFallback(
+    String promptId,
+    String baseUrl,
+  ) async {
+    final slot = await _queueSlotOf(promptId, baseUrl);
+    if (slot == null) return StopOutcome.failed;
+
+    switch (slot) {
+      case TaskQueueSlot.pending:
+        // 只摘这一条，不影响队列里别人的任务
+        final ok = await _postJson('$baseUrl/queue', {
+          'delete': [promptId],
+        });
+        if (!ok) return StopOutcome.failed;
+        _markStopped(promptId);
+        return StopOutcome.stopped;
+      case TaskQueueSlot.running:
+        // 带上 prompt_id：新版本只在这条确实在跑时才中断；
+        // 更老的版本会忽略 body 全局中断 —— 所以必须先查过队列才走到这
+        final ok = await _postJson('$baseUrl/interrupt', {
+          'prompt_id': promptId,
+        });
+        if (!ok) return StopOutcome.failed;
+        _markStopped(promptId);
+        return StopOutcome.stopped;
+      case TaskQueueSlot.absent:
+        // 既不在运行也不在排队：已经结束或早就丢了，对账纠正状态
+        unawaited(reconcilePendingTasks());
+        return StopOutcome.alreadyDone;
+    }
+  }
+
+  /// 这条任务在服务器队列里的位置；查不到（网络问题）返回 null。
+  Future<TaskQueueSlot?> _queueSlotOf(String promptId, String baseUrl) async {
+    try {
+      final resp = await http
+          .get(Uri.parse('$baseUrl/queue'))
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) return null;
+      return classifyQueueSlot(jsonDecode(resp.body), promptId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> _postJson(String url, Map<String, dynamic> body) async {
+    try {
+      final resp = await http
+          .post(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+      return resp.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 本地标记这条任务为已停止。
+  ///
+  /// 正在生成的那条随后还会收到服务端广播的中断事件，结果一致；
+  /// 排队中被摘掉的不发任何事件，只能靠这里兜底。
+  void _markStopped(String promptId) {
+    final idx = state.history.indexWhere((t) => t.promptId == promptId);
+    if (idx == -1) return;
+    final task = state.history[idx];
+    task.status = TaskStatus.interrupted;
+    task.nodePhase = TaskNodePhase.interrupted;
+    task.nodeDetail = '';
+    _saveHistory(List<TaskHistory>.from(state.history));
   }
 
   // 节点 ID → 可读名称：优先用工作流映射里保存的节点标题，无则回退"类名(ID)"
