@@ -29,7 +29,7 @@
 <p><a href="README.md">简体中文</a> ｜ <b>English</b></p>
 
 <p>
-  <img src="https://img.shields.io/badge/version-1.2.3-2ea043?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-1.3.0-2ea043?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/platform-Android-3ddc84?style=flat-square&logo=android&logoColor=white" alt="platform">
   <img src="https://img.shields.io/badge/Flutter-3.x-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Flutter">
   <img src="https://img.shields.io/badge/ComfyUI-compatible-8957e5?style=flat-square" alt="ComfyUI">
@@ -54,7 +54,7 @@
 ## Core capabilities
 
 1. **Connect and run** — type the server address and the workflow list appears; UI-format workflows are parsed into a runnable structure inside the app; local JSON can be imported too.
-2. **Parameters become a form** — node parameters are detected automatically; tick what you want to tweak, give it an alias, and the run page renders the right control (text / seed / int / float / toggle / dropdown / image). **Model and sampler dropdowns are filled with the options that actually exist on the server**, so you can switch models without going back to the PC.
+2. **Parameters become a form** — node parameters are detected automatically; tick what you want to tweak, give it an alias, and the run page renders the right control (text / seed / int / float / toggle / dropdown / image). **Model and sampler dropdowns are filled with the options that actually exist on the server**, so you can switch models without going back to the PC. The config page only shows what's already in your form; everything else lives in "Add parameters", grouped by purpose so even node-heavy workflows stay readable.
 3. **Results land on your phone** — live WebSocket progress and five task states; outputs are downloaded into an on-device gallery (PNG metadata preserved, so you can drop them back into ComfyUI) and can be saved to your album; every history entry can be replayed with "Run again".
 
 **One thing in the pipeline**: running workflows through RunningHub — see [Roadmap](#11-roadmap).
@@ -62,7 +62,7 @@
 ## Three steps to your first image
 
 1. **Install the APK** → open it and go to **Settings → Server connections → Add**, type the address (e.g. `http://192.168.1.100:8188`) and save. The first connection activates automatically; the badge in the top bar turns green once you're connected.
-2. **Workflows tab** → tap your workflow → tick the parameters you want to tweak on the phone → save. For UI format, tap "parse" first (the first time loads the server's frontend — a few seconds to a dozen).
+2. **Workflows tab** → tap your workflow → the config page **has already picked a set of common parameters for you**; add missing ones from "Add parameters", give them memorable names → save. For UI format, tap "parse" first (the first time loads the server's frontend — a few seconds to a dozen).
 3. **Tap "Generate"** → it jumps to History and you watch it go from "Queued" to "Completed" → tap the thumbnail to view it full size and save it to your album.
 
 Want another take? Go back to History, tap **Run again** on that card — the form and every value are already in place.
@@ -103,7 +103,7 @@ The three headline capabilities are at the top of this page; here is everything,
 | --- | --- |
 | Multiple servers | Save any number of servers (home LAN / office), each with a **primary + backup address**; falls back automatically when the primary is unreachable |
 | Three workflow sources | Server `_api.json` runs directly; server UI-format JSON is **parsed into the API structure inside the app**; local JSON files can be imported |
-| Parameters become a form | Node parameters are recognised through a **data-driven rule table**; tick what to expose, give it an alias, and the run page renders the right control (text / seed / int / float / toggle / dropdown / image). The config panel supports expand-all/collapse-all, per-node select-all and search by parameter |
+| Parameters become a form | Node parameters are recognised through a **data-driven rule table**; tick what to expose, give it an alias, and the run page renders the right control (text / seed / int / float / toggle / dropdown / image). The config page main view holds only selected parameters; everything else lives in "Add parameters", grouped by purpose, with search, expand-all/collapse-all and per-node select-all |
 | Dropdowns with real option lists | On opening the run page, the app asks the server once; dropdowns for models (Checkpoint / UNET / CLIP / VAE / LoRA / ControlNet), samplers and schedulers are then filled with the **list that really exists on the server**, with a manual refresh in the top-right corner. If the model written in the workflow is missing there, it is flagged and submission is blocked |
 | Live progress | Progress is pushed over WebSocket, showing the node currently executing plus a percentage; reconnects automatically and reconciles with the server, **including when the app returns to the foreground** |
 | Five task states | Queued / Running / Completed / Failed / Interrupted, with the server's actual error message shown on failure |
@@ -263,12 +263,19 @@ Any server workflow can be saved to the device at any time, becoming your privat
 
 Pull node parameters out of the workflow and turn them into a phone form. Open it by tapping a **not-yet-configured** workflow, or choosing "reconfigure nodes" from any card menu.
 
+**Two layers, each doing one job**
+
+- **The main view only shows what's already in your form**: a header line "17 of 18 in your form", then a flat list — one row per parameter (alias + type and current value), with an × to remove it from the form. One screen, check it, save. Renaming or removing only changes the phone form, never the workflow itself.
+- **"Add parameters" holds everything**: every parameter lives in this layer, **grouped by purpose** (Prompt / Sampling / Size / Model and weights / Fine control / Other nodes), with per-node collapsible cards. Search, bulk expand/collapse and per-node select-all all live here.
+
 **What it does**
 
 1. Walks every node in the workflow and asks the **built-in rule table** which parameters are worth exposing.
-2. Decides the type: forced types from the rule table first, then name/value inference — int / float / text / enum dropdown / toggle / seed / image.
+2. Decides the type: the **server's node specs** (`/object_info`) come first — dropdown, toggle or number is decided by them; when specs are unavailable it falls back to name/value inference and says so with a banner at the top.
 3. Skips **link references** (values shaped like `["nodeId", 0]`) — those aren't yours to fill in.
-4. Groups everything by node; you tick what you need, give it a memorable alias, and save.
+4. Selected parameters go to the main view, the rest stay in "Add parameters" — **coverage is never narrowed away**: for nodes the rule table doesn't know, every fillable parameter is still listed (that's what covers community nodes and `LoadImage`'s upload box).
+
+**Same-name nodes, told apart by wiring**: when a workflow has two `CLIPTextEncode` nodes (positive and negative prompts), the card header in "Add parameters" carries a hint — the one wired to the sampler's `positive` slot says "Positive conditioning", the `negative` one says "Negative conditioning"; model / LoRA loaders show **which asset they load** (e.g. `add_detail`). All of it is read from the workflow's own links and parameter values — the app doesn't guess.
 
 **What's covered**: the rule table is grouped by *purpose*, not by class name (the same feature has different class names on different machines):
 
@@ -286,17 +293,17 @@ Pull node parameters out of the workflow and turn them into a phone form. Open i
 | ControlNet preprocessors | `DWPreprocessor`, `DepthAnythingV2Preprocessor`, `DensePosePreprocessor`, `CannyEdgePreprocessor`, `TilePreprocessor`, `HEDPreprocessor` |
 
 - **Covered nodes are narrowed to the few worth exposing**: a rule can list explicit candidate keys (e.g. ControlNet preprocessors keep only `resolution`, `RMBG` keeps model/sensitivity/process resolution), so a node with dozens of parameters doesn't flood the run page.
-- **Uncovered nodes are not dropped**: the fallback rule lists **every fillable parameter** on the node (link references are skipped automatically) — that's what covers arbitrary community nodes and `LoadImage`'s image upload box without touching a line of code.
-- **The trade-off is that the fallback ignores node complexity**: nodes with a huge parameter count (video-combine nodes, `ModelMerge*`) have no narrowing rule, so all their parameters show up at once — untick what you don't want in the config panel.
+- **Uncovered nodes are not dropped**: the fallback rule lists **every fillable parameter** on the node (link references are skipped automatically) — that's what covers arbitrary community nodes without touching a line of code.
+- **The trade-off is that the fallback ignores node complexity**: nodes with a huge parameter count (video-combine nodes, `ModelMerge*`) have no narrowing rule, so all their parameters show up at once — untick what you don't want on the "Add parameters" page.
 - **Forced types**: parameters like `denoise`, `strength_*`, `mask_blur` are often integers in the JSON (`"denoise": 1`) but semantically fractional; they're forced to float, otherwise the phone keyboard can't type `0.5`.
 - **Default ticked**: the rule's own defaults (e.g. `strength` on `ControlNetApplyAdvanced`) plus a high-frequency list (seed, prompt text, image, steps, CFG, sampler, scheduler, width/height, batch size, model names).
 
-**Toolbar and bulk actions** (handy when there's a lot to configure)
+**Bulk actions on the "Add parameters" page** (handy when there's a lot to configure)
 
 | Control | What it does |
 | --- | --- |
 | Search box (top of the page) | Filters by parameter name, alias or node name; **only the matching parameters are shown**, and matching groups auto-expand |
-| Counter (e.g. `4/18 selected`) and Expand all / Collapse all | The counter shows how many parameters are exposed; expand/collapse **without touching selections** |
+| Counter (e.g. `17/18 selected`) and Expand all / Collapse all | The counter shows how many parameters are exposed; expand/collapse **without touching selections** |
 | Select all / Clear selection icon in a card header | Applies to **that card only**, separate from the expand hotspot |
 
 **Default aliases**: text parameters prefer the node title you gave it in ComfyUI (e.g. "Base settings"); structured parameters use the built-in name ("Steps", "CFG scale", "Seed"). Aliases are **content you saved**, so they are never translated when you switch the UI language.
@@ -306,10 +313,10 @@ Pull node parameters out of the workflow and turn them into a phone form. Open i
 <p align="center">
   <img src="docs/screenshots/en/03-config.png" width="45%" />
   &nbsp;
-  <img src="docs/screenshots/en/04-config-search.png" width="45%" />
+  <img src="docs/screenshots/en/04-config-picker.png" width="45%" />
 </p>
 
-<p align="center"><i>Left: the config panel (search at the top, counter and expand-collapse beneath it, per-card select-all)　Right: searching "seed" and seeing only the matching parameter</i></p>
+<p align="center"><i>Left: the main view holds only what's in your form, × removes a row　Right: "Add parameters" groups everything by purpose; same-name nodes are told apart by wiring</i></p>
 
 > Saving the config takes you to the run page; the gear icon in the run page's top-right brings you back to the config panel. The two replace each other rather than stacking up routes.
 
@@ -372,6 +379,8 @@ stateDiagram-v2
 | Completed | Output received | Green + thumbnail |
 | Failed | Server returned an error | Red + **the actual error reason** |
 | Interrupted | Cancelled, or the server doesn't know the task | Grey |
+
+**Manual stop**: a queued / running task shows a **stop button** on its history card — it prefers ComfyUI's per-task cancel endpoint (`/api/jobs/{id}/cancel`) and falls back automatically on older servers, so you never have to wait out a bad run.
 
 **Where progress comes from**: a WebSocket (`ws://<server>/ws?clientId=…`) pushes events in real time, including which node is running and the percentage. Node names prefer the title you saved in the config panel over a bare node ID.
 
@@ -566,7 +575,7 @@ So even if that workflow has since changed or been deleted on the server, "run a
 | Submitting returns HTTP 400 listing nodes | Server-side validation failed (commonly a missing model name or node type). Check the listed node IDs on your PC |
 | A task is stuck at "Running" | A final event was missed while offline or backgrounded. Tap refresh in the History top bar to reconcile (reconnecting and returning to the foreground also reconcile) |
 | Search can't find an old record | Three possibilities: ① older records stored no "submitted parameter values", so only the workflow name is searchable; ② parameter **aliases** need the snapshot to still exist — if it was deleted in settings, matching degrades to values only; ③ **numbers are not matched**, so searching `7` won't hit `cfg=7` |
-| The config panel list goes empty after typing in search | Search is a **per-parameter filter**: only matching parameters are shown, and no match means "no matching parameter". The keyword must appear in a parameter name, alias or node name |
+| The "Add parameters" list goes empty after typing in search | Search is a **per-parameter filter**: only matching parameters are shown, and no match means "no matching parameter". The keyword must appear in a parameter name, alias or node name |
 | Aliases are still Chinese after switching to English | Aliases are content saved at configuration time — your own data, not translated with the UI language. Just rename them in the config panel |
 | "Repository not accessible" when checking updates | The repo is private; put a read-only PAT in Settings → GitHub access token. If the repo is already public and you still see this, the stored token is stale — clear it |
 | Saving an image to the album fails | Album permission is required the first time |
@@ -648,7 +657,7 @@ No persisted data stores display text: task states are stored as enum names (`qu
 flutter pub get
 flutter run          # develop
 flutter analyze      # static analysis; should be clean before committing
-flutter test         # unit and widget tests (currently 176 cases, all green)
+flutter test         # unit and widget tests (currently 439 cases, all green)
 ```
 
 Pure logic — parsing, search, language resolution — is extracted into functions that don't depend on `BuildContext` (`workflow_node_parser` / `history_search` / `task_display`), so it can be unit-tested directly; complex screens get widget tests.
