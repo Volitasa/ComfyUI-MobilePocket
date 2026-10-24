@@ -125,6 +125,24 @@
   "@historyVideoLoadFailed": { "description": "视频加载失败" },
   "historyImageLoadFailed": "图片加载失败，请检查服务器连接",
   "@historyImageLoadFailed": { "description": "大图加载失败时的占位提示" },
+  "historyStopTooltip": "停止生成",
+  "@historyStopTooltip": { "description": "进行中记录的停止按钮" },
+  "historyStopTitle": "停止这次生成？",
+  "@historyStopTitle": { "description": "停止生成确认标题" },
+  "historyStopBody": "已经算出来的进度会丢失，服务器会停掉这个任务。",
+  "@historyStopBody": { "description": "停止生成确认正文" },
+  "historyStopConfirm": "停止",
+  "@historyStopConfirm": { "description": "停止生成确认按钮" },
+  "historyStopped": "已停止生成",
+  "@historyStopped": { "description": "停止成功提示" },
+  "historyStopNotRunning": "任务已结束",
+  "@historyStopNotRunning": { "description": "服务器上这条任务已经跑完/已丢失" },
+  "historyStopFailed": "停止失败，请检查服务器连接",
+  "@historyStopFailed": { "description": "停止失败提示" },
+  "historyStopActionDelete": "仍要删除",
+  "@historyStopActionDelete": {
+    "description": "停止失败时提示里的删除入口，避免记录卡在进行中"
+  },
 
   "serverDefaultName": "服务器",
   "@serverDefaultName": {

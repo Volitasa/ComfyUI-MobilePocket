@@ -170,6 +170,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to load image. Check the server connection.';
 
   @override
+  String get historyStopTooltip => 'Stop generation';
+
+  @override
+  String get historyStopTitle => 'Stop this generation?';
+
+  @override
+  String get historyStopBody =>
+      'Progress already made will be lost and the server will drop this task.';
+
+  @override
+  String get historyStopConfirm => 'Stop';
+
+  @override
+  String get historyStopped => 'Generation stopped';
+
+  @override
+  String get historyStopNotRunning => 'This task has already finished';
+
+  @override
+  String get historyStopFailed =>
+      'Failed to stop. Check the server connection.';
+
+  @override
+  String get historyStopActionDelete => 'Delete anyway';
+
+  @override
   String get serverDefaultName => 'Server';
 
   @override

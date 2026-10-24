@@ -167,6 +167,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get historyImageLoadFailed => '图片加载失败，请检查服务器连接';
 
   @override
+  String get historyStopTooltip => '停止生成';
+
+  @override
+  String get historyStopTitle => '停止这次生成？';
+
+  @override
+  String get historyStopBody => '已经算出来的进度会丢失，服务器会停掉这个任务。';
+
+  @override
+  String get historyStopConfirm => '停止';
+
+  @override
+  String get historyStopped => '已停止生成';
+
+  @override
+  String get historyStopNotRunning => '任务已结束';
+
+  @override
+  String get historyStopFailed => '停止失败，请检查服务器连接';
+
+  @override
+  String get historyStopActionDelete => '仍要删除';
+
+  @override
   String get serverDefaultName => '服务器';
 
   @override

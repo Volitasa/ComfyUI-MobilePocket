@@ -17,6 +17,7 @@ import '../../models/workflow_snapshot.dart';
 import '../../utils.dart';
 import '../../utils/history_search.dart';
 import '../../utils/task_display.dart';
+import '../../utils/task_stop.dart';
 import '../widgets/compact_search_field.dart';
 import '../widgets/connection_status_badge.dart';
 import '../builder/run_view.dart';
@@ -43,6 +44,9 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
 
   /// 状态筛选：null = 全部；其余为「进行中」这类合并后的筛选键。
   HistoryStatusFilter _statusFilter = HistoryStatusFilter.all;
+
+  /// 正在请求停止的记录：按钮换成转圈，也挡住连点。
+  final Set<String> _stopping = {};
 
   @override
   void dispose() {
@@ -282,6 +286,86 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     await ref
         .read(taskManagerProvider.notifier)
         .removeTask(task.promptId, deleteLocalImages: choice);
+  }
+
+  /// 远程停止一条还没结束的任务：先确认，再让服务器把它停掉。
+  Future<void> _stopTask(TaskHistory task) async {
+    final l = AppLocalizations.of(context);
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.historyStopTitle),
+        content: Text(l.historyStopBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.warning),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.historyStopConfirm),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _stopping.add(task.promptId));
+    final outcome = await ref
+        .read(taskManagerProvider.notifier)
+        .stopTask(task.promptId);
+    if (!mounted) return;
+    setState(() => _stopping.remove(task.promptId));
+
+    switch (outcome) {
+      case StopOutcome.stopped:
+        _toast(l.historyStopped);
+      case StopOutcome.alreadyDone:
+        _toast(l.historyStopNotRunning);
+      case StopOutcome.offline || StopOutcome.failed:
+        // 停不掉又删不掉，这条记录会永远卡在进行中 —— 所以失败时留一个删除出口
+        _toast(
+          l.historyStopFailed,
+          actionLabel: l.historyStopActionDelete,
+          onAction: () => _confirmDelete(task),
+        );
+    }
+  }
+
+  void _toast(String text, {String? actionLabel, VoidCallback? onAction}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        action: actionLabel == null
+            ? null
+            : SnackBarAction(label: actionLabel, onPressed: onAction ?? () {}),
+      ),
+    );
+  }
+
+  /// 进行中的记录：删除的位置换成停止（橙色，跟红色的删除区分开）。
+  Widget _stopOrDeleteAction(TaskHistory task, AppLocalizations l) {
+    if (_stopping.contains(task.promptId)) {
+      return const SizedBox(
+        width: 40,
+        height: 40,
+        child: Padding(
+          padding: EdgeInsets.all(11),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.warning,
+          ),
+        ),
+      );
+    }
+    return _IconAction(
+      icon: Icons.stop_circle_outlined,
+      color: AppColors.warning,
+      tooltip: l.historyStopTooltip,
+      onTap: () => _stopTask(task),
+    );
   }
 
   String _getMediaUrl(Map<String, dynamic> mediaObj) {
@@ -608,12 +692,15 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                       // 置灰但仍可点：点击会说明具体原因，而不是静默无反应
                       onTap: () => _runAgain(task),
                     ),
-                    _IconAction(
-                      icon: Icons.delete_outline,
-                      color: AppColors.danger,
-                      tooltip: l.delete,
-                      onTap: () => _confirmDelete(task),
-                    ),
+                    if (task.status.isPending)
+                      _stopOrDeleteAction(task, l)
+                    else
+                      _IconAction(
+                        icon: Icons.delete_outline,
+                        color: AppColors.danger,
+                        tooltip: l.delete,
+                        onTap: () => _confirmDelete(task),
+                      ),
                   ],
                 ),
               ),

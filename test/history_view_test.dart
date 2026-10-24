@@ -338,4 +338,49 @@ void main() {
       expect(meta, matches(RegExp(r'^已中断 · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$')));
     });
   });
+
+  group('进行中的记录给停止入口', () {
+    testWidgets('生成中/排队中的记录显示停止，不再显示删除', (tester) async {
+      for (final status in ['running', 'queued']) {
+        await _pumpHistory(tester, [
+          _task(status: status, promptId: 'p-live', nodePhase: 'running'),
+        ]);
+
+        expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
+        expect(find.byIcon(Icons.delete_outline), findsNothing);
+      }
+    });
+
+    testWidgets('已终结的记录照旧显示删除', (tester) async {
+      for (final status in ['completed', 'failed', 'interrupted']) {
+        await _pumpHistory(tester, [
+          _task(status: status, promptId: 'p-done-$status', nodePhase: 'done'),
+        ]);
+
+        expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+        expect(find.byIcon(Icons.stop_circle_outlined), findsNothing);
+      }
+    });
+
+    testWidgets('点停止先弹确认，取消则不发请求', (tester) async {
+      await _pumpHistory(tester, [
+        _task(status: 'running', promptId: 'p-live', nodePhase: 'running'),
+      ]);
+
+      await tester.tap(find.byIcon(Icons.stop_circle_outlined));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 确认弹窗出现；点「取消」后回到列表，没有开始转圈
+      expect(find.text('停止这次生成？'), findsOneWidget);
+      await tester.tap(find.text('取消'));
+      await tester.pump();
+      // 弹窗有关闭动画，等它走完（不用 pumpAndSettle：连接徽标有常驻动画）
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('停止这次生成？'), findsNothing);
+      // 取消后按钮还是停止图标，没有进入转圈
+      expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
+    });
+  });
 }

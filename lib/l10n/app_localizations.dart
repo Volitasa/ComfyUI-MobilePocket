@@ -386,6 +386,54 @@ abstract class AppLocalizations {
   /// **'图片加载失败，请检查服务器连接'**
   String get historyImageLoadFailed;
 
+  /// 进行中记录的停止按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'停止生成'**
+  String get historyStopTooltip;
+
+  /// 停止生成确认标题
+  ///
+  /// In zh, this message translates to:
+  /// **'停止这次生成？'**
+  String get historyStopTitle;
+
+  /// 停止生成确认正文
+  ///
+  /// In zh, this message translates to:
+  /// **'已经算出来的进度会丢失，服务器会停掉这个任务。'**
+  String get historyStopBody;
+
+  /// 停止生成确认按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'停止'**
+  String get historyStopConfirm;
+
+  /// 停止成功提示
+  ///
+  /// In zh, this message translates to:
+  /// **'已停止生成'**
+  String get historyStopped;
+
+  /// 服务器上这条任务已经跑完/已丢失
+  ///
+  /// In zh, this message translates to:
+  /// **'任务已结束'**
+  String get historyStopNotRunning;
+
+  /// 停止失败提示
+  ///
+  /// In zh, this message translates to:
+  /// **'停止失败，请检查服务器连接'**
+  String get historyStopFailed;
+
+  /// 停止失败时提示里的删除入口，避免记录卡在进行中
+  ///
+  /// In zh, this message translates to:
+  /// **'仍要删除'**
+  String get historyStopActionDelete;
+
   /// 连接没有名称时的默认名（仅在展示层兜底，不落盘）
   ///
   /// In zh, this message translates to:
