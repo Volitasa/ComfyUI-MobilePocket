@@ -1236,6 +1236,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get configPickerDone => 'Done';
 
   @override
+  String get categoryPrompt => 'Prompt';
+
+  @override
+  String get categorySampling => 'Sampling';
+
+  @override
+  String get categorySize => 'Size';
+
+  @override
+  String get categoryModel => 'Model and weights';
+
+  @override
+  String get categoryControl => 'Fine control';
+
+  @override
+  String get categoryOther => 'Other nodes';
+
+  @override
+  String get rolePositive => 'Positive conditioning';
+
+  @override
+  String get roleNegative => 'Negative conditioning';
+
+  @override
+  String get roleBaseSampler => 'Base sampler';
+
+  @override
+  String get roleRefinerSampler => 'Refiner sampler';
+
+  @override
   String get historySearchHint => 'Search workflow or prompt';
 
   @override

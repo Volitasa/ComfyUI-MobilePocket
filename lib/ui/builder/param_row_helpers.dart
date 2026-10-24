@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/workflow_node.dart';
+import '../../services/node_role.dart';
 import '../../services/workflow_node_parser.dart';
 import '../../utils.dart';
 import '../widgets/param_config_tile.dart';
@@ -70,6 +71,48 @@ String nodeGroupLabel(List<WorkflowNode> params, AppLocalizations l) {
   }
   return classType;
 }
+
+/// 该节点在图里的角色说明（「正向条件」「起始采样」「胶片颗粒」…）。
+///
+/// 认不出来返回空串 —— **没有就别编**，宁可让用户只看类名，
+/// 也好过贴一个猜错的角色（猜错的标签比没有标签更误导）。
+String nodeRoleText(
+  String nodeId,
+  Map<String, NodeRole> roles,
+  AppLocalizations l,
+) {
+  final role = roles[nodeId];
+  if (role == null) return '';
+  return switch (role.kind) {
+    NodeRoleKind.positive => l.rolePositive,
+    NodeRoleKind.negative => l.roleNegative,
+    NodeRoleKind.baseSampler => l.roleBaseSampler,
+    NodeRoleKind.refinerSampler => l.roleRefinerSampler,
+    // 资源名不翻译：模型 / LoRA 是用户自己的文件
+    NodeRoleKind.asset => role.assetName ?? '',
+  };
+}
+
+/// 用途分类的段标题。
+String categoryLabel(ParamCategory category, AppLocalizations l) =>
+    switch (category) {
+      ParamCategory.prompt => l.categoryPrompt,
+      ParamCategory.sampling => l.categorySampling,
+      ParamCategory.size => l.categorySize,
+      ParamCategory.model => l.categoryModel,
+      ParamCategory.control => l.categoryControl,
+      ParamCategory.other => l.categoryOther,
+    };
+
+/// 分段的固定顺序：从「最常改的」到「最不常改的」。
+const List<ParamCategory> kCategoryOrder = [
+  ParamCategory.prompt,
+  ParamCategory.sampling,
+  ParamCategory.size,
+  ParamCategory.model,
+  ParamCategory.control,
+  ParamCategory.other,
+];
 
 /// 一条参数行：勾选 + 别名编辑 + 类型/当前值摘要。
 ///

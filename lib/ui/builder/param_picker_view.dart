@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/workflow_node.dart';
+import '../../services/node_role.dart';
 import '../../services/workflow_node_parser.dart';
 import '../widgets/compact_search_field.dart';
 import 'param_row_helpers.dart';
@@ -19,14 +20,30 @@ class ParamPickerView extends StatefulWidget {
     required this.nodes,
     required this.aliasControllers,
     required this.issues,
+    required this.roles,
   });
 
   final List<WorkflowNode> nodes;
   final Map<String, TextEditingController> aliasControllers;
   final SpecIssues issues;
 
+  /// 节点在图里的角色（正向 / 负向 / 装了什么），用于区分同名的节点。
+  final Map<String, NodeRole> roles;
+
   @override
   State<ParamPickerView> createState() => _ParamPickerViewState();
+}
+
+/// 列表里的一行：要么是一段的标题，要么是一张节点卡片。
+///
+/// 用「扁平条目 + 段头」而不是嵌套列表，是为了继续走 `ListView.builder` ——
+/// 段数虽少，节点可以有很多个。
+class _PickerRow {
+  const _PickerRow.header(this.category) : nodeId = null;
+  const _PickerRow.node(this.nodeId) : category = null;
+
+  final ParamCategory? category;
+  final String? nodeId;
 }
 
 class _ParamPickerViewState extends State<ParamPickerView> {
@@ -126,11 +143,9 @@ class _ParamPickerViewState extends State<ParamPickerView> {
     for (final n in _visibleNodes) {
       groups.putIfAbsent(n.id, () => []).add(n);
     }
-    final groupIds = groups.keys.toList();
-
     // 有参数、但一个都没命中：说明是搜空了。
     // 不提示的话整片留白，看着像页面坏了。
-    if (groupIds.isEmpty) {
+    if (groups.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -142,14 +157,41 @@ class _ParamPickerViewState extends State<ParamPickerView> {
       );
     }
 
+    // 按用途分段。段内仍按工作流里的节点顺序排 —— 不重排、也不把同类节点
+    // 合并成一张卡：合并后「这个参数属于哪个节点」又变成要猜的事。
+    final items = <_PickerRow>[];
+    for (final category in kCategoryOrder) {
+      final ids = groups.keys
+          .where(
+            (id) =>
+                WorkflowNodeParser.categoryFor(groups[id]!.first.classType) ==
+                category,
+          )
+          .toList();
+      if (ids.isEmpty) continue;
+      items.add(_PickerRow.header(category));
+      items.addAll(ids.map(_PickerRow.node));
+    }
+
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: groupIds.length,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final nodeId = groupIds[index];
+        final item = items[index];
+        if (item.category != null) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              categoryLabel(item.category!, l),
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          );
+        }
+        final nodeId = item.nodeId!;
         final params = groups[nodeId]!;
         final exposedCount = params.where((p) => p.exposed).length;
         final allExposed = params.isNotEmpty && exposedCount == params.length;
+        final roleText = nodeRoleText(nodeId, widget.roles, l);
 
         // 默认展开含已勾选参数的节点，其余收起；搜索命中时一并展开 ——
         // 否则卡片留在列表里却是收起的，用户不知道自己搜到了什么。
@@ -160,7 +202,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
             : _keyword.isNotEmpty || exposedCount > 0;
 
         return Card(
-          margin: const EdgeInsets.only(bottom: 8),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -199,12 +241,27 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          nodeGroupLabel(params, l),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: nodeGroupLabel(params, l),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              if (roleText.isNotEmpty)
+                                TextSpan(
+                                  text: ' · $roleText',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                            ],
                           ),
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

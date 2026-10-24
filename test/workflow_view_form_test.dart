@@ -92,6 +92,11 @@ Future<void> _pumpConfig(WidgetTester tester) async {
   }
 }
 
+/// 卡片头是 `Text.rich`（节点名 + 角色），`find.text` 够不着。
+Finder richTextContaining(String text) => find.byWidgetPredicate(
+  (w) => w is Text && ((w.textSpan?.toPlainText().contains(text)) ?? false),
+);
+
 /// 点某个参数所在行的勾选框（别名由输入框显示，先按它定位到行）。
 Future<void> _toggleRow(WidgetTester tester, String alias) async {
   final row = find.ancestor(
@@ -162,11 +167,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // 两张节点卡片都在 —— 收窄只发生在主视图，不是识别范围
-    expect(find.text('KSampler'), findsOneWidget);
-    expect(find.text('CheckpointLoaderSimple'), findsOneWidget);
+    expect(richTextContaining('KSampler'), findsOneWidget);
+    expect(richTextContaining('CheckpointLoaderSimple'), findsOneWidget);
 
     // 没勾过的节点默认收起，展开后三个参数一个不少
-    await tester.tap(find.text('CheckpointLoaderSimple'));
+    await tester.tap(richTextContaining('CheckpointLoaderSimple'));
     await tester.pumpAndSettle();
     expect(find.byType(ParamConfigTile), findsNWidgets(3));
   });

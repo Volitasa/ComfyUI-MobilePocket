@@ -1188,6 +1188,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get configPickerDone => '完成';
 
   @override
+  String get categoryPrompt => '提示词';
+
+  @override
+  String get categorySampling => '采样';
+
+  @override
+  String get categorySize => '画面尺寸';
+
+  @override
+  String get categoryModel => '模型与权重';
+
+  @override
+  String get categoryControl => '精细控制';
+
+  @override
+  String get categoryOther => '其余节点';
+
+  @override
+  String get rolePositive => '正向条件';
+
+  @override
+  String get roleNegative => '负向条件';
+
+  @override
+  String get roleBaseSampler => '起始采样';
+
+  @override
+  String get roleRefinerSampler => '精修采样';
+
+  @override
   String get historySearchHint => '搜索工作流或提示词';
 
   @override

@@ -2222,6 +2222,66 @@ abstract class AppLocalizations {
   /// **'完成'**
   String get configPickerDone;
 
+  /// 添加参数页：用途分段-提示词
+  ///
+  /// In zh, this message translates to:
+  /// **'提示词'**
+  String get categoryPrompt;
+
+  /// 添加参数页：用途分段-采样
+  ///
+  /// In zh, this message translates to:
+  /// **'采样'**
+  String get categorySampling;
+
+  /// 添加参数页：用途分段-画面尺寸
+  ///
+  /// In zh, this message translates to:
+  /// **'画面尺寸'**
+  String get categorySize;
+
+  /// 添加参数页：用途分段-模型与权重
+  ///
+  /// In zh, this message translates to:
+  /// **'模型与权重'**
+  String get categoryModel;
+
+  /// 添加参数页：用途分段-精细控制
+  ///
+  /// In zh, this message translates to:
+  /// **'精细控制'**
+  String get categoryControl;
+
+  /// 添加参数页：用途分段-其余
+  ///
+  /// In zh, this message translates to:
+  /// **'其余节点'**
+  String get categoryOther;
+
+  /// 节点角色：连到采样器正向条件
+  ///
+  /// In zh, this message translates to:
+  /// **'正向条件'**
+  String get rolePositive;
+
+  /// 节点角色：连到采样器负向条件
+  ///
+  /// In zh, this message translates to:
+  /// **'负向条件'**
+  String get roleNegative;
+
+  /// 节点角色：从空画布起手的采样器
+  ///
+  /// In zh, this message translates to:
+  /// **'起始采样'**
+  String get roleBaseSampler;
+
+  /// 节点角色：接着上一阶段继续采样
+  ///
+  /// In zh, this message translates to:
+  /// **'精修采样'**
+  String get roleRefinerSampler;
+
   /// 生成记录页：搜索框提示
   ///
   /// In zh, this message translates to:

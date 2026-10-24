@@ -9,6 +9,7 @@ import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/object_info_provider.dart';
+import '../../services/node_role.dart';
 import '../../services/object_info_service.dart';
 import '../../utils.dart';
 import 'param_picker_view.dart';
@@ -45,6 +46,10 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
   /// 工作流与说明书对不上的地方（缺节点 / 缺参数），供标黄用。不落盘。
   SpecIssues _specIssues = const SpecIssues();
+
+  /// 节点在图里的角色（正向 / 负向 / 装了什么）。**只放内存，不落盘**：
+  /// 它随时能从工作流 JSON 重算，存一份只会多一处要跟着改的地方。
+  Map<String, NodeRole> _nodeRoles = const {};
 
   /// 已放进手机表单的参数 —— 主视图只展示这批。
   ///
@@ -161,6 +166,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     // `control` / `bounds` 一个都不会写，等于整期功能没生效（2026-10-23 修）。
     _parseWorkflow(jsonMap, savedConfig: savedConfig, specs: _specs);
     _specIssues = WorkflowNodeParser.computeIssues(_extractableNodes, _specs);
+    _nodeRoles = inferNodeRoles(jsonMap);
 
     setState(() {
       _isReady = true;
@@ -375,6 +381,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     if (!mounted) return;
     _parseWorkflow(jsonMap, useSavedConfig: false, specs: _specs);
     _specIssues = WorkflowNodeParser.computeIssues(_extractableNodes, _specs);
+    _nodeRoles = inferNodeRoles(jsonMap);
 
     if (!mounted) return;
     // 清掉旧的别名控制器，避免与新解析出的节点错位
@@ -398,6 +405,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
           nodes: _extractableNodes,
           aliasControllers: _aliasControllers,
           issues: _specIssues,
+          roles: _nodeRoles,
         ),
       ),
     );

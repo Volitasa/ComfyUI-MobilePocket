@@ -56,11 +56,22 @@ List<Map<String, dynamic>> _mappingConfig() => [
   },
 ];
 
+/// 卡片头是 `Text.rich`（节点名 + 角色），`find.text` 够不着。
+Finder richTextContaining(String text) => find.byWidgetPredicate(
+  (w) => w is Text && ((w.textSpan?.toPlainText().contains(text)) ?? false),
+);
+
 /// 用「快照模式」进配置页：不请求服务器，配置直接来自快照里的 mappingConfig。
 Future<void> _pumpConfig(
   WidgetTester tester, {
   List<Map<String, dynamic>>? mapping,
 }) async {
+  // 列表够长时 `ListView.builder` 只建可见的那几项，靠后的节点卡片会查不到 ——
+  // 放大视口让它们一次都渲染出来（不影响被测的行为本身）
+  tester.view.physicalSize = const Size(400, 2400);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(
@@ -166,6 +177,6 @@ void main() {
     // 节点身份由「添加参数」页的卡片头给出 —— 全量列表在那边
     await tester.tap(find.textContaining('添加参数'));
     await tester.pumpAndSettle();
-    expect(find.text('加载CLIP'), findsOneWidget);
+    expect(richTextContaining('加载CLIP'), findsOneWidget);
   });
 }
