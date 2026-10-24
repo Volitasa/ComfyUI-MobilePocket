@@ -1160,6 +1160,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get configNodeClearAll => '取消本节点';
 
   @override
+  String configFormCount(int count, int total) {
+    return '已放进表单 $count 项（共 $total 项）';
+  }
+
+  @override
+  String get configFormHint => '改名或移出只影响手机上的表单';
+
+  @override
+  String get configFormEmpty => '还没有参数放进表单';
+
+  @override
+  String get configAddParams => '添加参数';
+
+  @override
+  String configAddParamsCount(int count) {
+    return '添加参数（还有 $count 项）';
+  }
+
+  @override
+  String get configRemoveParam => '移出表单';
+
+  @override
+  String get configPickerTitle => '添加参数';
+
+  @override
+  String get configPickerDone => '完成';
+
+  @override
   String get historySearchHint => '搜索工作流或提示词';
 
   @override

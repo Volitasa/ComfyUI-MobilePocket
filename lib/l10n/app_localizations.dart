@@ -2174,6 +2174,54 @@ abstract class AppLocalizations {
   /// **'取消本节点'**
   String get configNodeClearAll;
 
+  /// 配置页：主视图统计，表单里几项、工作流一共几项
+  ///
+  /// In zh, this message translates to:
+  /// **'已放进表单 {count} 项（共 {total} 项）'**
+  String configFormCount(int count, int total);
+
+  /// 配置页：主视图副标题
+  ///
+  /// In zh, this message translates to:
+  /// **'改名或移出只影响手机上的表单'**
+  String get configFormHint;
+
+  /// 配置页：主视图空态
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有参数放进表单'**
+  String get configFormEmpty;
+
+  /// 配置页：进入全量参数列表的入口
+  ///
+  /// In zh, this message translates to:
+  /// **'添加参数'**
+  String get configAddParams;
+
+  /// 配置页：添加入口，附带还剩多少项可加
+  ///
+  /// In zh, this message translates to:
+  /// **'添加参数（还有 {count} 项）'**
+  String configAddParamsCount(int count);
+
+  /// 配置页：把该参数移出手机表单
+  ///
+  /// In zh, this message translates to:
+  /// **'移出表单'**
+  String get configRemoveParam;
+
+  /// 添加参数页：标题
+  ///
+  /// In zh, this message translates to:
+  /// **'添加参数'**
+  String get configPickerTitle;
+
+  /// 添加参数页：完成按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'完成'**
+  String get configPickerDone;
+
   /// 生成记录页：搜索框提示
   ///
   /// In zh, this message translates to:

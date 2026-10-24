@@ -17,6 +17,9 @@ class ParamConfigTile extends StatefulWidget {
     required this.aliasHint,
     this.onAliasChanged,
     this.warning,
+    this.showCheckbox = true,
+    this.onRemove,
+    this.removeTooltip,
   });
 
   /// 行高：44 是紧凑与「点得中」的折中，不再往下压。
@@ -24,9 +27,26 @@ class ParamConfigTile extends StatefulWidget {
 
   final String summary;
   final bool exposed;
-  final ValueChanged<bool?> onChanged;
+
+  /// 勾选变化。为 null 时（配合 `showCheckbox: false`）该行不可勾选。
+  final ValueChanged<bool?>? onChanged;
   final TextEditingController aliasController;
   final String aliasHint;
+
+  /// 是否画左侧勾选框。
+  ///
+  /// false 用于「已放进表单」的语境：那些参数本来就是选中的，
+  /// 再放一个永远勾着的框是噪音，取消改由 [onRemove] 承担。
+  final bool showCheckbox;
+
+  /// 尾部「移出」按钮。非 null 时行尾出现一个移除图标，点击即取消选中。
+  ///
+  /// 与 [showCheckbox] 二选一：有这个就别再画勾选框，否则一行上出现两个
+  /// 含义相反的入口（勾上 / 移出），用户要停下来想一下才敢点。
+  final VoidCallback? onRemove;
+
+  /// 移除按钮的长按提示。
+  final String? removeTooltip;
 
   /// 别名改动回写（保存配置时用的就是 `node.alias`，不是控制器里的文本）。
   final ValueChanged<String>? onAliasChanged;
@@ -75,15 +95,16 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
       height: ParamConfigTile.rowHeight,
       child: Row(
         children: [
-          SizedBox(
-            width: 36,
-            child: Checkbox(
-              value: widget.exposed,
-              onChanged: widget.onChanged,
-              visualDensity: VisualDensity.compact,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          if (widget.showCheckbox)
+            SizedBox(
+              width: 36,
+              child: Checkbox(
+                value: widget.exposed,
+                onChanged: widget.onChanged,
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
             ),
-          ),
           Expanded(
             child: TextField(
               controller: widget.aliasController,
@@ -125,8 +146,7 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (widget.warning != null &&
-                      widget.warning!.isNotEmpty) ...[
+                  if (widget.warning != null && widget.warning!.isNotEmpty) ...[
                     const Icon(
                       Icons.warning_amber_rounded,
                       size: 12,
@@ -140,7 +160,9 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
                       style: TextStyle(
                         fontSize: 11,
                         height: 1.2,
-                        color: widget.warning != null ? Colors.orange : Colors.grey,
+                        color: widget.warning != null
+                            ? Colors.orange
+                            : Colors.grey,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -148,6 +170,20 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ],
+          if (widget.onRemove != null) ...[
+            const SizedBox(width: 4),
+            SizedBox(
+              width: 32,
+              child: IconButton(
+                icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                tooltip: widget.removeTooltip,
+                onPressed: widget.onRemove,
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ),
           ],

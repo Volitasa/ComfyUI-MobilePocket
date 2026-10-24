@@ -395,6 +395,31 @@
   "@configNodeSelectAll": { "description": "Config page: select all params of a node" },
   "configNodeClearAll": "Clear this node",
   "@configNodeClearAll": { "description": "Config page: unselect all params of a node" },
+  "configFormCount": "{count} of {total} in your form",
+  "@configFormCount": {
+    "description": "Config page: main view count, how many are in the form out of the total",
+    "placeholders": {
+      "count": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "configFormHint": "Renaming or removing only changes the phone form",
+  "@configFormHint": { "description": "Config page: main view subtitle" },
+  "configFormEmpty": "Nothing in your form yet",
+  "@configFormEmpty": { "description": "Config page: main view empty state" },
+  "configAddParams": "Add parameters",
+  "@configAddParams": { "description": "Config page: entry to the full parameter list" },
+  "configAddParamsCount": "Add parameters ({count} more)",
+  "@configAddParamsCount": {
+    "description": "Config page: add entry, with how many are left to add",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "configRemoveParam": "Remove from form",
+  "@configRemoveParam": { "description": "Config page: remove this param from the phone form" },
+  "configPickerTitle": "Add parameters",
+  "@configPickerTitle": { "description": "Param picker page: title" },
+  "configPickerDone": "Done",
+  "@configPickerDone": { "description": "Param picker page: done button" },
   "historySearchHint": "Search workflow or prompt",
   "@historySearchHint": { "description": "History page: search field hint" },
   "historySearchEmpty": "No matching records",

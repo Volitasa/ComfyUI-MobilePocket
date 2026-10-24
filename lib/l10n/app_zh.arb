@@ -807,6 +807,31 @@
   "@configNodeSelectAll": { "description": "配置页：勾选该节点下全部参数" },
   "configNodeClearAll": "取消本节点",
   "@configNodeClearAll": { "description": "配置页：取消该节点下全部参数" },
+  "configFormCount": "已放进表单 {count} 项（共 {total} 项）",
+  "@configFormCount": {
+    "description": "配置页：主视图统计，表单里几项、工作流一共几项",
+    "placeholders": {
+      "count": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "configFormHint": "改名或移出只影响手机上的表单",
+  "@configFormHint": { "description": "配置页：主视图副标题" },
+  "configFormEmpty": "还没有参数放进表单",
+  "@configFormEmpty": { "description": "配置页：主视图空态" },
+  "configAddParams": "添加参数",
+  "@configAddParams": { "description": "配置页：进入全量参数列表的入口" },
+  "configAddParamsCount": "添加参数（还有 {count} 项）",
+  "@configAddParamsCount": {
+    "description": "配置页：添加入口，附带还剩多少项可加",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "configRemoveParam": "移出表单",
+  "@configRemoveParam": { "description": "配置页：把该参数移出手机表单" },
+  "configPickerTitle": "添加参数",
+  "@configPickerTitle": { "description": "添加参数页：标题" },
+  "configPickerDone": "完成",
+  "@configPickerDone": { "description": "添加参数页：完成按钮" },
   "historySearchHint": "搜索工作流或提示词",
   "@historySearchHint": { "description": "生成记录页：搜索框提示" },
   "historySearchEmpty": "没有匹配的记录",

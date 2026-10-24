@@ -1207,6 +1207,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get configNodeClearAll => 'Clear this node';
 
   @override
+  String configFormCount(int count, int total) {
+    return '$count of $total in your form';
+  }
+
+  @override
+  String get configFormHint =>
+      'Renaming or removing only changes the phone form';
+
+  @override
+  String get configFormEmpty => 'Nothing in your form yet';
+
+  @override
+  String get configAddParams => 'Add parameters';
+
+  @override
+  String configAddParamsCount(int count) {
+    return 'Add parameters ($count more)';
+  }
+
+  @override
+  String get configRemoveParam => 'Remove from form';
+
+  @override
+  String get configPickerTitle => 'Add parameters';
+
+  @override
+  String get configPickerDone => 'Done';
+
+  @override
   String get historySearchHint => 'Search workflow or prompt';
 
   @override
