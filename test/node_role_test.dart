@@ -63,29 +63,55 @@ const Map<String, dynamic> _workflow = {
 };
 
 void main() {
-  group('节点角色', () {
-    test('两个同名的文本编码按接到的槽位区分正负向', () {
+  group('节点位置', () {
+    test('同名文本编码靠它接到的官方槽位说清去哪', () {
       final roles = inferNodeRoles(_workflow);
 
       // 光看类名这两个节点一模一样，区别只在它接到了采样器的哪个口
-      expect(roles['2']?.kind, NodeRoleKind.positive);
-      expect(roles['3']?.kind, NodeRoleKind.negative);
+      expect(roles['2']?.isLink, isTrue);
+      expect(roles['2']?.targetLabel, 'KSampler');
+      expect(roles['2']?.slot, 'positive');
+      expect(roles['3']?.targetLabel, 'KSampler');
+      expect(roles['3']?.slot, 'negative');
     });
 
-    test('两个同名的采样器按 latent 来源区分起始 / 精修', () {
+    test('下游节点名用工作流自带的标题，我们自己不另起名字', () {
+      final roles = inferNodeRoles({
+        '2': {
+          'class_type': 'CLIPTextEncode',
+          'inputs': {
+            'text': 'a cat',
+            'clip': ['1', 1],
+          },
+        },
+        '5': {
+          'class_type': 'KSampler',
+          '_meta': {'title': 'K采样器'},
+          'inputs': {'positive': ['2', 0]},
+        },
+      });
+
+      // 「K采样器」是 ComfyUI 前端给的节点名，不是我们翻译的
+      expect(roles['2']?.targetLabel, 'K采样器');
+      expect(roles['2']?.slot, 'positive');
+    });
+
+    test('采样器不再贴「起始 / 精修」这种自己发明的标签', () {
       final roles = inferNodeRoles(_workflow);
 
-      // '5' 的 latent 来自空画布，'6' 接着 '5' 的输出继续采
-      expect(roles['5']?.kind, NodeRoleKind.baseSampler);
-      expect(roles['6']?.kind, NodeRoleKind.refinerSampler);
+      // 只按连线说话：'5' 的输出接到 '6' 的 latent_image，'6' 没有下游就别编
+      expect(roles['5']?.targetLabel, 'KSampler');
+      expect(roles['5']?.slot, 'latent_image');
+      expect(roles['6'], isNull);
     });
 
     test('加载类直接说装了什么，路径与扩展名都去掉', () {
       final roles = inferNodeRoles(_workflow);
 
-      expect(roles['1']?.kind, NodeRoleKind.asset);
       expect(roles['1']?.assetName, 'v1-5');
       expect(roles['7']?.assetName, 'film_grain');
+      // 资源名比「它接去哪」更值得占这一行
+      expect(roles['1']?.isLink, isFalse);
     });
 
     test('连线引用不当资源名 —— 否则会显示成一串节点号', () {
@@ -102,6 +128,31 @@ void main() {
       });
 
       expect(roles['9'], isNull);
+    });
+
+    test('多个下游又说不清是哪一路 → 干脆不说', () {
+      // 同一张空画布喂两个采样器：说「连到 KSampler · latent_image」会让人
+      // 以为只连了一个
+      final roles = inferNodeRoles({
+        '1': {
+          'class_type': 'EmptyLatentImage',
+          'inputs': {'width': 512},
+        },
+        '2': {
+          'class_type': 'KSampler',
+          'inputs': {
+            'latent_image': ['1', 0],
+          },
+        },
+        '3': {
+          'class_type': 'KSampler',
+          'inputs': {
+            'latent_image': ['1', 0],
+          },
+        },
+      });
+
+      expect(roles['1'], isNull);
     });
 
     test('认不出来就干脆不给，绝不硬猜', () {
@@ -121,17 +172,6 @@ void main() {
 
       expect(roles['4'], isNull);
       expect(roles['8'], isNull);
-    });
-
-    test('没有连线的孤立条件节点也认不出来', () {
-      final roles = inferNodeRoles({
-        '2': {
-          'class_type': 'CLIPTextEncode',
-          'inputs': {'text': 'a cat'},
-        },
-      });
-
-      expect(roles['2'], isNull);
     });
   });
 

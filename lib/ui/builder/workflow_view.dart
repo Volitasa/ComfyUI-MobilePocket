@@ -12,6 +12,7 @@ import '../../providers/object_info_provider.dart';
 import '../../services/node_role.dart';
 import '../../services/object_info_service.dart';
 import '../../utils.dart';
+import '../widgets/page_title.dart';
 import 'param_picker_view.dart';
 import 'param_row_helpers.dart';
 import 'run_view.dart'; // 下一步我们将创建运行页面
@@ -466,6 +467,8 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
               issues: _specIssues,
               onChanged: () => setState(() {}),
               showCheckbox: false,
+              // 主视图的参数是混着排的：行尾要说清它属于哪个节点
+              showNodeInSummary: true,
               onRemove: () => setState(() => selected[i].exposed = false),
             ),
           ],
@@ -541,7 +544,10 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         appBar: AppBar(
           // 这一步是在向服务器问节点说明书（决定控件形态），
           // 取不到会在 2s 后降级 —— 文案说清在等什么，别只写「解析中」
-          title: Text(AppLocalizations.of(context).configSpecsFetching),
+          title: Text(
+            AppLocalizations.of(context).configSpecsFetching,
+            style: kSubPageTitleStyle,
+          ),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -558,7 +564,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       appBar: AppBar(
         title: Text(
           AppLocalizations.of(context).configPanelTitle(displayName),
-          style: const TextStyle(fontSize: 16),
+          style: kSubPageTitleStyle,
         ),
         actions: [
           IconButton(

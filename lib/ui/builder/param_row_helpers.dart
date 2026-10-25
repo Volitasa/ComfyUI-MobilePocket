@@ -12,7 +12,27 @@ import '../widgets/param_config_tile.dart';
 /// 抽出来的原因只有一个：**同一行在两个页面里必须长得一模一样**。
 /// 主视图只放已选参数、添加页放全部参数，如果各自实现一遍，
 /// 别名框 / 告警 / 摘要迟早会漂移成两套皮肤。
-String paramSummaryText(WorkflowNode node, AppLocalizations l) {
+///
+/// [nodeLabel] **非 null 即「主视图模式」**：行尾写「节点名 · 当前值」。
+/// 那一页的参数是**混着排**的，用户看不出这一行属于哪个节点；
+/// 而「类型: 选项」这种信息给不出下一步动作。
+/// 传空串表示「这一行不用重复节点名」（别名本身就是节点名），此时只写当前值 ——
+/// ⚠️ 不能传回 null 退回类型摘要，否则同一份列表里有的行写节点、有的行写类型。
+/// 添加页的卡片本身按节点分组、节点名就在卡片头上，那边保持「类型 · 当前值」。
+String paramSummaryText(
+  WorkflowNode node,
+  AppLocalizations l, {
+  String? nodeLabel,
+}) {
+  final valueStr = _paramValueText(node);
+
+  if (nodeLabel != null) {
+    if (nodeLabel.isEmpty) return valueStr;
+    return valueStr.isEmpty
+        ? nodeLabel
+        : l.paramSummaryNodeValue(nodeLabel, valueStr);
+  }
+
   // ⚠️ 有 `control` 时按**控件形态**显示类型名，否则会出现
   // 「摘要写着"文本"，运行页却是个下拉框」的不一致（方案 §8.1 陷阱 3）。
   final control = node.control;
@@ -33,15 +53,18 @@ String paramSummaryText(WorkflowNode node, AppLocalizations l) {
         l.paramTypeDefault;
   }
 
-  final v = node.value;
-  String valueStr = '';
-  if (v != null) {
-    valueStr = v.toString();
-    if (valueStr.length > 20) valueStr = '${valueStr.substring(0, 20)}…';
-  }
   return valueStr.isEmpty
       ? l.paramSummaryType(typeName)
       : l.paramSummaryTypeValue(typeName, valueStr);
+}
+
+/// 当前值的单行展示：太长就在中间截断（行尾还有一层省略号）。
+String _paramValueText(WorkflowNode node) {
+  final v = node.value;
+  if (v == null) return '';
+  var s = v.toString();
+  if (s.length > 20) s = '${s.substring(0, 20)}…';
+  return s;
 }
 
 /// 该参数的行级告警文案；没问题返回 null。
@@ -62,20 +85,22 @@ String? paramWarningText(
   return null;
 }
 
-/// 节点分组卡片的头部标签：优先展示节点标题（有辨识度），无有效标题回退类名。
-String nodeGroupLabel(List<WorkflowNode> params, AppLocalizations l) {
-  final classType = params.first.classType;
-  final title = params.first.title;
-  if (isMeaningfulTitle(title, classType)) {
-    return title;
-  }
-  return classType;
+/// 节点的**官方名**：工作流里的节点标题优先，取不到就是类名。
+///
+/// ⚠️ 不翻译、也不自己起名 —— 「K采样器」「加载VAE」都是 ComfyUI 自己的
+/// 节点名，我们只是把它读出来。
+String nodeLabelOf(WorkflowNode node) {
+  final title = node.title.trim();
+  return isMeaningfulTitle(title, node.classType) ? title : node.classType;
 }
 
-/// 该节点在图里的角色说明（「正向条件」「起始采样」「胶片颗粒」…）。
+/// 节点分组卡片的头部标签：就是该节点的官方名（见 [nodeLabelOf]）。
+String nodeGroupLabel(List<WorkflowNode> params) => nodeLabelOf(params.first);
+
+/// 该节点在图里的位置说明（「连到 K采样器 · positive」「film_grain」…）。
 ///
 /// 认不出来返回空串 —— **没有就别编**，宁可让用户只看类名，
-/// 也好过贴一个猜错的角色（猜错的标签比没有标签更误导）。
+/// 也好过贴一个猜错的标签（猜错的标签比没有标签更误导）。
 String nodeRoleText(
   String nodeId,
   Map<String, NodeRole> roles,
@@ -83,14 +108,10 @@ String nodeRoleText(
 ) {
   final role = roles[nodeId];
   if (role == null) return '';
-  return switch (role.kind) {
-    NodeRoleKind.positive => l.rolePositive,
-    NodeRoleKind.negative => l.roleNegative,
-    NodeRoleKind.baseSampler => l.roleBaseSampler,
-    NodeRoleKind.refinerSampler => l.roleRefinerSampler,
-    // 资源名不翻译：模型 / LoRA 是用户自己的文件
-    NodeRoleKind.asset => role.assetName ?? '',
-  };
+  // 资源名不翻译：模型 / LoRA 是用户自己的文件
+  if (role.assetName != null) return role.assetName!;
+  if (role.isLink) return l.roleLinksTo(role.targetLabel!, role.slot!);
+  return '';
 }
 
 /// 用途分类的段标题。
@@ -121,6 +142,9 @@ const List<ParamCategory> kCategoryOrder = [
 /// 否则在添加页改了别名、回主视图又变回旧的。
 ///
 /// [showCheckbox] 与 [onRemove] 二选一，见 `ParamConfigTile` 上的说明。
+///
+/// [showNodeInSummary] 为 true 时行尾写「属于哪个节点 · 当前值」（主视图用）。
+/// 别名恰好就是节点名时不再重复一遍 —— 那行字本身已经是节点名了。
 Widget buildParamConfigRow(
   BuildContext context, {
   required WorkflowNode node,
@@ -134,6 +158,9 @@ Widget buildParamConfigRow(
   required VoidCallback onChanged,
   bool showCheckbox = true,
 
+  /// 行尾是否带上「属于哪个节点」。见 [paramSummaryText]。
+  bool showNodeInSummary = false,
+
   /// 非 null 时行尾出现移除按钮（主视图用它代替勾选框）。
   VoidCallback? onRemove,
 }) {
@@ -143,10 +170,15 @@ Widget buildParamConfigRow(
     controllerKey,
     () => TextEditingController(text: node.alias),
   );
+  final label = nodeLabelOf(node);
+  // 别名本身就是节点名时不重复那一遍，行尾只留当前值
+  final nodeInSummary = !showNodeInSummary
+      ? null
+      : (label.isNotEmpty && controller.text.trim() != label ? label : '');
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 2),
     child: ParamConfigTile(
-      summary: paramSummaryText(node, l),
+      summary: paramSummaryText(node, l, nodeLabel: nodeInSummary),
       exposed: node.exposed,
       onChanged: showCheckbox
           ? (val) {
@@ -157,7 +189,12 @@ Widget buildParamConfigRow(
       aliasController: controller,
       aliasHint: l.paramAliasHint,
       // 保存时用的是 node.alias，控制器文本必须回写，否则改了不生效
-      onAliasChanged: (val) => node.alias = val,
+      onAliasChanged: (val) {
+        node.alias = val;
+        // 主视图行尾要不要带节点名，取决于别名长什么样（见 [paramSummaryText]），
+        // 改名后就得重算一次；添加页行尾与别名无关，不必跟着重建。
+        if (showNodeInSummary) onChanged();
+      },
       warning: paramWarningText(node, issues, l),
       showCheckbox: showCheckbox,
       onRemove: onRemove,

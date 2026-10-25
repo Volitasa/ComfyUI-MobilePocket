@@ -59,7 +59,10 @@ List<Map<String, dynamic>> _mappingConfig() => [
 ];
 
 /// 用「快照模式」进配置页：不请求服务器，配置直接来自快照里的 mappingConfig。
-Future<void> _pumpConfig(WidgetTester tester) async {
+Future<void> _pumpConfig(
+  WidgetTester tester, {
+  List<Map<String, dynamic>>? mapping,
+}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(
@@ -71,7 +74,7 @@ Future<void> _pumpConfig(WidgetTester tester) async {
         'createdAt': 1760000000000,
         'serverId': 'srv_1',
         'workflowJson': _workflow,
-        'mappingConfig': _mappingConfig(),
+        'mappingConfig': mapping ?? _mappingConfig(),
       },
     ]),
   );
@@ -91,11 +94,6 @@ Future<void> _pumpConfig(WidgetTester tester) async {
     await tester.pump(const Duration(milliseconds: 50));
   }
 }
-
-/// 卡片头是 `Text.rich`（节点名 + 角色），`find.text` 够不着。
-Finder richTextContaining(String text) => find.byWidgetPredicate(
-  (w) => w is Text && ((w.textSpan?.toPlainText().contains(text)) ?? false),
-);
 
 /// 点某个参数所在行的勾选框（别名由输入框显示，先按它定位到行）。
 Future<void> _toggleRow(WidgetTester tester, String alias) async {
@@ -117,6 +115,62 @@ void main() {
 
     // 剩下的两项都还有路可去 —— 入口上写明还剩多少
     expect(find.text('添加参数（还有 2 项）'), findsOneWidget);
+  });
+
+  testWidgets('行尾标的是「哪个节点 · 当前值」，不是参数类型', (tester) async {
+    await _pumpConfig(tester);
+
+    // 主视图的参数是混着排的，行尾说清它属于哪个节点；
+    // 「类型: 整数」这种信息给不出下一步动作，已经让位给节点名
+    expect(find.text('KSampler · 20'), findsOneWidget);
+    expect(find.textContaining('类型: '), findsNothing);
+  });
+
+  testWidgets('别名就是节点名时不重复，行尾只剩当前值', (tester) async {
+    // 一份没改过名的配置：别名与节点标题一模一样
+    await _pumpConfig(
+      tester,
+      mapping: [
+        {
+          'id': '3',
+          'classType': 'KSampler',
+          'key': 'steps',
+          'alias': 'KSampler',
+          'exposed': true,
+          'title': '',
+          'paramType': 'intType',
+          'options': <String>[],
+          'value': 20,
+        },
+      ],
+    );
+
+    expect(find.text('20'), findsOneWidget);
+    // 关键：别退回类型摘要 —— 同一份列表里不能一半写节点、一半写「类型: 整数」
+    expect(find.textContaining('类型: '), findsNothing);
+    expect(find.textContaining('K采样器 · '), findsNothing);
+  });
+
+  testWidgets('改名后行尾跟着重算，输入框不回退', (tester) async {
+    await _pumpConfig(tester);
+    expect(find.text('KSampler · 20'), findsOneWidget);
+
+    final row = find.ancestor(
+      of: find.text('采样步数'),
+      matching: find.byType(ParamConfigTile),
+    );
+    final field = find.descendant(of: row, matching: find.byType(TextField));
+    await tester.tap(field);
+    await tester.pumpAndSettle();
+
+    // 改成与节点名相同 → 行尾不再重复节点名
+    await tester.enterText(field, 'KSampler');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+
+    expect(find.text('KSampler'), findsWidgets);
+    expect(find.text('20'), findsOneWidget);
+    expect(find.text('KSampler · 20'), findsNothing);
   });
 
   testWidgets('主视图的行不再画勾选框，行尾是移出', (tester) async {
@@ -167,11 +221,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // 两张节点卡片都在 —— 收窄只发生在主视图，不是识别范围
-    expect(richTextContaining('KSampler'), findsOneWidget);
-    expect(richTextContaining('CheckpointLoaderSimple'), findsOneWidget);
+    expect(find.text('KSampler'), findsOneWidget);
+    expect(find.text('CheckpointLoaderSimple'), findsOneWidget);
 
     // 没勾过的节点默认收起，展开后三个参数一个不少
-    await tester.tap(richTextContaining('CheckpointLoaderSimple'));
+    await tester.tap(find.text('CheckpointLoaderSimple'));
     await tester.pumpAndSettle();
     expect(find.byType(ParamConfigTile), findsNWidgets(3));
   });

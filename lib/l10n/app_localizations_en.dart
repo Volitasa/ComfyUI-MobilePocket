@@ -484,6 +484,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String paramSummaryNodeValue(String node, String value) {
+    return '$node · $value';
+  }
+
+  @override
   String get aliasSeed => 'Random seed';
 
   @override
@@ -1254,16 +1259,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categoryOther => 'Other nodes';
 
   @override
-  String get rolePositive => 'Positive conditioning';
-
-  @override
-  String get roleNegative => 'Negative conditioning';
-
-  @override
-  String get roleBaseSampler => 'Base sampler';
-
-  @override
-  String get roleRefinerSampler => 'Refiner sampler';
+  String roleLinksTo(String node, String slot) {
+    return 'Feeds $node · $slot';
+  }
 
   @override
   String get historySearchHint => 'Search workflow or prompt';

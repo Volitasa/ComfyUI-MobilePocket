@@ -5,6 +5,7 @@ import '../../models/workflow_node.dart';
 import '../../services/node_role.dart';
 import '../../services/workflow_node_parser.dart';
 import '../widgets/compact_search_field.dart';
+import '../widgets/page_title.dart';
 import 'param_row_helpers.dart';
 
 /// 「添加参数」页：全量参数按节点分组摆在这里，勾完返回。
@@ -241,58 +242,80 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: nodeGroupLabel(params, l),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                        // 两行：第一行是节点名与操作，第二行才说它在图里接去哪。
+                        // 一行放不下 ——「CLIP文本编码 连到 K采样器 · positive」
+                        // 再加上份数与全选按钮，中窄屏必然把后半句吃掉，
+                        // 而吃掉的那半句恰恰是这句话的全部价值。
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    nodeGroupLabel(params),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                              if (roleText.isNotEmpty)
-                                TextSpan(
-                                  text: ' · $roleText',
+                                const SizedBox(width: 8),
+                                Text(
+                                  exposedCount > 0
+                                      ? l.configSelectedCount(
+                                          exposedCount,
+                                          params.length,
+                                        )
+                                      : l.configParamCount(params.length),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: exposedCount > 0
+                                        ? Colors.green.shade700
+                                        : Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                IconButton(
+                                  visualDensity: VisualDensity.compact,
+                                  iconSize: 20,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  tooltip: allExposed
+                                      ? l.configNodeClearAll
+                                      : l.configNodeSelectAll,
+                                  onPressed: () => setState(() {
+                                    for (final p in params) {
+                                      p.exposed = !allExposed;
+                                    }
+                                  }),
+                                  icon: Icon(
+                                    allExposed
+                                        ? Icons.deselect
+                                        : Icons.select_all,
+                                    size: 20,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (roleText.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  roleText,
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                            ],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        exposedCount > 0
-                            ? l.configSelectedCount(exposedCount, params.length)
-                            : l.configParamCount(params.length),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: exposedCount > 0
-                              ? Colors.green.shade700
-                              : Colors.grey,
-                        ),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        iconSize: 20,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        tooltip: allExposed
-                            ? l.configNodeClearAll
-                            : l.configNodeSelectAll,
-                        onPressed: () => setState(() {
-                          for (final p in params) {
-                            p.exposed = !allExposed;
-                          }
-                        }),
-                        icon: Icon(
-                          allExposed ? Icons.deselect : Icons.select_all,
-                          size: 20,
-                          color: Colors.grey,
+                              ),
+                          ],
                         ),
                       ),
                     ],
@@ -328,7 +351,9 @@ class _ParamPickerViewState extends State<ParamPickerView> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l.configPickerTitle)),
+      appBar: AppBar(
+        title: Text(l.configPickerTitle, style: kSubPageTitleStyle),
+      ),
       body: Column(
         children: [
           _buildSearchField(l),

@@ -94,6 +94,19 @@ void main() {
     expect(find.text('整数 · 10'), findsNothing);
   });
 
+  testWidgets('行尾标得下「节点 · 当前值」，比原来的类型摘要宽', (tester) async {
+    const summary = 'CLIP文本编码 · masterpiece, 低质量, 模糊';
+    await _pump(tester, summary: summary);
+
+    // 原来上限 120，只够「类型: 整数 · 当前值: 20」这种短句；
+    // 换成节点名 + 当前值后必须放宽，否则永远看到半截
+    final width = tester.getSize(find.text(summary)).width;
+    expect(width, greaterThan(120));
+
+    // 宽也有个上限：别名还得留在屏上
+    expect(width, lessThanOrEqualTo(168));
+  });
+
   testWidgets('别名与当前值都超长也不报错，各自截断', (tester) async {
     await _pump(
       tester,

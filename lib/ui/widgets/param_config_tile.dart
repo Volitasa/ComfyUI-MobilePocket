@@ -137,12 +137,14 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
               ),
             ),
           ),
-          // 当前值只占行尾一小段，长值截断，不把别名挤没；
-          // 编辑别名时整段让出去。有告警时行尾让给告警（黄色）。
+          // 行尾写的是「属于哪个节点 · 当前值」，比原来的「类型」长得多，
+          // 所以上限放到 168（原来 120 只够放「类型: 整数 · 当前值: 20」这种短句）。
+          // 再长就交给省略号，无论如何都不许把左边的别名挤没；
+          // 编辑别名时整段让出去，有告警时行尾让给告警（黄色）。
           if (!_focused && widget.trailingText.isNotEmpty) ...[
             const SizedBox(width: 8),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 120),
+              constraints: const BoxConstraints(maxWidth: 168),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

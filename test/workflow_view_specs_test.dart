@@ -136,7 +136,10 @@ void main() {
 
     expect(find.text(_degradedText), findsNothing);
 
-    // 定型生效的证据：`type` 的摘要写「类型: 选项」而不是「类型: 文本」
+    // 定型生效的证据在添加页：`type` 的摘要写「类型: 选项」而不是「类型: 文本」。
+    // 主视图不看类型了（那里写的是「哪个节点 · 当前值」），所以进添加页核对。
+    await tester.tap(find.textContaining('添加参数'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('类型: 选项'), findsWidgets);
     expect(find.textContaining('类型: 文本'), findsNothing);
   });
@@ -189,8 +192,8 @@ void main() {
 
     await tester.pump(const Duration(seconds: 2));
     expect(find.text(_degradedText), findsOneWidget);
-    // 超时即定型：控件按 paramType 推断，`type` 是文本
-    expect(find.textContaining('类型: 文本'), findsWidgets);
+    // 超时也要能继续用：参数照常解析出来，行尾是节点名 + 当前值
+    expect(find.text('加载CLIP · lumina2'), findsOneWidget);
 
     // 把在飞的那次请求等完，别留下未结束的定时器
     await tester.pump(const Duration(seconds: 4));

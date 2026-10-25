@@ -19,6 +19,7 @@ import '../../services/submit_check.dart';
 import '../../services/workflow_node_parser.dart';
 import '../../utils.dart';
 import '../main_screen.dart';
+import '../widgets/page_title.dart';
 import '../widgets/param_field.dart';
 import 'param_widgets/param_card_registry.dart';
 import 'param_widgets/latent_size_card.dart';
@@ -864,7 +865,7 @@ class _RunViewState extends ConsumerState<RunView> {
       appBar: AppBar(
         title: Text(
           AppLocalizations.of(context).runTitle(displayName),
-          style: const TextStyle(fontSize: 16),
+          style: kSubPageTitleStyle,
         ),
         actions: [
           if (hasManyCards)

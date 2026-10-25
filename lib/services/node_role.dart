@@ -1,55 +1,43 @@
-/// 节点在图里的角色：**同一类节点出现好几个时，用来区分谁是谁**。
+import '../utils.dart';
+
+/// 节点在图里的位置：**同一类节点出现好几个时，用来区分谁是谁**。
 ///
 /// 工作流里三个 `CLIPTextEncode` 都叫「CLIP文本编码」，两个 `KSampler` 都叫
-/// 「KSampler」—— 光看类名用户没法判断该改哪个。真正的区别在图里：
-/// 一个连到采样器的 positive、一个连到 negative；一个从空画布起手、一个接着上一阶段精修。
+/// 「K采样器」—— 光看类名用户没法判断该改哪个。真正的区别在图里：
+/// 一个把结果送进采样器的 `positive`、一个送进 `negative`；
+/// 一个装的是这个模型、一个装的是那个 LoRA。
 ///
 /// 这里做的就是把**拓扑翻译成一句话**，而不是去画那张图：
 /// 手机上画 ComfyUI 的节点图既不现实也没必要（用户的任务是挑参数，不是读拓扑）。
-enum NodeRoleKind {
-  /// 连到采样器的正向条件（CLIPTextEncode → positive）
-  positive,
-
-  /// 连到采样器的负向条件（CLIPTextEncode → negative）
-  negative,
-
-  /// 从空 latent 起手的采样器
-  baseSampler,
-
-  /// 接着上一阶段继续采样的采样器（高分辨率精修那类）
-  refinerSampler,
-
-  /// 加载类节点：装了哪个模型 / LoRA / ControlNet
-  asset,
-}
-
+///
+/// ⚠️ **角色里出现的每个名字都必须来自官方数据**（用户 2026-10-25 定的红线）：
+/// - 下游节点名 → 工作流里的 `_meta.title`（ComfyUI 前端给的节点名），取不到退类名；
+/// - 槽位名 → 下游节点 `inputs` 里的 key（`positive` / `samples` …）；
+/// - 资源名 → 参数值里的文件名。
+/// **不许自己发明概念**（曾经的「起始采样 / 精修采样」就是这么来的，已删）。
 class NodeRole {
-  const NodeRole(this.kind, {this.assetName});
+  /// 这个节点的输出接到了某个节点的某个输入。
+  const NodeRole.link({required this.targetLabel, required this.slot})
+    : assetName = null;
 
-  final NodeRoleKind kind;
+  /// 加载类节点：装的是哪个资源。
+  const NodeRole.asset(this.assetName)
+    : targetLabel = null,
+      slot = null;
 
-  /// [NodeRoleKind.asset] 时的资源名（已去掉扩展名）。其余为 null。
+  /// 下游节点的官方名（`_meta.title`，取不到就是类名）。
+  final String? targetLabel;
+
+  /// 下游节点接过去的官方输入名（`inputs` 里的 key，如 `positive`）。
+  final String? slot;
+
+  /// [NodeRole.asset] 时的资源名（已去掉路径与扩展名）。其余为 null。
   ///
   /// 不翻译：模型名 / LoRA 名本来就是用户自己的文件，属于「不译」那一类。
   final String? assetName;
+
+  bool get isLink => targetLabel != null && slot != null;
 }
-
-/// 会输出「条件（conditioning）」的节点类型。
-const Set<String> kConditioningClassTypes = {
-  'CLIPTextEncode',
-  'CLIPTextEncodeFlux',
-  'CLIPTextEncodeSDXL',
-  'TextEncodeQwenImageEdit',
-  'TextEncode Flux',
-};
-
-/// 采样器类节点。
-const Set<String> kSamplerClassTypes = {
-  'KSampler',
-  'KSamplerAdvanced',
-  'SamplerCustom',
-  'SamplerCustomAdvanced',
-};
 
 /// 加载类节点里「装了什么」的参数名，按顺序取第一个有值的。
 ///
@@ -66,7 +54,7 @@ const List<String> kAssetNameKeys = <String>[
   'swap_model',
 ];
 
-/// 推断每个节点在图里的角色。认不出来就不给（返回 null），**绝不硬猜**。
+/// 推断每个节点在图里的位置。认不出来就不给（返回 null），**绝不硬猜**。
 ///
 /// 纯函数，便于单测；只读工作流 JSON，不碰服务器。
 Map<String, NodeRole> inferNodeRoles(Map<String, dynamic> jsonMap) {
@@ -90,52 +78,57 @@ Map<String, NodeRole> inferNodeRoles(Map<String, dynamic> jsonMap) {
   final roles = <String, NodeRole>{};
   jsonMap.forEach((nodeId, nodeData) {
     if (nodeData is! Map) return;
-    final classType = nodeData['class_type']?.toString() ?? '';
+
+    // 1) 加载类：「装的是哪个文件」比「它接去哪」更值得占这一行
     final inputs = nodeData['inputs'];
-    if (inputs is! Map) return;
-
-    // 1) 条件节点：看它接到了采样器的哪个槽
-    if (kConditioningClassTypes.contains(classType)) {
-      for (final c in consumers[nodeId] ?? const []) {
-        final slot = c.slot.toLowerCase();
-        if (slot.contains('positive')) {
-          roles[nodeId] = const NodeRole(NodeRoleKind.positive);
-          return;
-        }
-        if (slot.contains('negative')) {
-          roles[nodeId] = const NodeRole(NodeRoleKind.negative);
+    if (inputs is Map) {
+      for (final key in kAssetNameKeys) {
+        final v = inputs[key];
+        if (v is String && v.trim().isNotEmpty) {
+          roles[nodeId] = NodeRole.asset(_assetLabel(v));
           return;
         }
       }
-      return;
     }
 
-    // 2) 采样器：看它的 latent 是不是从空画布来的
-    if (kSamplerClassTypes.contains(classType)) {
-      final latent = inputs['latent_image'];
-      if (latent is List && latent.isNotEmpty && latent[0] is String) {
-        final src = jsonMap[latent[0] as String];
-        final srcType = src is Map ? src['class_type']?.toString() ?? '' : '';
-        roles[nodeId] = NodeRole(
-          srcType.startsWith('EmptyLatent')
-              ? NodeRoleKind.baseSampler
-              : NodeRoleKind.refinerSampler,
-        );
-        return;
-      }
-    }
-
-    // 3) 加载类：装了什么就叫什么
-    for (final key in kAssetNameKeys) {
-      final v = inputs[key];
-      if (v is String && v.trim().isNotEmpty) {
-        roles[nodeId] = NodeRole(NodeRoleKind.asset, assetName: _assetLabel(v));
-        return;
-      }
-    }
+    // 2) 其余节点：顺着连线说清它把结果送进了哪个节点的哪个参数
+    final picked = _pickLink(consumers[nodeId] ?? const []);
+    if (picked == null) return;
+    roles[nodeId] = NodeRole.link(
+      targetLabel: _nodeLabel(jsonMap[picked.id]),
+      slot: picked.slot,
+    );
   });
 
   return roles;
+}
+
+/// 在若干个下游里挑一个**能说清楚**的：
+///
+/// - `positive` / `negative` 优先 —— 槽位名本身就说清了用途，
+///   而这恰好是最容易混淆的一对（两个同名的文本编码）；
+/// - 只有一个下游时就用它；
+/// - 多个下游、又没有明确槽位 → 返回 null。**说不清就不说**，
+///   挑一个显示会让人以为只连了那一个。
+({String id, String slot})? _pickLink(List<({String id, String slot})> list) {
+  for (final c in list) {
+    final slot = c.slot.toLowerCase();
+    if (slot.contains('positive') || slot.contains('negative')) return c;
+  }
+  return list.length == 1 ? list.first : null;
+}
+
+/// 节点的官方名：前端给的标题（`_meta.title`）优先，取不到就是类名。
+///
+/// ⚠️ 这两个都来自工作流本身，**不翻译、也不自己起名** ——
+/// 界面上出现「K采样器」「加载VAE」是 ComfyUI 自己的中文节点名，
+/// 我们只是把它读出来。
+String _nodeLabel(dynamic nodeData) {
+  if (nodeData is! Map) return '';
+  final classType = nodeData['class_type']?.toString() ?? '';
+  final meta = nodeData['_meta'];
+  final title = meta is Map ? (meta['title']?.toString() ?? '') : '';
+  return isMeaningfulTitle(title, classType) ? title.trim() : classType;
 }
 
 /// 资源名去路径与扩展名：`a/b/film_grain.safetensors` → `film_grain`。

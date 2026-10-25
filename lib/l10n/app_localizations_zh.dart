@@ -471,6 +471,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String paramSummaryNodeValue(String node, String value) {
+    return '$node · $value';
+  }
+
+  @override
   String get aliasSeed => '随机种子';
 
   @override
@@ -1206,16 +1211,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get categoryOther => '其余节点';
 
   @override
-  String get rolePositive => '正向条件';
-
-  @override
-  String get roleNegative => '负向条件';
-
-  @override
-  String get roleBaseSampler => '起始采样';
-
-  @override
-  String get roleRefinerSampler => '精修采样';
+  String roleLinksTo(String node, String slot) {
+    return '连到 $node · $slot';
+  }
 
   @override
   String get historySearchHint => '搜索工作流或提示词';

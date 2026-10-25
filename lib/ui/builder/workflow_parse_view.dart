@@ -9,6 +9,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../providers/connection_provider.dart';
 import '../../services/workflow_api_converter.dart';
+import '../widgets/page_title.dart';
 
 /// 解析 UI 工作流：载入 ComfyUI 前端，调用**它自己的**转换逻辑取回 API 结构。
 ///
@@ -156,7 +157,7 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
       appBar: AppBar(
         title: Text(
           AppLocalizations.of(context).parseTitle(widget.displayName),
-          style: const TextStyle(fontSize: 16),
+          style: kSubPageTitleStyle,
         ),
       ),
       body: Stack(

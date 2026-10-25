@@ -932,6 +932,12 @@ abstract class AppLocalizations {
   /// **'类型: {type} · 当前值: {value}'**
   String paramSummaryTypeValue(String type, String value);
 
+  /// 参数摘要：属于哪个节点 + 当前值（主视图用）
+  ///
+  /// In zh, this message translates to:
+  /// **'{node} · {value}'**
+  String paramSummaryNodeValue(String node, String value);
+
   /// 默认别名：种子
   ///
   /// In zh, this message translates to:
@@ -2258,29 +2264,11 @@ abstract class AppLocalizations {
   /// **'其余节点'**
   String get categoryOther;
 
-  /// 节点角色：连到采样器正向条件
+  /// 节点位置说明：这个节点的输出接到了哪个节点的哪个输入（两个名字都是官方名，不翻译）
   ///
   /// In zh, this message translates to:
-  /// **'正向条件'**
-  String get rolePositive;
-
-  /// 节点角色：连到采样器负向条件
-  ///
-  /// In zh, this message translates to:
-  /// **'负向条件'**
-  String get roleNegative;
-
-  /// 节点角色：从空画布起手的采样器
-  ///
-  /// In zh, this message translates to:
-  /// **'起始采样'**
-  String get roleBaseSampler;
-
-  /// 节点角色：接着上一阶段继续采样
-  ///
-  /// In zh, this message translates to:
-  /// **'精修采样'**
-  String get roleRefinerSampler;
+  /// **'连到 {node} · {slot}'**
+  String roleLinksTo(String node, String slot);
 
   /// 生成记录页：搜索框提示
   ///

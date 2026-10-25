@@ -366,6 +366,14 @@
       "value": { "type": "String" }
     }
   },
+  "paramSummaryNodeValue": "{node} · {value}",
+  "@paramSummaryNodeValue": {
+    "description": "参数摘要：属于哪个节点 + 当前值（主视图用）",
+    "placeholders": {
+      "node": { "type": "String" },
+      "value": { "type": "String" }
+    }
+  },
   "aliasSeed": "随机种子",
   "@aliasSeed": { "description": "默认别名：种子" },
   "aliasImage": "参考图片",
@@ -844,14 +852,14 @@
   "@categoryControl": { "description": "添加参数页：用途分段-精细控制" },
   "categoryOther": "其余节点",
   "@categoryOther": { "description": "添加参数页：用途分段-其余" },
-  "rolePositive": "正向条件",
-  "@rolePositive": { "description": "节点角色：连到采样器正向条件" },
-  "roleNegative": "负向条件",
-  "@roleNegative": { "description": "节点角色：连到采样器负向条件" },
-  "roleBaseSampler": "起始采样",
-  "@roleBaseSampler": { "description": "节点角色：从空画布起手的采样器" },
-  "roleRefinerSampler": "精修采样",
-  "@roleRefinerSampler": { "description": "节点角色：接着上一阶段继续采样" },
+  "roleLinksTo": "连到 {node} · {slot}",
+  "@roleLinksTo": {
+    "description": "节点位置说明：这个节点的输出接到了哪个节点的哪个输入（两个名字都是官方名，不翻译）",
+    "placeholders": {
+      "node": { "type": "String" },
+      "slot": { "type": "String" }
+    }
+  },
   "historySearchHint": "搜索工作流或提示词",
   "@historySearchHint": { "description": "生成记录页：搜索框提示" },
   "historySearchEmpty": "没有匹配的记录",

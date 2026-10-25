@@ -155,6 +155,7 @@
   "paramTypeDefault": "Parameter",
   "paramSummaryType": "Type: {type}",
   "paramSummaryTypeValue": "Type: {type} · Current: {value}",
+  "paramSummaryNodeValue": "{node} · {value}",
   "aliasSeed": "Random seed",
   "aliasImage": "Reference image",
   "aliasSteps": "Sampling steps",
@@ -432,14 +433,14 @@
   "@categoryControl": { "description": "Param picker page: category - fine control" },
   "categoryOther": "Other nodes",
   "@categoryOther": { "description": "Param picker page: category - other" },
-  "rolePositive": "Positive conditioning",
-  "@rolePositive": { "description": "Node role: feeds the sampler positive input" },
-  "roleNegative": "Negative conditioning",
-  "@roleNegative": { "description": "Node role: feeds the sampler negative input" },
-  "roleBaseSampler": "Base sampler",
-  "@roleBaseSampler": { "description": "Node role: sampler starting from an empty canvas" },
-  "roleRefinerSampler": "Refiner sampler",
-  "@roleRefinerSampler": { "description": "Node role: sampler continuing from a previous stage" },
+  "roleLinksTo": "Feeds {node} · {slot}",
+  "@roleLinksTo": {
+    "description": "Node role: which node and which input this node feeds (both names are official, never translated)",
+    "placeholders": {
+      "node": { "type": "String" },
+      "slot": { "type": "String" }
+    }
+  },
   "historySearchHint": "Search workflow or prompt",
   "@historySearchHint": { "description": "History page: search field hint" },
   "historySearchEmpty": "No matching records",
