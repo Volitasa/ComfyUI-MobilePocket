@@ -266,7 +266,7 @@ Pull node parameters out of the workflow and turn them into a phone form. Open i
 
 **Two layers, each doing one job**
 
-- **The main view only shows what's already in your form**: a header line "17 of 18 in your form", then a flat list — one row per parameter (alias + type and current value), with an × to remove it from the form. One screen, check it, save. Renaming or removing only changes the phone form, never the workflow itself.
+- **The main view only shows what's already in your form**: a header line "17 of 18 in your form", then a flat list — one row per parameter (alias + which node it belongs to and its current value), with an × to remove it from the form. One screen, check it, save. Renaming or removing only changes the phone form, never the workflow itself.
 - **"Add parameters" holds everything**: every parameter lives in this layer, **grouped by purpose** (Prompt / Sampling / Size / Model and weights / Fine control / Other nodes), with per-node collapsible cards. Search, bulk expand/collapse and per-node select-all all live here.
 
 **What it does**
@@ -276,7 +276,7 @@ Pull node parameters out of the workflow and turn them into a phone form. Open i
 3. Skips **link references** (values shaped like `["nodeId", 0]`) — those aren't yours to fill in.
 4. Selected parameters go to the main view, the rest stay in "Add parameters" — **coverage is never narrowed away**: for nodes the rule table doesn't know, every fillable parameter is still listed (that's what covers community nodes and `LoadImage`'s upload box).
 
-**Same-name nodes, told apart by wiring**: when a workflow has two `CLIPTextEncode` nodes (positive and negative prompts), the card header in "Add parameters" carries a hint — the one wired to the sampler's `positive` slot says "Positive conditioning", the `negative` one says "Negative conditioning"; model / LoRA loaders show **which asset they load** (e.g. `add_detail`). All of it is read from the workflow's own links and parameter values — the app doesn't guess.
+**Same-name nodes, told apart by wiring**: when a workflow has two `CLIPTextEncode` nodes (positive and negative prompts), each card in "Add parameters" carries a second line saying **which node's which input it feeds** (e.g. `Feeds KSampler · positive`); model / LoRA loaders show **which asset they load** (e.g. `add_detail`). The node name is ComfyUI's own node title and the input name is the workflow's own parameter key — **both are shown as-is, never translated**; when a node feeds several places and there's no single clear answer, the line is simply omitted rather than guessed.
 
 **What's covered**: the rule table is grouped by *purpose*, not by class name (the same feature has different class names on different machines):
 
@@ -317,7 +317,7 @@ Pull node parameters out of the workflow and turn them into a phone form. Open i
   <img src="docs/screenshots/en/04-config-picker.png" width="45%" />
 </p>
 
-<p align="center"><i>Left: the main view holds only what's in your form, × removes a row　Right: "Add parameters" groups everything by purpose; same-name nodes are told apart by wiring</i></p>
+<p align="center"><i>Left: the main view holds only what's in your form, × removes a row　Right: "Add parameters" groups everything by purpose; same-name nodes say what they feed</i></p>
 
 > Saving the config takes you to the run page; the gear icon in the run page's top-right brings you back to the config panel. The two replace each other rather than stacking up routes.
 
@@ -634,7 +634,7 @@ lib/
 ├── services/
 │   ├── workflow_api_converter # UI→API conversion script and result validation (pure, unit-testable)
 │   ├── workflow_node_parser   # Node recognition rule table + param type / purpose category (pure, unit-testable)
-│   ├── node_role              # Roles for same-named nodes (reads links and values; pure)
+│   ├── node_role              # Where a node sits in the graph (reads links and values; pure)
 │   ├── object_info_service    # /object_info specs: options, min/max/step, control shape
 │   ├── submit_check           # Pre-submit server-side block (missing node / missing option)
 │   ├── workflow_api_converter # UI→API conversion script and result validation (pure, unit-testable)
