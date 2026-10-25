@@ -390,7 +390,7 @@ stateDiagram-v2
 
 ### 5.6 History and run-again
 
-Each entry is a compact card: a status colour bar on the left, one line for the title and one for status + time, a thumbnail on the right (multiple images show a count badge); meaningful phase notes (e.g. an interruption caused by a server restart) get their own line. **Run again** / **Delete** sit in the top-right corner — delete still asks for confirmation, and a record whose snapshot is gone stays tappable and explains why instead of failing silently.
+Each entry is a compact card: a status colour bar and thumbnail on the left (multiple images show a count badge), then the title and status + time; meaningful phase notes (e.g. an interruption caused by a server restart) get their own line. **Run again** / **Delete** sit on the right of the card — delete still asks for confirmation, and a record whose snapshot is gone stays tappable and explains why instead of failing silently.
 
 **Search and status filter**
 
@@ -409,7 +409,7 @@ Each entry is a compact card: a status colour bar on the left, one line for the 
   <img src="docs/screenshots/en/06-history-search.png" width="45%" />
 </p>
 
-<p align="center"><i>Left: default view with the status filter row　Right: searching "lora" matches 4 entries by workflow name</i></p>
+<p align="center"><i>Left: default view with the status filter row　Right: searching "test" matches all 6 entries by workflow name</i></p>
 
 **Run again** — one of the most useful things this app does:
 
@@ -445,7 +445,7 @@ The foundation of "run again".
 
 ### 5.8 Gallery and saving to your album
 
-**Gallery**: a dedicated tab, a three-column grid of everything downloaded to this device. Tapping opens a full-screen viewer with pinch zoom, swipe between items, and per-image delete.
+**Gallery**: a dedicated tab, a three-column grid of everything downloaded to this device. Tapping opens a full-screen viewer (the position is shown at the top, e.g. `1 / 5`) with pinch zoom and swipe between items, plus share and per-image delete, and a single **Save to album** button at the bottom.
 
 **Saving logic**:
 
@@ -628,7 +628,8 @@ lib/
 │   └── update_provider / github_token_provider
 ├── services/
 │   ├── workflow_api_converter # UI→API conversion script and result validation (pure, unit-testable)
-│   ├── workflow_node_parser   # Node recognition rule table + param type resolution (pure, unit-testable)
+│   ├── workflow_node_parser   # Node recognition rule table + param type / purpose category (pure, unit-testable)
+│   ├── node_role              # Roles for same-named nodes (reads links and values; pure)
 │   ├── gallery_store          # Local gallery storage
 │   ├── media_saver            # Single entry point for saving to the album
 │   ├── png_metadata_stripper  # Strips PNG metadata
@@ -639,7 +640,7 @@ lib/
 └── ui/
     ├── main_screen.dart      # Bottom navigation shell
     ├── home/                 # Workflows: server side / local side
-    ├── builder/              # Config panel / run page / WebView parse page
+    ├── builder/              # Config panel / param picker / run page / WebView parse page
     ├── gallery/              # History / gallery / media viewer
     ├── settings/             # Settings hub (including language) and sub-pages
     └── widgets/              # Connection status badge
