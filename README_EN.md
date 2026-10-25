@@ -54,7 +54,7 @@
 ## Core capabilities
 
 1. **Connect and run** — type the server address and the workflow list appears; UI-format workflows are parsed into a runnable structure inside the app; local JSON can be imported too.
-2. **Parameters become a form** — node parameters are detected automatically; tick what you want to tweak, give it an alias, and the run page renders the right control (text / seed / int / float / toggle / dropdown / image). **Model and sampler dropdowns are filled with the options that actually exist on the server**, so you can switch models without going back to the PC. The config page only shows what's already in your form; everything else lives in "Add parameters", grouped by purpose so even node-heavy workflows stay readable.
+2. **Parameters become a form** — node parameters are detected automatically; tick what you want to tweak, give it an alias, and the run page renders the right control (text / seed / int / float / slider / toggle / dropdown / image, and a size card for width/height on empty-canvas nodes). **Dropdowns are filled with the options that actually exist on the server**, so you can switch models without going back to the PC. The config page only shows what's already in your form; everything else lives in "Add parameters", grouped by purpose so even node-heavy workflows stay readable.
 3. **Results land on your phone** — live WebSocket progress and five task states; outputs are downloaded into an on-device gallery (PNG metadata preserved, so you can drop them back into ComfyUI) and can be saved to your album; every history entry can be replayed with "Run again".
 
 **One thing in the pipeline**: running workflows through RunningHub — see [Roadmap](#11-roadmap).
@@ -109,7 +109,7 @@ The three headline capabilities are at the top of this page; here is everything,
 | Five task states | Queued / Running / Completed / Failed / Interrupted, with the server's actual error message shown on failure |
 | Run again | Every run freezes a snapshot, so any history entry can restore the exact form and values it was run with — one tap to run it again |
 | History search & filter | Search history by workflow name, prompt text or parameter alias; filter by 5 statuses; each hit explains *why* it matched |
-| Local gallery | Outputs are downloaded into the app sandbox with **original PNG metadata preserved** (droppable back into ComfyUI); full-screen viewer and video playback |
+| Local gallery | Outputs are downloaded into the app sandbox with **original PNG metadata preserved** (droppable back into ComfyUI); grid browsing and a full-screen viewer. Videos play in the **history** viewer |
 | Save to album | Choose between "original image with workflow" and "plain image with metadata stripped" |
 | Chinese / English UI | Follow the system language or pin it to Chinese or English; persisted data never stores display strings, so switching languages never affects your history |
 | In-app updates | Manually check GitHub Releases, download the APK and hand it to the system installer (works with private and public repos alike) |
@@ -157,7 +157,7 @@ Four tabs at the bottom:
 | **Gallery** | Everything downloaded to this device, in a grid |
 | **Settings** | Language, server connections, workflow storage, snapshots, GitHub token, about & updates |
 
-A **connection status badge** (server name + status dot) sits in the top bar; tapping it jumps straight to the server config page.
+A **connection status badge** (server name + status dot) sits in the top bar of the **Workflows** and **History** tabs; tapping it jumps straight to the server config page. The Gallery and Settings tabs don't carry it.
 
 <p align="center">
   <img src="docs/screenshots/en/01-workflows.png" width="23%" />
@@ -192,8 +192,9 @@ Any number of server profiles, each with a primary and an optional backup addres
 | --- | --- |
 | Switching servers | Clears the workflow list and the current workflow cache; **does not** touch history, gallery or local workflows |
 | Deleting a server | Disconnects, and **also cleans up the parse cache belonging to that server** (those entries could never be validated again) |
-| Disconnected | WebSocket retries every 3 seconds for as long as the profile is still active |
-| Reconnect succeeds | Re-fetches the workflow list and reconciles every non-final task |
+| Disconnected | WebSocket retries **at most 3 times**, backing off 3s → 6s → 12s, then stops (retrying forever against a powered-off server just burns battery). Switching servers, re-testing a connection, or returning to the foreground grants a fresh set of attempts |
+| A (re-)connection succeeds | Re-fetches the workflow list and reconciles non-final tasks **belonging to the current server**. A WebSocket-only reconnect does not trigger this pair |
+| Editing and saving | If you edited the **currently active** profile, it re-probes primary and backup immediately (the live address may switch from primary to backup) |
 
 <p align="center">
   <img src="docs/screenshots/en/11-servers.png" width="45%" />
@@ -249,7 +250,7 @@ The second line of each card shows the **last run time** (from the local history
 
 #### "Save to local library"
 
-Any server workflow can be saved to the device at any time, becoming your private asset — for example when the server copy gets broken or deleted, you still have one.
+**API-format server workflows** (`_api.json`) can be saved to the device with "Save to local library", becoming your private asset — for example when the server copy gets broken or deleted, you still have one. The parsed result of a UI workflow already lives on the device, so its menu only offers re-parse and clear-cache; there is nothing extra to save.
 
 <p align="center">
   <img src="docs/screenshots/en/01-workflows.png" width="45%" />
@@ -302,7 +303,7 @@ Pull node parameters out of the workflow and turn them into a phone form. Open i
 
 | Control | What it does |
 | --- | --- |
-| Search box (top of the page) | Filters by parameter name, alias or node name; **only the matching parameters are shown**, and matching groups auto-expand |
+| Search box (top of the page) | Filters by parameter name, alias or **node class type**; **only the matching parameters are shown**, and matching groups auto-expand |
 | Counter (e.g. `17/18 selected`) and Expand all / Collapse all | The counter shows how many parameters are exposed; expand/collapse **without touching selections** |
 | Select all / Clear selection icon in a card header | Applies to **that card only**, separate from the expand hotspot |
 
@@ -327,28 +328,33 @@ Fill in the parameters and submit. Controls are rendered according to the config
 | Type | Control | Notes |
 | --- | --- | --- |
 | Text | Multi-line field | Prompts etc. |
-| Seed | Number field + **random button** | Keeps the workflow's own value; never randomises behind your back |
-| Int | Number field | Steps, width/height, batch size |
-| Float | Number field | CFG, denoise |
+| Seed | Number field + **random button** | Keeps the workflow's own value, never randomising behind your back; a random seed is generated only when there is no value at all |
+| Int / Float | Number field | Steps, CFG, denoise, … |
+| Slider | Slider + editable number field | Numeric parameters whose server spec supplies min/max/step with no more than 100 stops (steps, CFG, denoise, width/height …) become sliders; in two-column layouts they degrade to a plain field |
+| Enum | Dropdown | Sampler, scheduler, model names, … (see "real options" below) |
 | Toggle | Switch | Boolean parameters |
-| Enum | Dropdown | Sampler, scheduler, model names, … Model and sampler dropdowns fetch the real list from the server (refresh in the top-right corner); other dropdowns keep just the value hard-coded in the workflow |
-| Image | Pick image button + preview | A newly picked image is uploaded to the server before running; leaving it alone keeps the image already in the workflow |
+| Image | Pick image button + preview | A newly picked image is uploaded to the server before running; leaving it alone keeps the image already in the workflow, with a preview of the server-side original |
+
+> **Size card**: width/height and batch size on empty-canvas nodes like `EmptyLatentImage` are not plain number fields but a **size card** — aspect ratio (1:1, 16:9, …), long-edge presets (768 / 1024 / 1280 / 1536) and a batch stepper, with width/height snapped to multiples of 64, or type them yourself.
 
 Parameters stay grouped by node and are expanded by default.
 
-**Model dropdowns are filled with what the server really has**: opening the run page asks the server once, so dropdowns for models (Checkpoint / UNET / CLIP / VAE / LoRA / ControlNet), samplers and schedulers list the models that actually exist there — install a new model on the PC and tap refresh in the top-right corner to pick it up. The scope is deliberately narrow: only these dropdowns fetch real options, and image upload parameters never do (they would become a list of server filenames and you could no longer upload a new image). If the model written in the workflow isn't on the server, it is flagged and submission is blocked instead of sending a task that is bound to fail; with no connection or a failed request, dropdowns fall back to "just the current value", exactly as before.
+**Dropdowns are filled with what the server really has**: opening the run page asks `/object_info` once per **node that owns the parameter**, so every dropdown-type parameter gets the server's real option list — models (Checkpoint / UNET / CLIP / VAE / LoRA / ControlNet), samplers and schedulers are the classic cases, and third-party enums (`type`, `device`, `bit_depth`, …) are fetched too. Install a new model on the PC and tap refresh in the top-right corner to pick it up.
+
+Two boundaries: **image upload parameters deliberately do not fetch** (they would become a list of server filenames and you could no longer upload a new image), and **the pre-submit block only applies to model/sampler keys** — if such a value is missing on the server it is flagged and submission is blocked, whereas other dropdowns are not blocked even when their value isn't among the server's options. With no connection or a failed request, dropdowns fall back to "just the current value", exactly as before.
 
 **What "Generate" does**
 
 1. Validates that the current workflow data is ready and belongs to the right entry (so you can't submit the wrong workflow).
-2. If an image parameter has a newly picked file, uploads it with `POST /upload/image` first.
-3. Deep-copies the workflow JSON and writes the form values back into the corresponding nodes' `inputs`.
-4. Submits with `POST /prompt`.
-5. On success: **freezes a workflow snapshot**, writes a history entry, and switches to the **History** tab.
+2. **Server-side check**: if the server doesn't know this node, or a model/sampler value isn't found there, it stops here and explains why instead of firing a doomed request.
+3. If an image parameter has a newly picked file, uploads it with `POST /upload/image` first.
+4. Deep-copies the workflow JSON and writes the form values back into the corresponding nodes' `inputs`.
+5. Submits with `POST /prompt`.
+6. On success: **freezes a workflow snapshot**, writes a history entry, and switches to the **History** tab.
 
 **Failures tell you why**, instead of a generic "submit failed": network timeouts, HTTP status codes, and the server's `node_errors` (which lists the offending node IDs).
 
-**A mistyped number won't silently become empty**: each value goes through `num.tryParse`; if it fails to parse, the app falls back to the workflow's original value rather than submitting `null`.
+**A mistyped number won't silently become empty**: each value goes through `num.tryParse`; if it fails to parse, the app falls back to the workflow's original value rather than submitting `null` (seed is the exception: with no usable value it falls back to `0`). Parameters that carry a min/max/step in the server spec also show a red hint when you go out of range — **a hint only, never a block**, because some workflows step outside the range on purpose.
 
 <p align="center">
   <img src="docs/screenshots/en/02-run.png" width="45%" />
@@ -384,13 +390,13 @@ stateDiagram-v2
 
 **Where progress comes from**: a WebSocket (`ws://<server>/ws?clientId=…`) pushes events in real time, including which node is running and the percentage. Node names prefer the title you saved in the config panel over a bare node ID.
 
-**It survives crashes and disconnects**: on reconnect the app queries `/history` and `/queue` and corrects every task still marked queued/running into its real final state. Tasks found in neither are treated as "interrupted (the server may have restarted)" instead of spinning forever.
+**It survives crashes and disconnects**: the app queries `/history` and `/queue` and corrects tasks still marked queued/running into their real final state; tasks found in neither are treated as "interrupted (the server may have restarted)" instead of spinning forever. Four things trigger it: **a (re-)connection succeeding**, **returning to the foreground with a pending entry**, **tapping refresh on the History page**, and **stopping a task**. Reconciliation only touches tasks belonging to the current server (very old entries with no server recorded are treated as current), so a job running on another server is never mistaken for interrupted.
 
 **Returning from the background doesn't leave stale progress**: Android may silently kill a backgrounded WebSocket (a half-open connection that never fires the disconnect callback, so auto-reconnect never starts). When the app comes back to the foreground it rebuilds the connection and reconciles once — and only if there actually is a pending task, so an idle app never bothers the server.
 
 ### 5.6 History and run-again
 
-Each entry is a compact card: a status colour bar and thumbnail on the left (multiple images show a count badge), then the title and status + time; meaningful phase notes (e.g. an interruption caused by a server restart) get their own line. **Run again** / **Delete** sit on the right of the card — delete still asks for confirmation, and a record whose snapshot is gone stays tappable and explains why instead of failing silently.
+Each entry is a compact card: a status colour bar and thumbnail on the left (multiple images show a count badge), then the title and status + time; meaningful phase notes (e.g. an interruption caused by a server restart) get their own line. **Run again** is always on the right; for a pending entry that slot holds the **stop** button instead (there is no delete while it runs), and for the rest it's **delete**. Delete asks for confirmation, and only offers the two-way choice — **record only** (keep the gallery images) or **also delete the gallery images** (not recoverable) — when the entry actually has local images. A record whose snapshot is gone stays tappable and explains why instead of failing silently.
 
 **Search and status filter**
 
@@ -416,12 +422,7 @@ Each entry is a compact card: a status colour bar and thumbnail on the left (mul
 - Every run freezes a **snapshot** (the workflow JSON plus the parameter config at the time), so any history entry can reconstruct the form it was run with.
 - Tapping "Run again" rebuilds the form from the snapshot and **pre-fills the values you typed then** (prompt, seed, … — never randomised behind your back).
 - If you later changed the exposed config so some old parameters no longer exist in the current form, it says exactly "N parameters could not be applied due to config changes" instead of dropping them silently.
-- If the currently connected server **isn't** the one the job ran on, it warns first (models/plugins may differ and you may get "model not found"), and lets you decide.
-
-**Delete** asks which kind you want:
-
-- **Record only**: keep the images in the gallery.
-- **Record and gallery images**: also remove the images already downloaded to this device (irreversible).
+- If the currently connected server **isn't** the one the job ran on, it warns first (models/plugins may differ and you may get "model not found"), and lets you decide. Entries from older versions recorded no server, so they go through this confirmation too (shown as "unknown server" on both sides).
 
 > Deleting a record does **not** delete its snapshot — a snapshot may be referenced by other records. Snapshot cleanup is manual, on the settings page.
 
@@ -445,11 +446,13 @@ The foundation of "run again".
 
 ### 5.8 Gallery and saving to your album
 
-**Gallery**: a dedicated tab, a three-column grid of everything downloaded to this device. Tapping opens a full-screen viewer (the position is shown at the top, e.g. `1 / 5`) with pinch zoom and swipe between items, plus share and per-image delete, and a single **Save to album** button at the bottom.
+**Gallery**: a dedicated tab, a three-column grid of everything downloaded to this device (pull to refresh, or the refresh button in the top bar; an empty state explains itself when there's nothing yet). Tapping opens a full-screen viewer (the position is shown at the top, e.g. `1 / 5`) with pinch zoom, swipe between items and per-image delete behind a confirmation. There's also a share entry — **not live yet**, it currently says "coming soon".
+
+> The gallery grid renders images only. Videos (mp4 / webm / mov) play in the **history** viewer.
 
 **Saving logic**:
 
-- Images are read from the already-downloaded local file first (no re-download).
+- Images are read from the already-downloaded local file first (no re-download), and the app **requests the system album permission first**; a denial shows a message rather than failing silently.
 - For PNGs it asks first: **original image with workflow** (keeps the ComfyUI metadata, so you can drop it back into ComfyUI to reproduce) or **plain image (info stripped)**.
 - Videos (mp4/webm/mov) are written to a temp file and then saved to the album.
 
@@ -573,7 +576,7 @@ So even if that workflow has since changed or been deleted on the server, "run a
 | Parsing succeeds but reports "no dynamically editable parameters" | Every parameter is a **link reference** (or its value type can't be mapped to a control). Hit "Re-parse" in the config panel and try again; if it still fails, this workflow genuinely has nothing worth filling in on a phone |
 | A card turned amber saying "content updated" | The workflow content on the server changed, so old parameters may not fit the new structure. Open it and reconfirm the config |
 | Submitting returns HTTP 400 listing nodes | Server-side validation failed (commonly a missing model name or node type). Check the listed node IDs on your PC |
-| A task is stuck at "Running" | A final event was missed while offline or backgrounded. Tap refresh in the History top bar to reconcile (reconnecting and returning to the foreground also reconcile) |
+| A task is stuck at "Running" | A final event was missed while offline or backgrounded. Tap refresh in the History top bar to reconcile (a successful (re-)connection and returning to the foreground with a pending entry also reconcile) |
 | Search can't find an old record | Three possibilities: ① older records stored no "submitted parameter values", so only the workflow name is searchable; ② parameter **aliases** need the snapshot to still exist — if it was deleted in settings, matching degrades to values only; ③ **numbers are not matched**, so searching `7` won't hit `cfg=7` |
 | The "Add parameters" list goes empty after typing in search | Search is a **per-parameter filter**: only matching parameters are shown, and no match means "no matching parameter". The keyword must appear in a parameter name, alias or node name |
 | Aliases are still Chinese after switching to English | Aliases are content saved at configuration time — your own data, not translated with the UI language. Just rename them in the config panel |
@@ -586,9 +589,9 @@ So even if that workflow has since changed or been deleted on the server, "run a
 
 These are real boundaries of the current version, not bugs:
 
-- **Only model and sampler dropdowns fetch real server options**: other dropdowns (for example enums of third-party nodes) still contain just the value hard-coded in the workflow. **Image upload parameters deliberately do not** — otherwise they would turn into a list of server filenames and you could no longer upload a new image.
+- **Only image upload parameters don't fetch real server options**: every other dropdown (including third-party enums) fetches the server's real list by the node that owns it. **Image upload parameters deliberately don't** — otherwise they would turn into a list of server filenames and you could no longer upload a new image. Separately, **the pre-submit block only applies to model/sampler keys**: other dropdowns aren't blocked even when their value isn't among the server's options.
 - **Real dropdown options depend on the current connection**: with no connection, or when the request fails, dropdowns fall back to "just the current value" — exactly the old behaviour, with no error. The list is fetched when the page opens, so a model you just installed on the PC needs a tap on the refresh button.
-- **Numeric parameters have no min/max/step**: integers and floats are free-text fields with no range validation; a non-numeric entry falls back to the workflow's original value (it never submits an empty value).
+- **Numeric parameters aren't hard-blocked by range**: min/max/step are read from the server spec (rendered as a slider when there are no more than 100 stops); going out of range only shows a red hint, it never blocks submission — some workflows step outside the range on purpose. Without a spec it falls back to a free-text field, and a non-numeric entry falls back to the workflow's original value (it never submits an empty value).
 - **Nodes with a huge parameter count have no narrowing rule**: block-merge nodes like `ModelMergeQwenImage` and `ModelMergeFlux1` measure at 60–68 parameters on a single node; they only get the fallback, so every fillable parameter is listed at once on the "Add parameters" page (only high-frequency parameters are ticked by default, so the main view is unaffected).
 - **Image parameters record only the server-side filename**, so if the server cleans out its input directory, image references in old records can break.
 - **Search covers the latest 50 records only**: that's the history cap itself, and search is a plain local filter with no index; a much larger history would need a redesign.
@@ -599,7 +602,7 @@ These are real boundaries of the current version, not bugs:
 
 ## 9. Tech stack and project layout
 
-**Tech stack**: Flutter · Riverpod (state) · http · web_socket_channel · shared_preferences · file_picker · webview_flutter · video_player · gal (album) · path_provider · package_info_plus · open_filex · flutter_localizations (i18n)
+**Tech stack**: Flutter · Riverpod (state) · http · http_parser · web_socket_channel · shared_preferences · file_picker · webview_flutter · video_player · gal (album) · path_provider · package_info_plus · open_filex · flutter_localizations (i18n)
 
 ```
 lib/
@@ -622,28 +625,37 @@ lib/
 │   ├── connection_provider   # Multiple servers + primary/backup probing (structured results)
 │   ├── workflow_provider     # Workflow list, content, content-hash validation
 │   ├── task_manager          # Submission, history persistence, reconciliation, gallery download
-│   ├── ws_event_provider     # WebSocket channel and auto-reconnect
+│   ├── ws_event_provider     # WebSocket channel and auto-reconnect (3 attempts, backoff)
+│   ├── object_info_provider  # Spec fetching and its status (ok / empty / failed)
 │   ├── snapshot_provider     # Snapshots
+│   ├── gallery_revision_provider # Gallery revision counter that drives refreshes
 │   ├── local_workflow_provider / parsed_workflow_provider
 │   └── update_provider / github_token_provider
 ├── services/
 │   ├── workflow_api_converter # UI→API conversion script and result validation (pure, unit-testable)
 │   ├── workflow_node_parser   # Node recognition rule table + param type / purpose category (pure, unit-testable)
 │   ├── node_role              # Roles for same-named nodes (reads links and values; pure)
+│   ├── object_info_service    # /object_info specs: options, min/max/step, control shape
+│   ├── submit_check           # Pre-submit server-side block (missing node / missing option)
+│   ├── workflow_api_converter # UI→API conversion script and result validation (pure, unit-testable)
 │   ├── gallery_store          # Local gallery storage
-│   ├── media_saver            # Single entry point for saving to the album
+│   ├── media_saver            # Single entry point for saving to the album (includes permission)
 │   ├── png_metadata_stripper  # Strips PNG metadata
 │   └── update_service         # GitHub Releases lookup and download
 ├── utils/
 │   ├── task_display.dart     # Task status/phase → display text in the current language
-│   └── history_search.dart   # History keyword search and status filter (pure, unit-testable)
+│   ├── task_stop.dart        # Stopping a task: official cancel endpoint + legacy fallback
+│   ├── history_search.dart   # History keyword search and status filter (pure, unit-testable)
+│   ├── workflow_last_run.dart# "Last run" lookup shown on workflow cards
+│   └── release_notes.dart    # Strips Markdown from release notes
 └── ui/
     ├── main_screen.dart      # Bottom navigation shell
     ├── home/                 # Workflows: server side / local side
     ├── builder/              # Config panel / param picker / run page / WebView parse page
+    │   └── param_widgets/    # Per-type controls (incl. the empty-canvas size card and ratio presets)
     ├── gallery/              # History / gallery / media viewer
     ├── settings/             # Settings hub (including language) and sub-pages
-    └── widgets/              # Connection status badge
+    └── widgets/              # Shared widgets: status badge, param row, compact search field, …
 ```
 
 **Localisation**: strings live in `lib/l10n/*.arb` and `flutter gen-l10n` produces `AppLocalizations` on `flutter pub get` (see `l10n.yaml`). The default is to follow the system; a system language that is neither Chinese nor English falls back to Chinese, and the user can pin the language under "Settings → Language", stored in `comfy_ui_locale`.
