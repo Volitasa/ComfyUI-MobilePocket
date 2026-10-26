@@ -1264,6 +1264,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String roleLinksToMany(String node, String slot, int count) {
+    return 'Feeds $node · $slot — $count targets in total';
+  }
+
+  @override
   String get historySearchHint => 'Search workflow or prompt';
 
   @override

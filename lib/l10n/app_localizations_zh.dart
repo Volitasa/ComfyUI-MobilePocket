@@ -1216,6 +1216,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String roleLinksToMany(String node, String slot, int count) {
+    return '连到 $node · $slot 等 $count 处';
+  }
+
+  @override
   String get historySearchHint => '搜索工作流或提示词';
 
   @override

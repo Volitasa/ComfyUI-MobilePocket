@@ -2270,6 +2270,12 @@ abstract class AppLocalizations {
   /// **'连到 {node} · {slot}'**
   String roleLinksTo(String node, String slot);
 
+  /// 节点位置说明：下游不止一处，只报第一处 + 总处数
+  ///
+  /// In zh, this message translates to:
+  /// **'连到 {node} · {slot} 等 {count} 处'**
+  String roleLinksToMany(String node, String slot, int count);
+
   /// 生成记录页：搜索框提示
   ///
   /// In zh, this message translates to:

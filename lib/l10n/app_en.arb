@@ -441,6 +441,15 @@
       "slot": { "type": "String" }
     }
   },
+  "roleLinksToMany": "Feeds {node} · {slot} — {count} targets in total",
+  "@roleLinksToMany": {
+    "description": "Node role: several downstream targets; show the first one plus the total count",
+    "placeholders": {
+      "node": { "type": "String" },
+      "slot": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
   "historySearchHint": "Search workflow or prompt",
   "@historySearchHint": { "description": "History page: search field hint" },
   "historySearchEmpty": "No matching records",

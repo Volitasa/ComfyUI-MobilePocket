@@ -860,6 +860,15 @@
       "slot": { "type": "String" }
     }
   },
+  "roleLinksToMany": "连到 {node} · {slot} 等 {count} 处",
+  "@roleLinksToMany": {
+    "description": "节点位置说明：下游不止一处，只报第一处 + 总处数",
+    "placeholders": {
+      "node": { "type": "String" },
+      "slot": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
   "historySearchHint": "搜索工作流或提示词",
   "@historySearchHint": { "description": "生成记录页：搜索框提示" },
   "historySearchEmpty": "没有匹配的记录",

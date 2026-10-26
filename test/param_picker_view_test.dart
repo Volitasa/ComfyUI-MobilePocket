@@ -9,13 +9,18 @@ import 'package:comfyui_mobilepocket/ui/builder/param_picker_view.dart';
 import 'package:comfyui_mobilepocket/ui/widgets/page_title.dart';
 
 /// 一条带连线的链路：两个同名的文本编码 + 一段采样 + 一个模型。
+///
+/// `_meta.title` 与下面 `WorkflowNode.title` 保持一致 —— 卡片头与位置说明
+/// 都读工作流里的官方节点名，测试里两边对不上就会看起来像 bug。
 const Map<String, dynamic> _workflow = {
   '1': {
     'class_type': 'CheckpointLoaderSimple',
+    '_meta': {'title': '加载Checkpoint'},
     'inputs': {'ckpt_name': 'v1-5.safetensors'},
   },
   '2': {
     'class_type': 'CLIPTextEncode',
+    '_meta': {'title': 'CLIP文本编码'},
     'inputs': {
       'text': 'a cat',
       'clip': ['1', 1],
@@ -23,6 +28,7 @@ const Map<String, dynamic> _workflow = {
   },
   '3': {
     'class_type': 'CLIPTextEncode',
+    '_meta': {'title': 'CLIP文本编码'},
     'inputs': {
       'text': 'blurry',
       'clip': ['1', 1],
@@ -30,6 +36,7 @@ const Map<String, dynamic> _workflow = {
   },
   '5': {
     'class_type': 'KSampler',
+    '_meta': {'title': 'K采样器'},
     'inputs': {
       'seed': 1,
       'steps': 20,
@@ -66,7 +73,7 @@ List<WorkflowNode> _nodes() => [
     classType: 'KSampler',
     key: 'steps',
     alias: 'steps',
-    title: '',
+    title: 'K采样器',
     exposed: true,
     paramType: ParamType.intType,
     value: 20,
@@ -76,7 +83,7 @@ List<WorkflowNode> _nodes() => [
     classType: 'CheckpointLoaderSimple',
     key: 'ckpt_name',
     alias: 'ckpt_name',
-    title: '',
+    title: '加载Checkpoint',
     exposed: true,
     paramType: ParamType.enumType,
     value: 'v1-5.safetensors',
@@ -149,18 +156,18 @@ void main() {
     // 两个都叫「CLIP文本编码」，区别只在接到了采样器的哪个口；
     // 这两个名字都取自工作流本身（节点名 + 输入名），不是我们起的标签
     expect(find.text('CLIP文本编码'), findsNWidgets(2));
-    expect(find.text('连到 KSampler · positive'), findsOneWidget);
-    expect(find.text('连到 KSampler · negative'), findsOneWidget);
+    expect(find.text('连到 K采样器 · positive'), findsOneWidget);
+    expect(find.text('连到 K采样器 · negative'), findsOneWidget);
 
-    // 加载类节点直接说装了什么
-    expect(find.text('v1-5'), findsOneWidget);
+    // 加载类也只看连线：接了两处就报第一处 + 总处数（模型名在参数行里）
+    expect(find.text('连到 CLIP文本编码 · clip 等 2 处'), findsOneWidget);
   });
 
   testWidgets('说不清位置的节点不硬编一句', (tester) async {
     await _pumpPicker(tester);
 
     // 这个 KSampler 没有下游，也不装资源 —— 没有就别编
-    expect(find.text('KSampler'), findsOneWidget);
-    expect(find.textContaining('连到 KSampler'), findsNWidgets(2));
+    expect(find.text('K采样器'), findsOneWidget);
+    expect(find.textContaining('连到 K采样器'), findsNWidgets(2));
   });
 }

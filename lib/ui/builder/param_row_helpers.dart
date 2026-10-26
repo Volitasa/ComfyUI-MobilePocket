@@ -97,21 +97,21 @@ String nodeLabelOf(WorkflowNode node) {
 /// 节点分组卡片的头部标签：就是该节点的官方名（见 [nodeLabelOf]）。
 String nodeGroupLabel(List<WorkflowNode> params) => nodeLabelOf(params.first);
 
-/// 该节点在图里的位置说明（「连到 K采样器 · positive」「film_grain」…）。
+/// 该节点在图里的位置说明（「连到 K采样器 · positive」「连到 VAE解码 · vae」…）。
 ///
-/// 认不出来返回空串 —— **没有就别编**，宁可让用户只看类名，
-/// 也好过贴一个猜错的标签（猜错的标签比没有标签更误导）。
+/// 卡片上这句话只回答一件事：**它的输出接去哪**。接了好几处就写第一处 + 「等 N 处」，
+/// 不藏也不硬挑一个当成唯一。没有下游返回空串 —— **没有就别编**。
 String nodeRoleText(
   String nodeId,
   Map<String, NodeRole> roles,
   AppLocalizations l,
 ) {
-  final role = roles[nodeId];
-  if (role == null) return '';
-  // 资源名不翻译：模型 / LoRA 是用户自己的文件
-  if (role.assetName != null) return role.assetName!;
-  if (role.isLink) return l.roleLinksTo(role.targetLabel!, role.slot!);
-  return '';
+  final links = roles[nodeId]?.links ?? const <NodeLink>[];
+  if (links.isEmpty) return '';
+  final first = links.first;
+  return links.length == 1
+      ? l.roleLinksTo(first.label, first.slot)
+      : l.roleLinksToMany(first.label, first.slot, links.length);
 }
 
 /// 用途分类的段标题。

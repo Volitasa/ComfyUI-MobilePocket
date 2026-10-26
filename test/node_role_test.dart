@@ -68,11 +68,8 @@ void main() {
       final roles = inferNodeRoles(_workflow);
 
       // 光看类名这两个节点一模一样，区别只在它接到了采样器的哪个口
-      expect(roles['2']?.isLink, isTrue);
-      expect(roles['2']?.targetLabel, 'KSampler');
-      expect(roles['2']?.slot, 'positive');
-      expect(roles['3']?.targetLabel, 'KSampler');
-      expect(roles['3']?.slot, 'negative');
+      expect(roles['2']?.links.first, (label: 'KSampler', slot: 'positive'));
+      expect(roles['3']?.links.first, (label: 'KSampler', slot: 'negative'));
     });
 
     test('下游节点名用工作流自带的标题，我们自己不另起名字', () {
@@ -92,70 +89,93 @@ void main() {
       });
 
       // 「K采样器」是 ComfyUI 前端给的节点名，不是我们翻译的
-      expect(roles['2']?.targetLabel, 'K采样器');
-      expect(roles['2']?.slot, 'positive');
+      expect(roles['2']?.links.first, (label: 'K采样器', slot: 'positive'));
+    });
+
+    test('加载类也只看连线 —— 卡片上那句话只有一种含义', () {
+      final roles = inferNodeRoles(_workflow);
+
+      // 模型名在参数行里写着当前值，这里不再重复；只回答「接去哪」
+      expect(roles['1']?.links, contains((label: 'KSampler', slot: 'model')));
+      // 装着 LoRA 但没有任何下游 → 不给位置说明（宁可不说）
+      expect(roles['7'], isNull);
+    });
+
+    test('链式加载也按连线分得清（LoRA 接给谁）', () {
+      final roles = inferNodeRoles({
+        '1': {
+          'class_type': 'CheckpointLoaderSimple',
+          'inputs': {'ckpt_name': 'v1.safetensors'},
+        },
+        '7': {
+          'class_type': 'LoraLoader',
+          'inputs': {
+            'lora_name': 'film.safetensors',
+            'model': ['1', 0],
+          },
+        },
+        '5': {
+          'class_type': 'KSampler',
+          'inputs': {
+            'model': ['7', 0],
+          },
+        },
+      });
+
+      expect(roles['1']?.links, [(label: 'LoraLoader', slot: 'model')]);
+      expect(roles['7']?.links, [(label: 'KSampler', slot: 'model')]);
+    });
+
+    test('下游接了好几个同名节点同一个槽，算一处', () {
+      final roles = inferNodeRoles(_workflow);
+
+      // '1' 同时喂给两个文本编码的 clip：不合并就会写成「等 2 处」，
+      // 而两处长得一模一样（接给 LoraLoader.clip 是另一处，不算重复）
+      final clipLinks = roles['1']!.links.where(
+        (l) => l == (label: 'CLIPTextEncode', slot: 'clip'),
+      );
+      expect(clipLinks.length, 1);
+
+      // '2' 同时喂给两个采样器的 positive，同理只算一处
+      expect(roles['2']!.links.length, 1);
+    });
+
+    test('接了好几处时，条件槽位排在最前面', () {
+      final roles = inferNodeRoles({
+        '2': {
+          'class_type': 'CLIPTextEncode',
+          'inputs': {'text': 'a cat'},
+        },
+        '8': {
+          'class_type': 'ControlNetApply',
+          'inputs': {
+            'conditioning': ['2', 0],
+          },
+        },
+        '5': {
+          'class_type': 'KSampler',
+          'inputs': {'positive': ['2', 0]},
+        },
+      });
+
+      // 两处都保留，但先报 positive（任务里最容易混淆的就是它）
+      expect(roles['2']!.links.length, 2);
+      expect(roles['2']!.links.first, (label: 'KSampler', slot: 'positive'));
+      expect(
+        roles['2']!.links.last,
+        (label: 'ControlNetApply', slot: 'conditioning'),
+      );
     });
 
     test('采样器不再贴「起始 / 精修」这种自己发明的标签', () {
       final roles = inferNodeRoles(_workflow);
 
       // 只按连线说话：'5' 的输出接到 '6' 的 latent_image，'6' 没有下游就别编
-      expect(roles['5']?.targetLabel, 'KSampler');
-      expect(roles['5']?.slot, 'latent_image');
+      expect(roles['5']?.links, [(label: 'KSampler', slot: 'latent_image')]);
       expect(roles['6'], isNull);
     });
 
-    test('加载类直接说装了什么，路径与扩展名都去掉', () {
-      final roles = inferNodeRoles(_workflow);
-
-      expect(roles['1']?.assetName, 'v1-5');
-      expect(roles['7']?.assetName, 'film_grain');
-      // 资源名比「它接去哪」更值得占这一行
-      expect(roles['1']?.isLink, isFalse);
-    });
-
-    test('连线引用不当资源名 —— 否则会显示成一串节点号', () {
-      // LoraLoader 的 model 是连线 ['1', 0]，不能拿来当名字
-      final roles = inferNodeRoles({
-        '9': {
-          'class_type': 'LoraLoader',
-          'inputs': {
-            'model': ['1', 0],
-            'clip': ['1', 1],
-            'strength_model': 0.8,
-          },
-        },
-      });
-
-      expect(roles['9'], isNull);
-    });
-
-    test('多个下游又说不清是哪一路 → 干脆不说', () {
-      // 同一张空画布喂两个采样器：说「连到 KSampler · latent_image」会让人
-      // 以为只连了一个
-      final roles = inferNodeRoles({
-        '1': {
-          'class_type': 'EmptyLatentImage',
-          'inputs': {'width': 512},
-        },
-        '2': {
-          'class_type': 'KSampler',
-          'inputs': {
-            'latent_image': ['1', 0],
-          },
-        },
-        '3': {
-          'class_type': 'KSampler',
-          'inputs': {
-            'latent_image': ['1', 0],
-          },
-        },
-      });
-
-      expect(roles['1'], isNull);
-    });
-
-    test('认不出来就干脆不给，绝不硬猜', () {
+    test('没有下游的节点不出现在结果里，绝不硬猜', () {
       final roles = inferNodeRoles({
         '4': {
           'class_type': 'EmptyLatentImage',
