@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/connection_provider.dart';
 import 'providers/locale_provider.dart';
+import 'providers/theme_mode_provider.dart';
 import 'theme.dart';
 import 'ui/main_screen.dart'; // 引入全新的导航壳层
 
@@ -45,12 +46,19 @@ class ComfyuiMobilePocket extends ConsumerWidget {
       // 让 Material 内置组件（菜单、日期选择器、系统返回提示等）也随语言切换
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      themeMode: ref.watch(themeModeProvider) ?? ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
         // 绿色主色沿用原版的色调，但中性面改为真正的灰：
         // M3 默认会把容器色染上种子色相，整屏会泛黄绿。详见 AppTheme 的注释。
         colorScheme: AppTheme.lightScheme(),
         scaffoldBackgroundColor: AppColors.scaffoldBackground,
+      ),
+      // 深色下 fromSeed 的输出天然协调，不需要像浅色那样覆写容器色，
+      // 页面底色直接用 scheme.surface 即可，所以这里不设 scaffoldBackgroundColor。
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: AppTheme.darkScheme(),
       ),
       home: const MainScreen(), // 挂载底部导航栏
     );

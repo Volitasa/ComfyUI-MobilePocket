@@ -318,6 +318,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLanguageTitle => '选择界面语言';
 
   @override
+  String get settingsAppearance => '外观';
+
+  @override
+  String get settingsAppearanceTitle => '选择外观';
+
+  @override
+  String get settingsAppearanceLight => '浅色';
+
+  @override
+  String get settingsAppearanceDark => '深色';
+
+  @override
   String get settingsServerEntry => '服务器连接';
 
   @override

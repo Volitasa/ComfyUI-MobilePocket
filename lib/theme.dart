@@ -66,4 +66,49 @@ class AppTheme {
         onSurfaceVariant: const Color(0xFF5F665F),
         outlineVariant: const Color(0xFFE3E6E3),
       );
+
+  /// 深色方案。`fromSeed` 在深色下输出天然协调，容器色不需要像浅色那样覆写。
+  static ColorScheme darkScheme() => ColorScheme.fromSeed(
+    seedColor: const Color(0xFF6FC08A),
+    brightness: Brightness.dark,
+  );
+}
+
+/// 按当前主题取色的快捷方式。
+///
+/// 用扩展而不是 `AppColors` 常量，是因为**常量不随亮/暗主题切换**：
+/// #5F665F 在浅色卡片上是 5.5:1，到了深色卡片底只有 2.89:1，等于隐形。
+/// 凡是要支持多主题的颜色，都必须走这里。
+extension AppThemeColors on BuildContext {
+  /// 次要文字 / 次要图标
+  Color get textSecondary => Theme.of(this).colorScheme.onSurfaceVariant;
+
+  /// 柔和边框
+  Color get borderColor => Theme.of(this).colorScheme.outlineVariant;
+
+  /// 输入框填充。两种主题下都是「比所在卡片亮一档」：
+  /// 浅色用纯白（卡片是 #F7F8F7），深色用 surfaceContainerHighest（卡片是 #181D18）。
+  /// 直接写死 `Colors.white` 的话，深色下会冒出一片瞎白块。
+  Color get fieldFill => Theme.of(this).brightness == Brightness.dark
+      ? Theme.of(this).colorScheme.surfaceContainerHighest
+      : Colors.white;
+}
+
+/// 随主题变化的语义色。
+///
+/// 原来这些是常量（#2E7D32 / #D32F2F / #757575），都是为白底挑的中深色，
+/// 到了深底上只有 3.3–3.7:1，读不出来。深色下换成提亮版（8.9 / 7.5 / 7.7:1）。
+extension AppSemanticColors on BuildContext {
+  bool get _isDark => Theme.of(this).brightness == Brightness.dark;
+
+  Color get stateSuccess =>
+      _isDark ? const Color(0xFF6FCF85) : AppColors.success;
+
+  Color get stateDanger => _isDark ? const Color(0xFFFF8A80) : AppColors.danger;
+
+  Color get stateNeutral =>
+      _isDark ? const Color(0xFFADAEAD) : AppColors.neutral;
+
+  /// 警告色 #F57C00 在深色底上本来就有 6.3:1，深浅通用，不用换
+  Color get stateWarning => AppColors.warning;
 }

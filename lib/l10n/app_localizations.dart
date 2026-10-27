@@ -662,6 +662,30 @@ abstract class AppLocalizations {
   /// **'选择界面语言'**
   String get settingsLanguageTitle;
 
+  /// 设置项：界面外观（浅色 / 深色）
+  ///
+  /// In zh, this message translates to:
+  /// **'外观'**
+  String get settingsAppearance;
+
+  /// 外观选择对话框标题
+  ///
+  /// In zh, this message translates to:
+  /// **'选择外观'**
+  String get settingsAppearanceTitle;
+
+  /// 外观选项：始终浅色
+  ///
+  /// In zh, this message translates to:
+  /// **'浅色'**
+  String get settingsAppearanceLight;
+
+  /// 外观选项：始终深色
+  ///
+  /// In zh, this message translates to:
+  /// **'深色'**
+  String get settingsAppearanceDark;
+
   /// 设置项：服务器连接
   ///
   /// In zh, this message translates to:

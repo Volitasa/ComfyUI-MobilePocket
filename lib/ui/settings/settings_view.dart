@@ -4,6 +4,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../providers/connection_provider.dart';
 import '../../providers/locale_provider.dart';
+import '../../providers/theme_mode_provider.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../providers/github_token_provider.dart';
@@ -19,6 +20,9 @@ import '../../theme.dart';
 /// 否则「取消」与「跟随系统」都是 null，无法区分。
 enum LanguageChoice { follow, zh, en }
 
+/// 外观选择的返回值，同上：枚举才能区分「取消」和「跟随系统」。
+enum AppearanceChoice { follow, light, dark }
+
 /// 设置中心：服务器配置下沉为子项，后续设置项都挂在这里。
 class SettingsView extends ConsumerWidget {
   const SettingsView({super.key});
@@ -32,6 +36,7 @@ class SettingsView extends ConsumerWidget {
     final localCount = ref.watch(localWorkflowProvider).length;
     final tokenConfigured = ref.watch(githubTokenProvider).trim().isNotEmpty;
     final preferred = ref.watch(localeProvider);
+    final themeChoice = ref.watch(themeModeProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -49,6 +54,12 @@ class SettingsView extends ConsumerWidget {
             title: l.settingsLanguage,
             subtitle: _languageLabel(l, preferred?.languageCode),
             onTap: () => _pickLanguage(context, ref),
+          ),
+          _EntryTile(
+            icon: Icons.brightness_6_outlined,
+            title: l.settingsAppearance,
+            subtitle: _appearanceLabel(l, themeChoice),
+            onTap: () => _pickAppearance(context, ref),
           ),
           const Divider(height: 24),
           _SectionTitle(l.settingsSectionConnection),
@@ -123,6 +134,52 @@ class SettingsView extends ConsumerWidget {
     _ => l.settingsLanguageFollow,
   };
 
+  /// 设置项上显示的当前外观；未选择即跟随系统
+  String _appearanceLabel(AppLocalizations l, ThemeMode? mode) =>
+      switch (mode) {
+        ThemeMode.light => l.settingsAppearanceLight,
+        ThemeMode.dark => l.settingsAppearanceDark,
+        _ => l.settingsLanguageFollow,
+      };
+
+  Future<void> _pickAppearance(BuildContext context, WidgetRef ref) async {
+    final l = AppLocalizations.of(context);
+    final choice = await showDialog<AppearanceChoice>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(l.settingsAppearanceTitle),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, AppearanceChoice.follow),
+            child: Text(l.settingsLanguageFollow),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, AppearanceChoice.light),
+            child: Text(l.settingsAppearanceLight),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, AppearanceChoice.dark),
+            child: Text(l.settingsAppearanceDark),
+          ),
+        ],
+      ),
+    );
+    if (choice == null) return;
+
+    final notifier = ref.read(themeModeProvider.notifier);
+    switch (choice) {
+      case AppearanceChoice.follow:
+        await notifier.setFollowSystem();
+        break;
+      case AppearanceChoice.light:
+        await notifier.setThemeMode(ThemeMode.light);
+        break;
+      case AppearanceChoice.dark:
+        await notifier.setThemeMode(ThemeMode.dark);
+        break;
+    }
+  }
+
   Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
     final l = AppLocalizations.of(context);
     final choice = await showDialog<LanguageChoice>(
@@ -172,9 +229,9 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
-          color: AppColors.textSecondary,
+          color: context.textSecondary,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -198,13 +255,14 @@ class _EntryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: Colors.black87),
+      // 原来是写死的 Theme.of(context).colorScheme.onSurface，深色底上只有 1.16:1，等于隐形
+      leading: Icon(icon, color: Theme.of(context).colorScheme.onSurface),
       title: Text(title),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 12, color: context.textSecondary),
       ),
-      trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+      trailing: Icon(Icons.chevron_right, color: context.textSecondary),
       onTap: onTap,
     );
   }
