@@ -16,6 +16,8 @@
 
 <p>连上服务器就能浏览工作流、把常用参数变成一张表单、一键下发生图任务、实时看进度，出图自动回到手机相册。</p>
 
+<p><sub>本应用为第三方工具，与 ComfyUI 官方无隶属关系。</sub></p>
+
 <p>
   <a href="https://github.com/Volitasa/ComfyUI-MobilePocket/releases/latest"><b>⬇️ 下载 APK</b></a>
   ·

@@ -16,6 +16,8 @@
 
 <p>Connect to your server, browse its workflows, turn the parameters you care about into a form, submit a job with one tap, watch the progress live and get the results back in your phone's album.</p>
 
+<p><sub>This is a third-party app and is not affiliated with or endorsed by the ComfyUI team.</sub></p>
+
 <p>
   <a href="https://github.com/Volitasa/ComfyUI-MobilePocket/releases/latest"><b>⬇️ Download APK</b></a>
   ·
