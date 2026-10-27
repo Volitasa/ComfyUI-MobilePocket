@@ -13,6 +13,8 @@ import 'snapshot_list_view.dart';
 import 'workflow_storage_view.dart';
 import 'github_token_view.dart';
 
+import '../../theme.dart';
+
 /// 语言选择的返回值：用枚举而不是 Locale?，
 /// 否则「取消」与「跟随系统」都是 null，无法区分。
 enum LanguageChoice { follow, zh, en }
@@ -172,7 +174,7 @@ class _SectionTitle extends StatelessWidget {
         text,
         style: const TextStyle(
           fontSize: 12,
-          color: Colors.grey,
+          color: AppColors.textSecondary,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -200,9 +202,9 @@ class _EntryTile extends StatelessWidget {
       title: Text(title),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
+        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
       ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
       onTap: onTap,
     );
   }

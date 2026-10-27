@@ -208,7 +208,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     return switch (task.status) {
       TaskStatus.completed => Text(
         l.historyNoImage,
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
+        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
       ),
       TaskStatus.failed => Icon(
         Icons.error_outline,
@@ -258,7 +258,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
               const SizedBox(height: 10),
               Text(
                 l.historyDeleteImagesNote,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ],
@@ -392,7 +395,11 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
       errorBuilder: (_, _, _) => Container(
         color: Colors.grey.shade200,
         child: const Center(
-          child: Icon(Icons.broken_image, size: 20, color: Colors.grey),
+          child: Icon(
+            Icons.broken_image,
+            size: 20,
+            color: AppColors.textSecondary,
+          ),
         ),
       ),
     );
@@ -478,7 +485,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
           ? Center(
               child: Text(
                 l.historyEmpty,
-                style: const TextStyle(color: Colors.grey),
+                style: const TextStyle(color: AppColors.textSecondary),
               ),
             )
           : Column(
@@ -491,7 +498,9 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                       ? Center(
                           child: Text(
                             l.historySearchEmpty,
-                            style: const TextStyle(color: Colors.grey),
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         )
                       : ListView.builder(
@@ -529,7 +538,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
               children: [
                 _isVideo(task.images[0]['filename'])
                     ? const Center(
-                        child: Icon(Icons.videocam, color: Colors.grey),
+                        child: Icon(
+                          Icons.videocam,
+                          color: AppColors.textSecondary,
+                        ),
                       )
                     : _thumbnail(task.images[0]),
                 if (task.images.length > 1)
@@ -661,7 +673,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                               style: const TextStyle(
                                 fontSize: 11,
                                 height: 1.2,
-                                color: Colors.grey,
+                                color: AppColors.textSecondary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -687,7 +699,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                       // 用沉一点的成功色而非品牌亮绿，小图标不至于抢过内容
                       color: canRerun
                           ? AppColors.success
-                          : Colors.grey.shade400,
+                          : AppColors.textSecondary,
                       tooltip: l.historyRerun,
                       // 置灰但仍可点：点击会说明具体原因，而不是静默无反应
                       onTap: () => _runAgain(task),
@@ -877,7 +889,7 @@ class _MediaViewerState extends State<MediaViewer> {
           padding: const EdgeInsets.all(20.0),
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.primary,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),

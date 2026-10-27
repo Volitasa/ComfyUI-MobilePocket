@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme.dart';
+
 /// 工作流列表里的一行。
 ///
 /// 三处共用：服务器 API 工作流、服务器 UI 工作流、本地工作流。
@@ -89,7 +91,7 @@ class WorkflowTile extends StatelessWidget {
                             statusLabel,
                             style: TextStyle(
                               fontSize: 11,
-                              color: statusColor ?? Colors.grey,
+                              color: statusColor ?? AppColors.textSecondary,
                             ),
                           ),
                         ],
@@ -104,7 +106,7 @@ class WorkflowTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           height: 1.2,
-                          color: footnoteColor ?? Colors.grey,
+                          color: footnoteColor ?? AppColors.textSecondary,
                         ),
                       ),
                     ],

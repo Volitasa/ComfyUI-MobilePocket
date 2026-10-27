@@ -153,7 +153,10 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
             const SizedBox(height: 16),
             Text(
               AppLocalizations.of(context).tokenLocalOnlyNote,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),

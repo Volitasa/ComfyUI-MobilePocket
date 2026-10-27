@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme.dart';
+
 /// 两处共用的紧凑搜索框（生成记录页、工作流配置页）。
 ///
 /// 高度刻意锁死在 40：输入框的前置图标默认带 48×48 的最小约束，会硬把
@@ -46,7 +48,7 @@ class CompactSearchField extends StatelessWidget {
           filled: true,
           fillColor: Colors.grey.shade100,
           hintText: hintText,
-          hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
+          hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           prefixIcon: const Icon(Icons.search, size: 17),
           prefixIconConstraints: const BoxConstraints(
             minWidth: 32,

@@ -47,7 +47,7 @@ class LocalWorkflowSection extends ConsumerWidget {
               ? AppLocalizations.of(context).localEmpty
               : AppLocalizations.of(context)
                     .localSummary(workflows.length, formatBytes(totalBytes)),
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 14),
         OutlinedButton.icon(
@@ -56,7 +56,7 @@ class LocalWorkflowSection extends ConsumerWidget {
           label: Text(AppLocalizations.of(context).localImportButton),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
-            side: const BorderSide(color: Colors.grey),
+            side: const BorderSide(color: AppColors.border),
             foregroundColor: Colors.black87,
           ),
         ),
@@ -65,7 +65,10 @@ class LocalWorkflowSection extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
             AppLocalizations.of(context).localImportNote,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
           ),
         ),
         const SizedBox(height: 20),
@@ -87,7 +90,10 @@ class LocalWorkflowSection extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   AppLocalizations.of(context).localNoWorkflowsHint,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -99,7 +105,10 @@ class LocalWorkflowSection extends ConsumerWidget {
             padding: const EdgeInsets.only(top: 12, left: 4, right: 4),
             child: Text(
               AppLocalizations.of(context).localFooterNote,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
       ],
@@ -140,7 +149,7 @@ class LocalWorkflowSection extends ConsumerWidget {
       statusColor: exposedCount == 0 ? null : AppColors.primary,
       footnote: meta,
       menu: PopupMenuButton<String>(
-        icon: const Icon(Icons.more_vert, color: Colors.grey),
+        icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
         tooltip: l.menuMore,
         onSelected: (v) => _onMenuSelected(context, ref, workflow, v),
         itemBuilder: (_) => [

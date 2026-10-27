@@ -15,6 +15,7 @@ import '../../utils.dart';
 import '../widgets/page_title.dart';
 import 'param_picker_view.dart';
 import 'param_row_helpers.dart';
+import '../../theme.dart';
 import 'run_view.dart'; // 下一步我们将创建运行页面
 
 class WorkflowView extends ConsumerStatefulWidget {
@@ -436,7 +437,10 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
           const SizedBox(height: 2),
           Text(
             l.configFormHint,
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -610,7 +614,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                       child: Text(
                         l.configNoParams,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.grey),
+                        style: const TextStyle(color: AppColors.textSecondary),
                       ),
                     ),
                   )
@@ -621,7 +625,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                       child: Text(
                         l.configFormEmpty,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.grey),
+                        style: const TextStyle(color: AppColors.textSecondary),
                       ),
                     ),
                   )
@@ -638,7 +642,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.green,
+                    backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

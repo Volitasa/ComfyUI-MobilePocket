@@ -8,6 +8,8 @@ import '../../providers/gallery_revision_provider.dart';
 import '../../services/gallery_store.dart';
 import '../../services/media_saver.dart';
 
+import '../../theme.dart';
+
 /// 画廊：浏览所有本地化保存的生成图片。
 /// 图片以原始文件保存在 App 沙盒，内嵌 ComfyUI 工作流元数据，
 /// 拖回 ComfyUI 即可复现。
@@ -75,7 +77,7 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                   const Icon(
                     Icons.photo_library_outlined,
                     size: 48,
-                    color: Colors.grey,
+                    color: AppColors.textSecondary,
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -85,7 +87,10 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                   const SizedBox(height: 4),
                   Text(
                     AppLocalizations.of(context).galleryEmptyHint,
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -113,7 +118,7 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                           color: Colors.grey.shade200,
                           child: const Icon(
                             Icons.broken_image,
-                            color: Colors.grey,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ),
@@ -277,7 +282,7 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
           padding: const EdgeInsets.all(20.0),
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.primary,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),

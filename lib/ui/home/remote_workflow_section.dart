@@ -20,6 +20,8 @@ import '../builder/workflow_view.dart';
 import '../settings/server_config_view.dart';
 import '../widgets/workflow_tile.dart';
 
+import '../../theme.dart';
+
 /// 服务器段：服务端工作流目录的投影。
 ///
 /// 这里的条目都能从服务器重新获得，所以**不提供删除**，
@@ -67,7 +69,10 @@ class RemoteWorkflowSection extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
             AppLocalizations.of(context).homeWorkflowSourceNote,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
           ),
         ),
       ],
@@ -79,7 +84,7 @@ class RemoteWorkflowSection extends ConsumerWidget {
       padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
+        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
       ),
     );
   }
@@ -142,7 +147,7 @@ class RemoteWorkflowSection extends ConsumerWidget {
       fillColor: stale ? const Color(0xFFFAEEDA) : null,
       showBorder: cached != null,
       menu: PopupMenuButton<String>(
-        icon: const Icon(Icons.more_vert, color: Colors.grey),
+        icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
         tooltip: AppLocalizations.of(context).menuMore,
         onSelected: (v) =>
             _onUiMenuSelected(context, ref, filename, cached?.id, v),
@@ -336,7 +341,10 @@ class RemoteWorkflowSection extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             AppLocalizations.of(context).homeDisconnectedBody,
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
@@ -369,7 +377,10 @@ class RemoteWorkflowSection extends ConsumerWidget {
           Text(
             AppLocalizations.of(context).homeEmptyBody,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -443,7 +454,7 @@ class RemoteWorkflowSection extends ConsumerWidget {
 
   Widget _buildMenu(BuildContext context, WidgetRef ref, String filename) {
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: Colors.grey),
+      icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
       tooltip: AppLocalizations.of(context).menuMore,
       onSelected: (value) => _onMenuSelected(context, ref, filename, value),
       itemBuilder: (_) => [

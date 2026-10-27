@@ -231,7 +231,7 @@ void main() {
       ]);
       expect(
         tester.widget<Icon>(find.byIcon(Icons.replay)).color,
-        Colors.grey.shade400,
+        AppColors.textSecondary,
       );
     });
 

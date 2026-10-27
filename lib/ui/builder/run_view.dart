@@ -25,6 +25,8 @@ import 'param_widgets/param_card_registry.dart';
 import 'param_widgets/latent_size_card.dart';
 import 'workflow_view.dart';
 
+import '../../theme.dart';
+
 class RunView extends ConsumerStatefulWidget {
   final String workflowId;
 
@@ -969,7 +971,7 @@ class _RunViewState extends ConsumerState<RunView> {
                                     child: const Icon(
                                       Icons.expand_more,
                                       size: 20,
-                                      color: Colors.grey,
+                                      color: AppColors.textSecondary,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
@@ -988,7 +990,7 @@ class _RunViewState extends ConsumerState<RunView> {
                                         .configParamCount(params.length),
                                     style: const TextStyle(
                                       fontSize: 11,
-                                      color: Colors.grey,
+                                      color: AppColors.textSecondary,
                                     ),
                                   ),
                                 ],
@@ -1021,7 +1023,9 @@ class _RunViewState extends ConsumerState<RunView> {
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: _isExecuting ? Colors.grey : Colors.green,
+                    backgroundColor: _isExecuting
+                        ? AppColors.textSecondary
+                        : AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -1184,7 +1188,10 @@ class _RunViewState extends ConsumerState<RunView> {
                 ),
                 child: Text(
                   node.key,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
           ],
@@ -1212,7 +1219,7 @@ class _RunViewState extends ConsumerState<RunView> {
         const SizedBox(width: 8),
         Text(
           on ? l.runBoolOn : l.runBoolOff,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
         _boolSwitch(k),
       ],
@@ -1275,7 +1282,10 @@ class _RunViewState extends ConsumerState<RunView> {
           const SizedBox(height: 4),
           Text(
             l10n.runModelMissing,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ],
@@ -1384,7 +1394,10 @@ class _RunViewState extends ConsumerState<RunView> {
                 width: double.infinity,
                 color: Colors.grey.shade100,
                 child: const Center(
-                  child: Icon(Icons.broken_image, color: Colors.grey),
+                  child: Icon(
+                    Icons.broken_image,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
             ),
@@ -1392,7 +1405,10 @@ class _RunViewState extends ConsumerState<RunView> {
           const SizedBox(height: 4),
           Text(
             l.runUsingServerImage(serverImage),
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ],

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/connection_provider.dart';
 import 'providers/locale_provider.dart';
+import 'theme.dart';
 import 'ui/main_screen.dart'; // 引入全新的导航壳层
 
 void main() async {
@@ -46,11 +47,10 @@ class ComfyuiMobilePocket extends ConsumerWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.green, // 保持原 Vue 版本的绿色主色调
-          surface: Colors.white,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF9F9F9),
+        // 绿色主色沿用原版的色调，但中性面改为真正的灰：
+        // M3 默认会把容器色染上种子色相，整屏会泛黄绿。详见 AppTheme 的注释。
+        colorScheme: AppTheme.lightScheme(),
+        scaffoldBackgroundColor: AppColors.scaffoldBackground,
       ),
       home: const MainScreen(), // 挂载底部导航栏
     );

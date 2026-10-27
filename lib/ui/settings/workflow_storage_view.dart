@@ -10,6 +10,8 @@ import '../../providers/parsed_workflow_provider.dart';
 import '../../utils.dart';
 import 'server_config_view.dart' show serverDisplayName;
 
+import '../../theme.dart';
+
 /// 工作流存储：汇总所有保存在本机的工作流，显示占用并集中提供清理入口。
 ///
 /// 两类来源用标签区分，因为**清除语义不同**：
@@ -107,7 +109,7 @@ class WorkflowStorageView extends ConsumerWidget {
         body: Center(
           child: Text(
             AppLocalizations.of(context).storageEmpty,
-            style: const TextStyle(color: Colors.grey),
+            style: const TextStyle(color: AppColors.textSecondary),
           ),
         ),
       );
@@ -154,7 +156,10 @@ class WorkflowStorageView extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 AppLocalizations.of(context).storageParsedNote,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
           ],
@@ -168,7 +173,7 @@ class WorkflowStorageView extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
+        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
       ),
     );
   }
@@ -206,7 +211,10 @@ class WorkflowStorageView extends ConsumerWidget {
                 Text(
                   AppLocalizations.of(context)
                       .storageOrigin(workflow.originName!),
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ],
@@ -265,7 +273,10 @@ class WorkflowStorageView extends ConsumerWidget {
                       ? AppLocalizations.of(context).unknownConnection
                       : '$serverName / ${workflow.filename}',
                 ),
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ),

@@ -8,6 +8,8 @@ import '../widgets/compact_search_field.dart';
 import '../widgets/page_title.dart';
 import 'param_row_helpers.dart';
 
+import '../../theme.dart';
+
 /// 「添加参数」页：全量参数按节点分组摆在这里，勾完返回。
 ///
 /// 它存在的前提是主视图只放已选参数 —— **全量列表必须有地方去**，
@@ -112,7 +114,9 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                   ? l.configSelectedCount(exposedTotal, widget.nodes.length)
                   : l.configParamCount(widget.nodes.length),
               style: textStyle.copyWith(
-                color: exposedTotal > 0 ? Colors.green.shade700 : Colors.grey,
+                color: exposedTotal > 0
+                    ? Colors.green.shade700
+                    : AppColors.textSecondary,
               ),
             ),
           ),
@@ -152,7 +156,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
           padding: const EdgeInsets.all(32),
           child: Text(
             l.configSearchEmpty,
-            style: const TextStyle(color: Colors.grey),
+            style: const TextStyle(color: AppColors.textSecondary),
           ),
         ),
       );
@@ -184,7 +188,10 @@ class _ParamPickerViewState extends State<ParamPickerView> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Text(
               categoryLabel(item.category!, l),
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
             ),
           );
         }
@@ -237,7 +244,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                         child: const Icon(
                           Icons.expand_more,
                           size: 20,
-                          color: Colors.grey,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -275,7 +282,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                                     fontSize: 11,
                                     color: exposedCount > 0
                                         ? Colors.green.shade700
-                                        : Colors.grey,
+                                        : AppColors.textSecondary,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -297,7 +304,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                                         ? Icons.deselect
                                         : Icons.select_all,
                                     size: 20,
-                                    color: Colors.grey,
+                                    color: AppColors.textSecondary,
                                   ),
                                 ),
                               ],
@@ -309,7 +316,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                                   roleText,
                                   style: const TextStyle(
                                     fontSize: 11,
-                                    color: Colors.grey,
+                                    color: AppColors.textSecondary,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -374,7 +381,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.green,
+                    backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

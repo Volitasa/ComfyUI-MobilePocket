@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme.dart';
+
 /// 配置页里单个参数的行：勾选 + 别名输入 + 当前值摘要，**一行 44px**。
 ///
 /// 别名只出现一次 —— 输入框本身就是显示别名的地方（平时无边框、聚焦才描一圈），
@@ -117,7 +119,7 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
                 hintStyle: const TextStyle(
                   fontSize: 14,
                   height: 1.2,
-                  color: Colors.grey,
+                  color: AppColors.textSecondary,
                 ),
                 // 平时看不出是输入框，聚焦才描边：可编辑性靠「点一下就有光标」传达，
                 // 而不是让几十个边框把页面变成表单。
@@ -164,7 +166,7 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
                         height: 1.2,
                         color: widget.warning != null
                             ? Colors.orange
-                            : Colors.grey,
+                            : AppColors.textSecondary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -180,7 +182,11 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
             SizedBox(
               width: 32,
               child: IconButton(
-                icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                icon: const Icon(
+                  Icons.close,
+                  size: 18,
+                  color: AppColors.textSecondary,
+                ),
                 tooltip: widget.removeTooltip,
                 onPressed: widget.onRemove,
                 visualDensity: VisualDensity.compact,

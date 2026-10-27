@@ -96,12 +96,18 @@ class _AboutViewState extends ConsumerState<AboutView> {
             const SizedBox(height: 24),
             Text(
               AppLocalizations.of(context).updateSourceNote,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
             const SizedBox(height: 4),
             SelectableText(
               UpdateService.repoHomeUrl,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -144,7 +150,10 @@ class _AboutViewState extends ConsumerState<AboutView> {
                 Text(
                   AppLocalizations.of(context)
                       .aboutVersionBuild(version, build),
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -159,7 +168,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
       case UpdateStatus.checking:
         return _InfoRow(
           icon: Icons.hourglass_top,
-          color: Colors.grey,
+          color: AppColors.textSecondary,
           text: AppLocalizations.of(context).updateChecking,
         );
 
@@ -206,7 +215,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
         if (!Platform.isAndroid) {
           return _InfoRow(
             icon: Icons.info_outline,
-            color: Colors.grey,
+            color: AppColors.textSecondary,
             text: AppLocalizations.of(context)
                 .updateAvailableOtherPlatform(release.version),
           );
@@ -252,7 +261,10 @@ class _AboutViewState extends ConsumerState<AboutView> {
             const SizedBox(height: 6),
             Text(
               '${release.assetName} · ${release.sizeText(AppLocalizations.of(context))}',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
             // GitHub 自动生成的说明含 Markdown 与裸链接，需清洗后再展示
             if (notes.text.isNotEmpty) ...[
@@ -287,7 +299,10 @@ class _AboutViewState extends ConsumerState<AboutView> {
               const SizedBox(height: 6),
               SelectableText(
                 notes.changelogUrl,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
             const SizedBox(height: 14),
@@ -298,7 +313,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
                   LinearProgressIndicator(
                     value: state.progress > 0 ? state.progress : null,
                     backgroundColor: Colors.green.shade100,
-                    color: Colors.green,
+                    color: AppColors.primary,
                     minHeight: 5,
                   ),
                   const SizedBox(height: 8),
@@ -308,7 +323,10 @@ class _AboutViewState extends ConsumerState<AboutView> {
                             (state.progress * 100).toStringAsFixed(0),
                           )
                         : AppLocalizations.of(context).updateDownloading,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               )

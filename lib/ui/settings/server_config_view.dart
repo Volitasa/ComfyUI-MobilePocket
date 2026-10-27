@@ -5,6 +5,8 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/parsed_workflow_provider.dart';
 
+import '../../theme.dart';
+
 /// 连接探测结果 → 展示文案。结果本身只描述“发生了什么”，
 /// 这里才按当前语言拼出句子（颜色也由 ok 决定，不再靠文案里的字眼判断）。
 String testResultText(AppLocalizations l, ConnectionTestResult r) =>
@@ -81,14 +83,17 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                   label: Text(l.serverAdd),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: Colors.grey),
+                    side: const BorderSide(color: AppColors.border),
                     foregroundColor: Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   l.serverHint,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -141,7 +146,7 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                 isActive
                     ? Icons.radio_button_checked
                     : Icons.radio_button_unchecked,
-                color: isActive ? Colors.green : Colors.grey,
+                color: isActive ? AppColors.primary : AppColors.textSecondary,
               ),
         title: Row(
           children: [
@@ -419,7 +424,7 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
           child: Text(l.cancel),
         ),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: Colors.green),
+          style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
           onPressed: () {
             if (_primaryCtrl.text.trim().isEmpty) return;
             Navigator.pop(

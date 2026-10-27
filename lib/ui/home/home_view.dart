@@ -11,6 +11,8 @@ import '../settings/server_config_view.dart';
 import 'remote_workflow_section.dart';
 import 'local_workflow_section.dart';
 
+import '../../theme.dart';
+
 /// 首页分段：0 服务器 / 1 本地
 final workflowTabIndexProvider = StateProvider<int>((ref) => 0);
 
@@ -136,7 +138,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
-              color: selected ? Colors.black87 : Colors.grey,
+              color: selected ? Colors.black87 : AppColors.textSecondary,
             ),
           ),
         ),

@@ -6,6 +6,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../models/workflow_node.dart';
 import 'size_presets.dart';
 
+import '../../../theme.dart';
+
 /// latent 节点的「尺寸卡」：比例 + 长边 + 张数，替代三个分开的数字输入框。
 ///
 /// 三条约束（改动前定死的）：
@@ -169,7 +171,10 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
 
   Widget _sectionLabel(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
-    child: Text(text, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+    child: Text(
+      text,
+      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+    ),
   );
 
   Widget _longEdgePicker() {

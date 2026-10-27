@@ -7,6 +7,8 @@ import '../../providers/connection_provider.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/task_manager.dart';
 
+import '../../theme.dart';
+
 /// 工作流快照管理：查看所有快照、显示被多少条生成记录引用、手动删除。
 ///
 /// 删除生成记录**不会**连带删除快照（快照可能被其他记录引用），
@@ -94,7 +96,7 @@ class SnapshotListView extends ConsumerWidget {
           ? Center(
               child: Text(
                 AppLocalizations.of(context).snapshotEmpty,
-                style: const TextStyle(color: Colors.grey),
+                style: const TextStyle(color: AppColors.textSecondary),
               ),
             )
           : ListView.separated(
@@ -144,7 +146,7 @@ class SnapshotListView extends ConsumerWidget {
                             style: TextStyle(
                               color: refCount > 0
                                   ? Colors.black54
-                                  : Colors.grey,
+                                  : AppColors.textSecondary,
                             ),
                           ),
                         ],
