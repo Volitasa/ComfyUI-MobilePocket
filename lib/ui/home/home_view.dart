@@ -106,7 +106,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
   Widget _buildTabs(int currentTab) {
     return Container(
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+        border: Border(bottom: BorderSide(color: context.borderColor)),
       ),
       child: Row(
         children: [
@@ -138,7 +138,9 @@ class _HomeViewState extends ConsumerState<HomeView> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
-              color: selected ? Colors.black87 : AppColors.textSecondary,
+              color: selected
+                  ? Theme.of(context).colorScheme.onSurface
+                  : context.textSecondary,
             ),
           ),
         ),

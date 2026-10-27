@@ -96,7 +96,7 @@ class SnapshotListView extends ConsumerWidget {
           ? Center(
               child: Text(
                 AppLocalizations.of(context).snapshotEmpty,
-                style: const TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: context.textSecondary),
               ),
             )
           : ListView.separated(
@@ -110,7 +110,7 @@ class SnapshotListView extends ConsumerWidget {
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: AppColors.border),
+                    side: BorderSide(color: context.borderColor),
                   ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(
@@ -146,7 +146,7 @@ class SnapshotListView extends ConsumerWidget {
                             style: TextStyle(
                               color: refCount > 0
                                   ? Colors.black54
-                                  : AppColors.textSecondary,
+                                  : context.textSecondary,
                             ),
                           ),
                         ],

@@ -96,18 +96,12 @@ class _AboutViewState extends ConsumerState<AboutView> {
             const SizedBox(height: 24),
             Text(
               AppLocalizations.of(context).updateSourceNote,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 12, color: context.textSecondary),
             ),
             const SizedBox(height: 4),
             SelectableText(
               UpdateService.repoHomeUrl,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 12, color: context.textSecondary),
             ),
           ],
         ),
@@ -123,7 +117,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
+        side: BorderSide(color: context.borderColor),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -150,10 +144,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
                 Text(
                   AppLocalizations.of(context)
                       .aboutVersionBuild(version, build),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 13, color: context.textSecondary),
                 ),
               ],
             ),
@@ -168,14 +159,14 @@ class _AboutViewState extends ConsumerState<AboutView> {
       case UpdateStatus.checking:
         return _InfoRow(
           icon: Icons.hourglass_top,
-          color: AppColors.textSecondary,
+          color: context.textSecondary,
           text: AppLocalizations.of(context).updateChecking,
         );
 
       case UpdateStatus.upToDate:
         return _InfoRow(
           icon: Icons.check_circle_outline,
-          color: AppColors.success,
+          color: context.stateSuccess,
           text: AppLocalizations.of(context)
               .updateUpToDate(state.currentVersion),
         );
@@ -186,7 +177,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
         final needsToken = ref.watch(githubTokenProvider).trim().isEmpty;
         return _InfoRow(
           icon: Icons.error_outline,
-          color: AppColors.danger,
+          color: context.stateDanger,
           text: state.message ?? AppLocalizations.of(context).updateCheckFailed,
           action: Column(
             mainAxisSize: MainAxisSize.min,
@@ -215,7 +206,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
         if (!Platform.isAndroid) {
           return _InfoRow(
             icon: Icons.info_outline,
-            color: AppColors.textSecondary,
+            color: context.textSecondary,
             text: AppLocalizations.of(context)
                 .updateAvailableOtherPlatform(release.version),
           );
@@ -261,10 +252,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
             const SizedBox(height: 6),
             Text(
               '${release.assetName} · ${release.sizeText(AppLocalizations.of(context))}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 12, color: context.textSecondary),
             ),
             // GitHub 自动生成的说明含 Markdown 与裸链接，需清洗后再展示
             if (notes.text.isNotEmpty) ...[
@@ -299,10 +287,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
               const SizedBox(height: 6),
               SelectableText(
                 notes.changelogUrl,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 12, color: context.textSecondary),
               ),
             ],
             const SizedBox(height: 14),
@@ -323,9 +308,9 @@ class _AboutViewState extends ConsumerState<AboutView> {
                             (state.progress * 100).toStringAsFixed(0),
                           )
                         : AppLocalizations.of(context).updateDownloading,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textSecondary,
+                      color: context.textSecondary,
                     ),
                   ),
                 ],
@@ -374,7 +359,7 @@ class _InfoRow extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
+        side: BorderSide(color: context.borderColor),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

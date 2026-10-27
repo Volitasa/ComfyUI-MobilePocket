@@ -173,7 +173,7 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
     padding: const EdgeInsets.only(bottom: 6),
     child: Text(
       text,
-      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+      style: TextStyle(fontSize: 11, color: context.textSecondary),
     ),
   );
 

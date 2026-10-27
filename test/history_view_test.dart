@@ -229,9 +229,12 @@ void main() {
           snapshotId: 'snap_gone',
         ),
       ]);
+      // 置灰用的是主题的次要色，不能是写死的常量——否则深色主题下会看不见。
+      // 这里按语义断言：与当前主题的 onSurfaceVariant 一致。
+      final element = tester.element(find.byIcon(Icons.replay));
       expect(
         tester.widget<Icon>(find.byIcon(Icons.replay)).color,
-        AppColors.textSecondary,
+        Theme.of(element).colorScheme.onSurfaceVariant,
       );
     });
 

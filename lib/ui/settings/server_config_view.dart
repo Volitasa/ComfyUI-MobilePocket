@@ -83,17 +83,14 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                   label: Text(l.serverAdd),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: AppColors.border),
-                    foregroundColor: Colors.black87,
+                    side: BorderSide(color: context.borderColor),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   l.serverHint,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 12, color: context.textSecondary),
                 ),
               ],
             ),
@@ -146,7 +143,7 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                 isActive
                     ? Icons.radio_button_checked
                     : Icons.radio_button_unchecked,
-                color: isActive ? AppColors.primary : AppColors.textSecondary,
+                color: isActive ? AppColors.primary : context.textSecondary,
               ),
         title: Row(
           children: [

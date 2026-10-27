@@ -437,10 +437,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
           const SizedBox(height: 2),
           Text(
             l.configFormHint,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 11, color: context.textSecondary),
           ),
         ],
       ),
@@ -458,7 +455,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
+        side: BorderSide(color: context.borderColor),
       ),
       child: Column(
         children: [
@@ -614,7 +611,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                       child: Text(
                         l.configNoParams,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.textSecondary),
+                        style: TextStyle(color: context.textSecondary),
                       ),
                     ),
                   )
@@ -625,7 +622,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                       child: Text(
                         l.configFormEmpty,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.textSecondary),
+                        style: TextStyle(color: context.textSecondary),
                       ),
                     ),
                   )

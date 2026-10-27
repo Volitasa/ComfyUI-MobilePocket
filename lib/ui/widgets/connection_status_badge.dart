@@ -27,7 +27,7 @@ class ConnectionStatusBadge extends ConsumerWidget {
         ? serverDisplayName(l, activeServer.first.name)
         : l.notConnected;
     final connected = config.isConnected && wsState.isConnected;
-    final color = connected ? AppColors.success : AppColors.danger;
+    final color = connected ? context.stateSuccess : context.stateDanger;
 
     return InkWell(
       onTap: onTap,
@@ -45,7 +45,10 @@ class ConnectionStatusBadge extends ConsumerWidget {
             const SizedBox(width: 6),
             Text(
               name,
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ],

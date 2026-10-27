@@ -74,7 +74,7 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: AppColors.border),
+                side: BorderSide(color: context.borderColor),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -88,7 +88,9 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
                           ? Icons.check_circle_outline
                           : Icons.info_outline,
                       size: 20,
-                      color: configured ? AppColors.success : AppColors.neutral,
+                      color: configured
+                          ? context.stateSuccess
+                          : context.stateNeutral,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -99,8 +101,8 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
                         style: TextStyle(
                           fontSize: 13,
                           color: configured
-                              ? AppColors.success
-                              : AppColors.neutral,
+                              ? context.stateSuccess
+                              : context.stateNeutral,
                         ),
                       ),
                     ),
@@ -153,10 +155,7 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
             const SizedBox(height: 16),
             Text(
               AppLocalizations.of(context).tokenLocalOnlyNote,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 12, color: context.textSecondary),
             ),
           ],
         ),

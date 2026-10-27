@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme.dart';
+
 /// 运行页 / 尺寸卡共用的输入框外观。
 ///
 /// 之前每个控件各写一份 `InputDecoration`，同一页里攒出了四套观感：
@@ -65,7 +67,7 @@ class ParamFieldStyle {
       suffixText: suffixText,
       isDense: true,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: context.fieldFill,
       contentPadding: contentPadding ?? ParamFieldStyle.contentPadding,
       border: border,
       enabledBorder: border,

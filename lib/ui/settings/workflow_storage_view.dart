@@ -109,7 +109,7 @@ class WorkflowStorageView extends ConsumerWidget {
         body: Center(
           child: Text(
             AppLocalizations.of(context).storageEmpty,
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: context.textSecondary),
           ),
         ),
       );
@@ -141,6 +141,7 @@ class WorkflowStorageView extends ConsumerWidget {
           ),
           if (local.isNotEmpty) ...[
             _buildGroupTitle(
+              context,
               AppLocalizations.of(context).storageGroupLocal(local.length),
             ),
             ...local.map((w) => _buildLocalTile(context, ref, w)),
@@ -148,6 +149,7 @@ class WorkflowStorageView extends ConsumerWidget {
           ],
           if (parsed.isNotEmpty) ...[
             _buildGroupTitle(
+              context,
               AppLocalizations.of(context).storageGroupParsed(parsed.length),
             ),
             ...parsed.map((w) => _buildParsedTile(context, ref, w, servers)),
@@ -156,10 +158,7 @@ class WorkflowStorageView extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 AppLocalizations.of(context).storageParsedNote,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 12, color: context.textSecondary),
               ),
             ),
           ],
@@ -168,12 +167,12 @@ class WorkflowStorageView extends ConsumerWidget {
     );
   }
 
-  Widget _buildGroupTitle(String text) {
+  Widget _buildGroupTitle(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 12, color: context.textSecondary),
       ),
     );
   }
@@ -188,7 +187,7 @@ class WorkflowStorageView extends ConsumerWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
+        side: BorderSide(color: context.borderColor),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -211,10 +210,7 @@ class WorkflowStorageView extends ConsumerWidget {
                 Text(
                   AppLocalizations.of(context)
                       .storageOrigin(workflow.originName!),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 12, color: context.textSecondary),
                 ),
               ],
             ],
@@ -247,7 +243,7 @@ class WorkflowStorageView extends ConsumerWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
+        side: BorderSide(color: context.borderColor),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -273,10 +269,7 @@ class WorkflowStorageView extends ConsumerWidget {
                       ? AppLocalizations.of(context).unknownConnection
                       : '$serverName / ${workflow.filename}',
                 ),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 12, color: context.textSecondary),
               ),
             ],
           ),

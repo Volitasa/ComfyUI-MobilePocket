@@ -941,7 +941,7 @@ class _RunViewState extends ConsumerState<RunView> {
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: AppColors.border),
+                        side: BorderSide(color: context.borderColor),
                       ),
                       child: Column(
                         children: [
@@ -968,10 +968,10 @@ class _RunViewState extends ConsumerState<RunView> {
                                   AnimatedRotation(
                                     turns: expanded ? 0 : -0.25,
                                     duration: const Duration(milliseconds: 150),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.expand_more,
                                       size: 20,
-                                      color: AppColors.textSecondary,
+                                      color: context.textSecondary,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
@@ -988,9 +988,9 @@ class _RunViewState extends ConsumerState<RunView> {
                                   Text(
                                     AppLocalizations.of(context)
                                         .configParamCount(params.length),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
-                                      color: AppColors.textSecondary,
+                                      color: context.textSecondary,
                                     ),
                                   ),
                                 ],
@@ -1024,7 +1024,7 @@ class _RunViewState extends ConsumerState<RunView> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: _isExecuting
-                        ? AppColors.textSecondary
+                        ? context.textSecondary
                         : AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -1188,10 +1188,7 @@ class _RunViewState extends ConsumerState<RunView> {
                 ),
                 child: Text(
                   node.key,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 10, color: context.textSecondary),
                 ),
               ),
           ],
@@ -1219,7 +1216,7 @@ class _RunViewState extends ConsumerState<RunView> {
         const SizedBox(width: 8),
         Text(
           on ? l.runBoolOn : l.runBoolOff,
-          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12, color: context.textSecondary),
         ),
         _boolSwitch(k),
       ],
@@ -1282,10 +1279,7 @@ class _RunViewState extends ConsumerState<RunView> {
           const SizedBox(height: 4),
           Text(
             l10n.runModelMissing,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 12, color: context.textSecondary),
           ),
         ],
       ],
@@ -1393,11 +1387,8 @@ class _RunViewState extends ConsumerState<RunView> {
                 height: 96,
                 width: double.infinity,
                 color: Colors.grey.shade100,
-                child: const Center(
-                  child: Icon(
-                    Icons.broken_image,
-                    color: AppColors.textSecondary,
-                  ),
+                child: Center(
+                  child: Icon(Icons.broken_image, color: context.textSecondary),
                 ),
               ),
             ),
@@ -1405,10 +1396,7 @@ class _RunViewState extends ConsumerState<RunView> {
           const SizedBox(height: 4),
           Text(
             l.runUsingServerImage(serverImage),
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 12, color: context.textSecondary),
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -1456,7 +1444,7 @@ class _RunViewState extends ConsumerState<RunView> {
               ),
               isDense: true,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: context.fieldFill,
             ),
           ),
         ),

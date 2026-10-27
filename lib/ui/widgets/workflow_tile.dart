@@ -77,11 +77,11 @@ class WorkflowTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             // 锁行高：默认行高会让 14 号字占掉 20px，
                             // 两行字就耗掉 36，卡片高度下不来
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               height: 1.2,
                               fontWeight: FontWeight.w500,
-                              color: Colors.black87,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -91,7 +91,7 @@ class WorkflowTile extends StatelessWidget {
                             statusLabel,
                             style: TextStyle(
                               fontSize: 11,
-                              color: statusColor ?? AppColors.textSecondary,
+                              color: statusColor ?? context.textSecondary,
                             ),
                           ),
                         ],
@@ -106,7 +106,7 @@ class WorkflowTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           height: 1.2,
-                          color: footnoteColor ?? AppColors.textSecondary,
+                          color: footnoteColor ?? context.textSecondary,
                         ),
                       ),
                     ],

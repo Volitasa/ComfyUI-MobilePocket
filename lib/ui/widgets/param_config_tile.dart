@@ -116,10 +116,10 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
               decoration: InputDecoration(
                 isDense: true,
                 hintText: widget.aliasHint,
-                hintStyle: const TextStyle(
+                hintStyle: TextStyle(
                   fontSize: 14,
                   height: 1.2,
-                  color: AppColors.textSecondary,
+                  color: context.textSecondary,
                 ),
                 // 平时看不出是输入框，聚焦才描边：可编辑性靠「点一下就有光标」传达，
                 // 而不是让几十个边框把页面变成表单。
@@ -166,7 +166,7 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
                         height: 1.2,
                         color: widget.warning != null
                             ? Colors.orange
-                            : AppColors.textSecondary,
+                            : context.textSecondary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -182,11 +182,7 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
             SizedBox(
               width: 32,
               child: IconButton(
-                icon: const Icon(
-                  Icons.close,
-                  size: 18,
-                  color: AppColors.textSecondary,
-                ),
+                icon: Icon(Icons.close, size: 18, color: context.textSecondary),
                 tooltip: widget.removeTooltip,
                 onPressed: widget.onRemove,
                 visualDensity: VisualDensity.compact,

@@ -193,9 +193,9 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
 
   // 任务状态 → 展示色（成功绿 / 失败红 / 中断灰 / 进行中橙）
   Color _statusColor(TaskStatus status) => switch (status) {
-    TaskStatus.completed => AppColors.success,
-    TaskStatus.failed => AppColors.danger,
-    TaskStatus.interrupted => AppColors.neutral,
+    TaskStatus.completed => context.stateSuccess,
+    TaskStatus.failed => context.stateDanger,
+    TaskStatus.interrupted => context.stateNeutral,
     TaskStatus.queued || TaskStatus.running => AppColors.warning,
   };
 
@@ -208,7 +208,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     return switch (task.status) {
       TaskStatus.completed => Text(
         l.historyNoImage,
-        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 12, color: context.textSecondary),
       ),
       TaskStatus.failed => Icon(
         Icons.error_outline,
@@ -258,10 +258,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
               const SizedBox(height: 10),
               Text(
                 l.historyDeleteImagesNote,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 12, color: context.textSecondary),
               ),
             ],
           ],
@@ -394,11 +391,11 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) => Container(
         color: Colors.grey.shade200,
-        child: const Center(
+        child: Center(
           child: Icon(
             Icons.broken_image,
             size: 20,
-            color: AppColors.textSecondary,
+            color: context.textSecondary,
           ),
         ),
       ),
@@ -485,7 +482,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
           ? Center(
               child: Text(
                 l.historyEmpty,
-                style: const TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: context.textSecondary),
               ),
             )
           : Column(
@@ -498,9 +495,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                       ? Center(
                           child: Text(
                             l.historySearchEmpty,
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                            ),
+                            style: TextStyle(color: context.textSecondary),
                           ),
                         )
                       : ListView.builder(
@@ -537,10 +532,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
               fit: StackFit.expand,
               children: [
                 _isVideo(task.images[0]['filename'])
-                    ? const Center(
+                    ? Center(
                         child: Icon(
                           Icons.videocam,
-                          color: AppColors.textSecondary,
+                          color: context.textSecondary,
                         ),
                       )
                     : _thumbnail(task.images[0]),
@@ -630,11 +625,11 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                           Text(
                             workflowDisplayNameOr(l, task.title),
                             // 锁行高：默认行高会让 14 号字占掉 20px，行高压不下来
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               height: 1.2,
                               fontWeight: FontWeight.w500,
-                              color: Colors.black87,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -670,10 +665,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                             const SizedBox(height: 2),
                             Text(
                               detail,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 height: 1.2,
-                                color: AppColors.textSecondary,
+                                color: context.textSecondary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -698,8 +693,8 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                       icon: Icons.replay,
                       // 用沉一点的成功色而非品牌亮绿，小图标不至于抢过内容
                       color: canRerun
-                          ? AppColors.success
-                          : AppColors.textSecondary,
+                          ? context.stateSuccess
+                          : context.textSecondary,
                       tooltip: l.historyRerun,
                       // 置灰但仍可点：点击会说明具体原因，而不是静默无反应
                       onTap: () => _runAgain(task),
@@ -709,7 +704,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                     else
                       _IconAction(
                         icon: Icons.delete_outline,
-                        color: AppColors.danger,
+                        color: context.stateDanger,
                         tooltip: l.delete,
                         onTap: () => _confirmDelete(task),
                       ),

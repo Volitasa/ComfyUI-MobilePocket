@@ -74,10 +74,10 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.photo_library_outlined,
                     size: 48,
-                    color: AppColors.textSecondary,
+                    color: context.textSecondary,
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -87,8 +87,8 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                   const SizedBox(height: 4),
                   Text(
                     AppLocalizations.of(context).galleryEmptyHint,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
+                    style: TextStyle(
+                      color: context.textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -116,9 +116,9 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => Container(
                           color: Colors.grey.shade200,
-                          child: const Icon(
+                          child: Icon(
                             Icons.broken_image,
-                            color: AppColors.textSecondary,
+                            color: context.textSecondary,
                           ),
                         ),
                       ),

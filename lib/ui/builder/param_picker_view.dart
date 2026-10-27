@@ -116,7 +116,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
               style: textStyle.copyWith(
                 color: exposedTotal > 0
                     ? Colors.green.shade700
-                    : AppColors.textSecondary,
+                    : context.textSecondary,
               ),
             ),
           ),
@@ -156,7 +156,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
           padding: const EdgeInsets.all(32),
           child: Text(
             l.configSearchEmpty,
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: context.textSecondary),
           ),
         ),
       );
@@ -188,10 +188,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Text(
               categoryLabel(item.category!, l),
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 11, color: context.textSecondary),
             ),
           );
         }
@@ -214,7 +211,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: AppColors.border),
+            side: BorderSide(color: context.borderColor),
           ),
           child: Column(
             children: [
@@ -241,10 +238,10 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                       AnimatedRotation(
                         turns: expanded ? 0 : -0.25,
                         duration: const Duration(milliseconds: 150),
-                        child: const Icon(
+                        child: Icon(
                           Icons.expand_more,
                           size: 20,
-                          color: AppColors.textSecondary,
+                          color: context.textSecondary,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -282,7 +279,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                                     fontSize: 11,
                                     color: exposedCount > 0
                                         ? Colors.green.shade700
-                                        : AppColors.textSecondary,
+                                        : context.textSecondary,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -304,7 +301,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                                         ? Icons.deselect
                                         : Icons.select_all,
                                     size: 20,
-                                    color: AppColors.textSecondary,
+                                    color: context.textSecondary,
                                   ),
                                 ),
                               ],
@@ -314,9 +311,9 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                                 padding: const EdgeInsets.only(top: 2),
                                 child: Text(
                                   roleText,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 11,
-                                    color: AppColors.textSecondary,
+                                    color: context.textSecondary,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,

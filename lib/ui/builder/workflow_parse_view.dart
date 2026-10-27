@@ -9,6 +9,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../providers/connection_provider.dart';
 import '../../services/workflow_api_converter.dart';
+import '../../theme.dart';
 import '../widgets/page_title.dart';
 
 /// 解析 UI 工作流：载入 ComfyUI 前端，调用**它自己的**转换逻辑取回 API 结构。
@@ -185,7 +186,9 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
           WebViewWidget(controller: _controller),
           Positioned.fill(
             child: Container(
-              color: Colors.white,
+              // 这层遮罩盖住了 WebView（用户全程只看得到状态文字，看不到
+              // ComfyUI 前端），所以它可以跟着主题走，不必迁就前端的浅色
+              color: Theme.of(context).colorScheme.surface,
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -197,9 +200,9 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
                       Text(
                         _status,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: Colors.black54,
+                          color: context.textSecondary,
                         ),
                       ),
                     ],

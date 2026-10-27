@@ -52,14 +52,14 @@ class RemoteWorkflowSection extends ConsumerWidget {
       children: [
         // 分组按格式而非状态：条目解析后不会在两组之间跳来跳去
         if (workflowState.workflowList.isNotEmpty) ...[
-          _buildGroupTitle(AppLocalizations.of(context).homeGroupApi),
+          _buildGroupTitle(context, AppLocalizations.of(context).homeGroupApi),
           ...workflowState.workflowList.map(
             (file) => _buildWorkflowCard(context, ref, file, workflowState),
           ),
           const SizedBox(height: 18),
         ],
         if (workflowState.uiWorkflowList.isNotEmpty) ...[
-          _buildGroupTitle(AppLocalizations.of(context).homeGroupUi),
+          _buildGroupTitle(context, AppLocalizations.of(context).homeGroupUi),
           ...workflowState.uiWorkflowList.map(
             (file) => _buildUiWorkflowCard(context, ref, file, workflowState),
           ),
@@ -69,22 +69,19 @@ class RemoteWorkflowSection extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
             AppLocalizations.of(context).homeWorkflowSourceNote,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 12, color: context.textSecondary),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildGroupTitle(String text) {
+  Widget _buildGroupTitle(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 12, color: context.textSecondary),
       ),
     );
   }
@@ -147,7 +144,7 @@ class RemoteWorkflowSection extends ConsumerWidget {
       fillColor: stale ? const Color(0xFFFAEEDA) : null,
       showBorder: cached != null,
       menu: PopupMenuButton<String>(
-        icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+        icon: Icon(Icons.more_vert, color: context.textSecondary),
         tooltip: AppLocalizations.of(context).menuMore,
         onSelected: (v) =>
             _onUiMenuSelected(context, ref, filename, cached?.id, v),
@@ -341,10 +338,7 @@ class RemoteWorkflowSection extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             AppLocalizations.of(context).homeDisconnectedBody,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: context.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
@@ -377,10 +371,7 @@ class RemoteWorkflowSection extends ConsumerWidget {
           Text(
             AppLocalizations.of(context).homeEmptyBody,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: context.textSecondary, fontSize: 12),
           ),
         ],
       ),
@@ -454,7 +445,7 @@ class RemoteWorkflowSection extends ConsumerWidget {
 
   Widget _buildMenu(BuildContext context, WidgetRef ref, String filename) {
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+      icon: Icon(Icons.more_vert, color: context.textSecondary),
       tooltip: AppLocalizations.of(context).menuMore,
       onSelected: (value) => _onMenuSelected(context, ref, filename, value),
       itemBuilder: (_) => [
