@@ -214,7 +214,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.grey.shade200),
+            side: BorderSide(color: AppColors.border),
           ),
           child: Column(
             children: [

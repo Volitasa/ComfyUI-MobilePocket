@@ -7,8 +7,12 @@ class AppColors {
   /// 品牌主色（冷绿；与 AppTheme.lightScheme() 派生出的 primary 保持一致）
   static const Color primary = Color(0xFF256A4B);
 
-  /// 明色页面底色。比纯白略沉一点，让白色卡片能浮起来。
-  static const Color scaffoldBackground = Color(0xFFF4F5F4);
+  /// 明色页面底色。
+  ///
+  /// 不能太接近卡片色：卡片是 #F7F8F7，原先底色取 #F4F5F4 只差 1.3% 明度，
+  /// 容器色去掉黄绿色相后卡片边界就看不见了（以前是靠色相差撑着的）。
+  /// 这里压到 #EFF1EF，与卡片拉开约 7%，分组边界重新成立。
+  static const Color scaffoldBackground = Color(0xFFEFF1EF);
 
   /// 次要文字与图标色。
   ///

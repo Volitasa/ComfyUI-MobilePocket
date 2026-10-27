@@ -106,7 +106,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
   Widget _buildTabs(int currentTab) {
     return Container(
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         children: [
@@ -128,7 +128,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: selected ? Colors.black87 : Colors.transparent,
+                color: selected ? AppColors.primary : Colors.transparent,
                 width: 2,
               ),
             ),
