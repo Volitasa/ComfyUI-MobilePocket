@@ -38,10 +38,16 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
   bool _converting = false;
   late String _status;
 
+  /// 初始状态文案是否已取。取文案要读 Localizations，而那是 InheritedWidget，
+  /// 在 initState 期间不能依赖（见下面的 didChangeDependencies）。
+  bool _statusResolved = false;
+
   @override
   void initState() {
     super.initState();
-    _status = AppLocalizations.of(context).parseStatusConnecting;
+    // 这里**不能**取 AppLocalizations：initState 阶段还没挂上 Localizations，
+    // 调 dependOnInheritedWidgetOfExactType 会直接抛断言（红屏）。
+    // 初始文案统一在 didChangeDependencies 里写。
     final url = ref.read(connectionProvider).comfyUrl;
 
     _controller = WebViewController()
@@ -51,6 +57,8 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
         WorkflowApiConverter.bridgeName,
         onMessageReceived: (msg) {
           _convertTimer?.cancel();
+          // WebView 的回调可能在页面已经关掉之后才到，这时再读 context 会崩
+          if (!mounted) return;
           _finish(
             WorkflowApiConverter.parsePayload(
               msg.message,
@@ -63,6 +71,17 @@ class _WorkflowParseViewState extends ConsumerState<WorkflowParseView> {
         NavigationDelegate(onPageFinished: (_) => _startPolling()),
       )
       ..loadRequest(Uri.parse(url));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 首帧取一次初始状态文案。加标记是为了只写这一次：
+    // 后续轮询会把 _status 推进成"正在载入/等待就绪"，重复写会把它盖回去。
+    if (!_statusResolved) {
+      _statusResolved = true;
+      _status = AppLocalizations.of(context).parseStatusConnecting;
+    }
   }
 
   @override
