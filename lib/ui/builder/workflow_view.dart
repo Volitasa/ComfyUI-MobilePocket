@@ -25,7 +25,10 @@ import 'run_view.dart'; // 下一步我们将创建运行页面
 const double kSectionGap = 10;
 
 /// 段内参数超过这个数，拖动时改画紧凑预览（整段浮起来会挡住落点）。
-const int kCompactDragThreshold = 6;
+///
+/// 4 行 = 176dp，已接近屏幕高度的四分之一，再往上就会把落点区域盖住。
+/// 一开始写 6 太保守：6 项正好落在边界外，整段 477px 浮起来（真机实测）。
+const int kCompactDragThreshold = 4;
 
 class WorkflowView extends ConsumerStatefulWidget {
   final String workflowId;
@@ -507,42 +510,52 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     final editing = section.params.any(
       (p) => _focusedParamKey == nodeParamKey(p.id, p.key),
     );
-    return ParamDragStartListener(
+    // ⚠️ 段间距必须挂在**卡片外面**的 Padding 上，不能用 `Card.margin`。
+    // Card.margin 属于 item 自身尺寸的一部分，拖动时 `proxyDecorator`
+    // 会把这段间距一起框进绿框 —— 长按后看起来"底下多出一块"，
+    // 还会压住下一段的顶部（真机实测 20px）。见 `_buildDragProxy`。
+    return Padding(
       key: ValueKey('param-section-${section.nodeId}'),
-      index: index,
-      // 只有一段时无从可排；段内有别名在编辑时，长按让给输入框。
-      enabled: !editing && sectionCount > 1,
-      child: Card(
-        margin: const EdgeInsets.only(bottom: kSectionGap),
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: context.borderColor),
-        ),
-        child: Column(
-          children: [
-            for (var i = 0; i < section.params.length; i++) ...[
-              if (i > 0) const Divider(height: 1),
-              buildParamConfigRow(
-                context,
-                node: section.params[i],
-                aliasControllers: _aliasControllers,
-                issues: _specIssues,
-                onChanged: () => setState(() {}),
-                showCheckbox: false,
-                // 段内没有标题，行尾这行字是唯一的归属线索
-                showNodeInSummary: true,
-                onRemove: () => setState(() {
-                  section.params[i].exposed = false;
-                }),
-                onFocusChanged: (focused) => setState(() {
-                  _focusedParamKey = focused
-                      ? nodeParamKey(section.params[i].id, section.params[i].key)
-                      : null;
-                }),
-              ),
+      padding: const EdgeInsets.only(bottom: kSectionGap),
+      child: ParamDragStartListener(
+        index: index,
+        // 只有一段时无从可排；段内有别名在编辑时，长按让给输入框。
+        enabled: !editing && sectionCount > 1,
+        child: Card(
+          margin: EdgeInsets.zero,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: context.borderColor),
+          ),
+          child: Column(
+            children: [
+              for (var i = 0; i < section.params.length; i++) ...[
+                if (i > 0) const Divider(height: 1),
+                buildParamConfigRow(
+                  context,
+                  node: section.params[i],
+                  aliasControllers: _aliasControllers,
+                  issues: _specIssues,
+                  onChanged: () => setState(() {}),
+                  showCheckbox: false,
+                  // 段内没有标题，行尾这行字是唯一的归属线索
+                  showNodeInSummary: true,
+                  onRemove: () => setState(() {
+                    section.params[i].exposed = false;
+                  }),
+                  onFocusChanged: (focused) => setState(() {
+                    _focusedParamKey = focused
+                        ? nodeParamKey(
+                            section.params[i].id,
+                            section.params[i].key,
+                          )
+                        : null;
+                  }),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -550,21 +563,28 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
 
   /// 拖动中的浮起样式。
   ///
-  /// 段内参数很多时（IPAdapter 那类节点约 20 项）整段浮起来是 880px 的一大块，
-  /// 会把落点区域全挡住 —— 改成「节点名 + N 项参数」的紧凑预览，落位后恢复。
-  /// 语义上也更对：拖的是这一段的代表，不是它的全部内容。
+  /// 两件事：
+  /// 1. **把 item 外层的段间距 Padding 拆出来**，绿框只包卡片本体。
+  ///    否则框会把这段间距一起圈进去，长按后看似"底下多出一块"（真机实测 20px），
+  ///    还会压住下一段顶部。拆出来的 padding 原样加回去，保证浮起高度 = item 高度，
+  ///    落位不会跳。
+  /// 2. 段内参数多时改画「节点名 + N 项参数」的紧凑预览：20 项的段整段浮起来是
+  ///    880px 的一大块，会把落点区域全挡住。拖的是这一段的代表，不是它的全部内容。
   Widget _buildDragProxy(
     List<ParamSection> sections,
     Widget child,
     int index,
     Animation<double> animation,
   ) {
+    final padding = child is Padding ? child.padding : EdgeInsets.zero;
+    final body = child is Padding ? child.child! : child;
     final compact = index < sections.length &&
         sections[index].params.length > kCompactDragThreshold;
-    final Widget body;
+
+    final Widget surface;
     if (compact) {
       final params = sections[index].params;
-      body = SizedBox(
+      surface = SizedBox(
         height: 44,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -590,24 +610,28 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         ),
       );
     } else {
-      body = child;
+      surface = body;
     }
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.accent, width: 1.5),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x29000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: body,
+
+    return Padding(
+      padding: padding,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: context.accent, width: 1.5),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x29000000),
+              blurRadius: 8,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: surface,
+        ),
       ),
     );
   }
