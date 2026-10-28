@@ -1227,7 +1227,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get configFormHint => '改名或移出只影响手机上的表单';
+  String get configFormHint => '长按可拖动排序，改名或移出只影响手机上的表单';
 
   @override
   String get configFormEmpty => '还没有参数放进表单';

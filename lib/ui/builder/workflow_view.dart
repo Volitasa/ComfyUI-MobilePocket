@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../models/workflow_node.dart';
 import '../../providers/workflow_provider.dart';
+import '../../services/param_order.dart';
 import '../../services/workflow_node_parser.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
@@ -13,10 +15,17 @@ import '../../services/node_role.dart';
 import '../../services/object_info_service.dart';
 import '../../utils.dart';
 import '../widgets/page_title.dart';
+import '../widgets/param_drag_listener.dart';
 import 'param_picker_view.dart';
 import 'param_row_helpers.dart';
 import '../../theme.dart';
 import 'run_view.dart'; // 下一步我们将创建运行页面
+
+/// 段与段之间的间距。太小（8）会和行分隔线混在一起看不出分组，太大（16）浪费。
+const double kSectionGap = 10;
+
+/// 段内参数超过这个数，拖动时改画紧凑预览（整段浮起来会挡住落点）。
+const int kCompactDragThreshold = 6;
 
 class WorkflowView extends ConsumerStatefulWidget {
   final String workflowId;
@@ -60,6 +69,16 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
   /// 只是不默认摆在主视图上。
   List<WorkflowNode> get _selectedNodes =>
       _extractableNodes.where((n) => n.exposed).toList();
+
+  /// 已选参数按节点分成的段 —— 主视图的渲染单位，也是拖动单位。
+  ///
+  /// 与运行页「按节点分卡」同源（都是按 node.id 分组、保持首现顺序），
+  /// 所以这里的段顺序就是运行页的卡片顺序。
+  List<ParamSection> get _sections => buildParamSections(_selectedNodes);
+
+  /// 哪一行正在编辑别名（`nodeParamKey`）。非空表示这一段处于编辑态，
+  /// 长按归输入框（全选 / 粘贴 / 拖光标），整段不响应拖拽。
+  String? _focusedParamKey;
 
   @override
   void dispose() {
@@ -304,6 +323,12 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
               bounds: n.bounds ?? saved.bounds,
             );
           }).toList();
+          // 段顺序是用户排的：按旧配置的节点块顺序还原，
+          // 否则下一次进页面就被解析顺序覆盖回去了（方案 v3 §3.3）。
+          _extractableNodes = orderLikeSavedConfig(
+            _extractableNodes,
+            savedConfig,
+          );
         }
         return;
       }
@@ -444,38 +469,165 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     );
   }
 
-  /// 已放进表单的参数：一张卡片、一行一项，行尾是移出。
+  /// 已放进表单的参数：**一个节点一段**，段与段之间留间距。
   ///
-  /// 刻意**不做重排序**：顺序跟着工作流里的节点顺序走，和运行页一致，
-  /// 免得这里排了一遍、那边又是另一个顺序。
-  Widget _buildSelectedCard() {
-    final selected = _selectedNodes;
-    return Card(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: context.borderColor),
+  /// 分组靠间距表达，不画节点标题 —— 加节点标题是早先「标签分类」的形态，
+  /// 行高不变、密度不降的前提下它只会让有效信息变少（10-29 定的方向）。
+  /// 归属仍由**行尾那行字**说明（没有段标题，这一行不能省）。
+  ///
+  /// 长按任意位置可拖动整段，**没有可见手柄**：编辑态（别名聚焦）的长按归输入框。
+  /// 顺序跟着用户走，运行页按同一顺序显示（两边都是按节点分组，1:1）。
+  Widget _buildSelectedList() {
+    final sections = _sections;
+    return ReorderableListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      itemCount: sections.length,
+      itemBuilder: (context, index) => _buildSection(
+        context,
+        sections[index],
+        index,
+        sectionCount: sections.length,
       ),
-      child: Column(
-        children: [
-          for (var i = 0; i < selected.length; i++) ...[
-            if (i > 0) const Divider(height: 1),
-            buildParamConfigRow(
-              context,
-              node: selected[i],
-              aliasControllers: _aliasControllers,
-              issues: _specIssues,
-              onChanged: () => setState(() {}),
-              showCheckbox: false,
-              // 主视图的参数是混着排的：行尾要说清它属于哪个节点
-              showNodeInSummary: true,
-              onRemove: () => setState(() => selected[i].exposed = false),
-            ),
+      onReorderItem: _onReorder,
+      // 起拖 / 落位各震一下：没有手柄，全靠这下反馈告诉用户"已经拿起来了"。
+      onReorderStart: (_) => HapticFeedback.mediumImpact(),
+      onReorderEnd: (_) => HapticFeedback.lightImpact(),
+      proxyDecorator: (child, index, animation) =>
+          _buildDragProxy(sections, child, index, animation),
+    );
+  }
+
+  /// 一段：一张无标题的卡片，里面是该节点的已选参数。
+  Widget _buildSection(
+    BuildContext context,
+    ParamSection section,
+    int index, {
+    required int sectionCount,
+  }) {
+    final editing = section.params.any(
+      (p) => _focusedParamKey == nodeParamKey(p.id, p.key),
+    );
+    return ParamDragStartListener(
+      key: ValueKey('param-section-${section.nodeId}'),
+      index: index,
+      // 只有一段时无从可排；段内有别名在编辑时，长按让给输入框。
+      enabled: !editing && sectionCount > 1,
+      child: Card(
+        margin: const EdgeInsets.only(bottom: kSectionGap),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: context.borderColor),
+        ),
+        child: Column(
+          children: [
+            for (var i = 0; i < section.params.length; i++) ...[
+              if (i > 0) const Divider(height: 1),
+              buildParamConfigRow(
+                context,
+                node: section.params[i],
+                aliasControllers: _aliasControllers,
+                issues: _specIssues,
+                onChanged: () => setState(() {}),
+                showCheckbox: false,
+                // 段内没有标题，行尾这行字是唯一的归属线索
+                showNodeInSummary: true,
+                onRemove: () => setState(() {
+                  section.params[i].exposed = false;
+                }),
+                onFocusChanged: (focused) => setState(() {
+                  _focusedParamKey = focused
+                      ? nodeParamKey(section.params[i].id, section.params[i].key)
+                      : null;
+                }),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
+  }
+
+  /// 拖动中的浮起样式。
+  ///
+  /// 段内参数很多时（IPAdapter 那类节点约 20 项）整段浮起来是 880px 的一大块，
+  /// 会把落点区域全挡住 —— 改成「节点名 + N 项参数」的紧凑预览，落位后恢复。
+  /// 语义上也更对：拖的是这一段的代表，不是它的全部内容。
+  Widget _buildDragProxy(
+    List<ParamSection> sections,
+    Widget child,
+    int index,
+    Animation<double> animation,
+  ) {
+    final compact = index < sections.length &&
+        sections[index].params.length > kCompactDragThreshold;
+    final Widget body;
+    if (compact) {
+      final params = sections[index].params;
+      body = SizedBox(
+        height: 44,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  nodeLabelOf(params.first),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                AppLocalizations.of(context).configParamCount(params.length),
+                style: TextStyle(fontSize: 11, color: context.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      body = child;
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.accent, width: 1.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x29000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: body,
+      ),
+    );
+  }
+
+  /// 整段换位。段顺序写回「已选项原本占据的槽位」，未暴露的参数原地不动。
+  ///
+  /// ⚠️ 用 `onReorderItem` 而不是已废弃的 `onReorder`：前者给的 `newIndex`
+  /// 已经按「旧项已移除」调整过（3.41 起的行为），所以这里**不能再减 1**，
+  /// 否则往下移时会少走一格。
+  void _onReorder(int oldIndex, int newIndex) {
+    final sections = List<ParamSection>.of(_sections);
+    if (oldIndex == newIndex) return;
+    final moved = sections.removeAt(oldIndex);
+    sections.insert(newIndex, moved);
+    setState(() {
+      _extractableNodes = withExposedOrder(
+        _extractableNodes,
+        flattenSections(sections),
+      );
+    });
   }
 
   /// 「添加参数」入口：全量参数的唯一去处，一个都不少。
@@ -626,7 +778,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                       ),
                     ),
                   )
-                : SingleChildScrollView(child: _buildSelectedCard()),
+                : _buildSelectedList(),
           ),
           if (_extractableNodes.isNotEmpty) _buildAddButton(l),
 

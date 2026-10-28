@@ -423,7 +423,7 @@
       "total": { "type": "int" }
     }
   },
-  "configFormHint": "Renaming or removing only changes the phone form",
+  "configFormHint": "Long-press to reorder; renaming or removing only changes the phone form",
   "@configFormHint": { "description": "Config page: main view subtitle" },
   "configFormEmpty": "Nothing in your form yet",
   "@configFormEmpty": { "description": "Config page: main view empty state" },

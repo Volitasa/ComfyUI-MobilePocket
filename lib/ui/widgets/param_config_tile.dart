@@ -22,6 +22,7 @@ class ParamConfigTile extends StatefulWidget {
     this.showCheckbox = true,
     this.onRemove,
     this.removeTooltip,
+    this.onFocusChanged,
   });
 
   /// 行高：44 是紧凑与「点得中」的折中，不再往下压。
@@ -52,6 +53,13 @@ class ParamConfigTile extends StatefulWidget {
 
   /// 别名改动回写（保存配置时用的就是 `node.alias`，不是控制器里的文本）。
   final ValueChanged<String>? onAliasChanged;
+
+  /// 别名框聚焦状态变化。
+  ///
+  /// 配置页用它判断「这一段是不是正在被编辑」：编辑态下长按归输入框
+  /// （全选 / 粘贴 / 拖光标），此时整段不响应拖拽 —— 否则手指一按下去
+  /// 输入框还亮着光标，整段就飞走了。
+  final ValueChanged<bool>? onFocusChanged;
 
   /// 行级告警文案（如"服务器上没有这个参数"）。为空则不显示。
   ///
@@ -88,6 +96,7 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
   void _handleFocusChange() {
     if (_focused == _focusNode.hasFocus) return;
     setState(() => _focused = _focusNode.hasFocus);
+    widget.onFocusChanged?.call(_focused);
   }
 
   @override

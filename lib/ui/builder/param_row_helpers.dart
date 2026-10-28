@@ -163,6 +163,9 @@ Widget buildParamConfigRow(
 
   /// 非 null 时行尾出现移除按钮（主视图用它代替勾选框）。
   VoidCallback? onRemove,
+
+  /// 别名框聚焦变化，见 `ParamConfigTile.onFocusChanged`。
+  ValueChanged<bool>? onFocusChanged,
 }) {
   final l = AppLocalizations.of(context);
   final controllerKey = nodeParamKey(node.id, node.key);
@@ -199,6 +202,7 @@ Widget buildParamConfigRow(
       showCheckbox: showCheckbox,
       onRemove: onRemove,
       removeTooltip: onRemove == null ? null : l.configRemoveParam,
+      onFocusChanged: onFocusChanged,
     ),
   );
 }

@@ -1276,7 +1276,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get configFormHint =>
-      'Renaming or removing only changes the phone form';
+      'Long-press to reorder; renaming or removing only changes the phone form';
 
   @override
   String get configFormEmpty => 'Nothing in your form yet';

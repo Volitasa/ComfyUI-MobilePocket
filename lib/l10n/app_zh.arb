@@ -863,7 +863,7 @@
       "total": { "type": "int" }
     }
   },
-  "configFormHint": "改名或移出只影响手机上的表单",
+  "configFormHint": "长按可拖动排序，改名或移出只影响手机上的表单",
   "@configFormHint": { "description": "配置页：主视图副标题" },
   "configFormEmpty": "还没有参数放进表单",
   "@configFormEmpty": { "description": "配置页：主视图空态" },
