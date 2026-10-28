@@ -229,4 +229,47 @@ void main() {
       expect(cleanStoredServerName('我的服务器'), '我的服务器');
     });
   });
+
+  group('图片参数的下发来源', () {
+    test('本地新选的图优先走上传', () {
+      expect(
+        imageValueSource(
+          hasLocalPick: true,
+          serverValue: 'old.png [input]',
+        ),
+        ImageValueSource.local,
+      );
+    });
+
+    test('从服务器目录选的图要原样下发', () {
+      // 这是修掉的 bug：选完服务器图后本地那份被清掉，
+      // 以前走到这里会被当成"没改过"直接跳过，服务器仍在用旧图。
+      expect(
+        imageValueSource(
+          hasLocalPick: false,
+          serverValue: 'ComfyUI_00001_.png [output]',
+        ),
+        ImageValueSource.server,
+      );
+    });
+
+    test('没改过时沿用工作流原值', () {
+      expect(
+        imageValueSource(hasLocalPick: false, serverValue: null),
+        ImageValueSource.unchanged,
+      );
+      expect(
+        imageValueSource(hasLocalPick: false, serverValue: ''),
+        ImageValueSource.unchanged,
+      );
+    });
+
+    test('上传成功后写入的名字，下次就是 server 来源', () {
+      // `_handleExecute` 上传完会把名字写回 `_widgetValues`
+      expect(
+        imageValueSource(hasLocalPick: false, serverValue: 'new_00001_.png'),
+        ImageValueSource.server,
+      );
+    });
+  });
 }

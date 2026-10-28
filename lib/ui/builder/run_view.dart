@@ -754,22 +754,33 @@ class _RunViewState extends ConsumerState<RunView> {
         final paramKey = nodeParamKey(node.id, node.key);
 
         if (_controlFor(node, paired: false) == ParamControl.upload) {
-          // 图片：只有用户重新选择了本地图片才上传；否则沿用工作流里的原值
+          // 图片三种来源（见 `imageValueSource`）：
+          // 本地新选 → 先上传；服务器目录选的 → 原样下发；没改过 → 不覆盖。
           final picked = _formData[paramKey];
-          if (picked != null) {
-            final uploadedName = await taskManager.uploadImage(
-              picked['bytes'],
-              picked['filename'],
-            );
-            if (uploadedName == null) {
-              throw Exception(l.runImageUploadFailed);
-            }
-            value = uploadedName;
-            // 记进快照参数，否则再次运行时会丢掉本次上传的图
-            _widgetValues[paramKey] = uploadedName;
-          } else {
-            // 未重新选择，保持工作流原有图片文件名不变
-            continue;
+          switch (
+            imageValueSource(
+              hasLocalPick: picked != null,
+              serverValue: _widgetValues[paramKey] as String?,
+            )
+          ) {
+            case ImageValueSource.local:
+              final uploadedName = await taskManager.uploadImage(
+                picked!['bytes'],
+                picked['filename'],
+              );
+              if (uploadedName == null) {
+                throw Exception(l.runImageUploadFailed);
+              }
+              value = uploadedName;
+              // 记进快照参数，否则再次运行时会丢掉本次上传的图
+              _widgetValues[paramKey] = uploadedName;
+            case ImageValueSource.server:
+              // ⚠️ 这里原来直接 continue —— 从服务器目录选的图压根没提交，
+              // 工作流还在用原来的图（界面显示新图、服务器跑旧图）。
+              value = _widgetValues[paramKey];
+            case ImageValueSource.unchanged:
+              // 没动过：保持工作流原有的图片文件名
+              continue;
           }
         } else {
           value = _resolveValue(node);

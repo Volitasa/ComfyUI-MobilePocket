@@ -335,3 +335,35 @@ dynamic resolveParamValue({
       return widgetValue ?? text;
   }
 }
+
+/// 下发任务时，图片参数的值从哪儿来。
+///
+/// ⚠️ 曾经在这里漏掉 [ImageValueSource.server]：从服务器目录选的图只写进了
+/// `_widgetValues`，下发时却只认「本地新选」，其余一律跳过 —— 结果界面显示新图、
+/// 服务器跑的还是旧图（用户把结果拖回画布才发现）。
+/// 三种来源必须显式列出来，别再用「没选就跳过」省事。
+enum ImageValueSource {
+  /// 用户刚从手机本地选了图，需要先 `POST /upload/image`，用返回的名字下发。
+  local,
+
+  /// 用户从服务器目录选的图。值带 `[output]` 这类注解，原样下发即可。
+  server,
+
+  /// 没改过：沿用工作流里的原值（这一项可以不写进提交的 prompt）。
+  unchanged,
+}
+
+/// 判定图片参数的下发来源。
+///
+/// [hasLocalPick] 为 true 时优先本地（本地图会覆盖服务器选图，与 `_pickServerImage`
+/// 里「选服务器图就丢掉本地那份」是同一个优先级）。
+ImageValueSource imageValueSource({
+  required bool hasLocalPick,
+  required String? serverValue,
+}) {
+  if (hasLocalPick) return ImageValueSource.local;
+  if (serverValue != null && serverValue.isNotEmpty) {
+    return ImageValueSource.server;
+  }
+  return ImageValueSource.unchanged;
+}
