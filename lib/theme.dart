@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// 全局主题色常量：统一品牌主色，避免各处硬编码 Colors.green。
+/// 明色基准值。
+///
+/// 这些常量只描述**明色**下的取值，供 `AppTheme.lightScheme()` 与
+/// `AppSemanticColors` 引用；界面代码一律通过 `context.xxx` 取色，
+/// 不要再直接写常量——常量不随亮/暗切换，深色下必然失色。
 class AppColors {
   AppColors._();
-
-  /// 品牌主色（冷绿；与 AppTheme.lightScheme() 派生出的 primary 保持一致）
-  static const Color primary = Color(0xFF256A4B);
 
   /// 明色页面底色。
   ///
@@ -14,29 +15,21 @@ class AppColors {
   /// 这里压到 #EFF1EF，与卡片拉开约 7%，分组边界重新成立。
   static const Color scaffoldBackground = Color(0xFFEFF1EF);
 
-  /// 次要文字与图标色。
-  ///
-  /// 值是 `AppTheme.lightScheme().onSurfaceVariant` 的镜像（对卡片底 5.5:1）。
-  /// 以前这些位置直接写 `Colors.grey`（#9E9E9E），在白底上只有 2.68:1、
-  /// 在卡片底上更低，掉出了 4.5:1 的可读下限，界面整体发闷。
-  /// 用常量而不是 `Theme.of(...)` 是为了保持 `const` 写法；等将来支持深色主题时，
-  /// 这几处要改回按 `Theme.of(context).colorScheme.onSurfaceVariant` 取色。
-  static const Color textSecondary = Color(0xFF5F665F);
-
-  /// 柔和边框色，替代原先直接用的 `Colors.grey`（边框不需要那么重）。
-  static const Color border = Color(0xFFE3E6E3);
-
-  /// 成功状态
+  /// 成功状态（明色基准）
   static const Color success = Color(0xFF2E7D32);
 
-  /// 失败状态
+  /// 失败状态（明色基准）
   static const Color danger = Color(0xFFD32F2F);
 
-  /// 进行中/警告
-  static const Color warning = Color(0xFFF57C00);
+  /// 进行中/警告（明色基准）。
+  ///
+  /// 原来是 #F57C00，在卡片底上只有 2.54:1——「排队中 / 生成中」是 11px 小字，
+  /// 这个值等于看不清。压到 #B45309 后 4.72:1 过线，色相仍是橙（25°），
+  /// 与红色的失败态、绿色的成功态不会混。
+  static const Color warning = Color(0xFFB45309);
 
-  /// 中断/中性
-  static const Color neutral = Color(0xFF757575);
+  /// 中断/中性（明色基准）。#757575 在填充底上只有 4.14:1，收到 #6B6B6B（4.79:1）。
+  static const Color neutral = Color(0xFF6B6B6B);
 }
 
 /// 明色主题。
@@ -92,6 +85,27 @@ extension AppThemeColors on BuildContext {
   Color get fieldFill => Theme.of(this).brightness == Brightness.dark
       ? Theme.of(this).colorScheme.surfaceContainerHighest
       : Colors.white;
+
+  /// 次要容器填充：搜索框、缩略图占位、键名小标签这类「卡片里的浅底块」。
+  /// 浅色取 surfaceContainer（#F2F3F2），深色取 surfaceContainerHigh（#262B27）——
+  /// 深色下不能用更「低」的容器，否则和页面底分不出边界。
+  Color get containerFill => Theme.of(this).brightness == Brightness.dark
+      ? Theme.of(this).colorScheme.surfaceContainerHigh
+      : Theme.of(this).colorScheme.surfaceContainer;
+
+  /// 强调色（用法的原意是「品牌绿」）。深色下 primary 自动变成提亮版，
+  /// 所以不要再写死 `AppColors.primary` —— 那个常量在深底上只有 2.6:1。
+  Color get accent => Theme.of(this).colorScheme.primary;
+
+  /// 强调色底上的前景（主色按钮的文字 / 图标 / 转圈）
+  Color get onAccent => Theme.of(this).colorScheme.onPrimary;
+
+  /// 装饰性弱化图标（空状态的大插画）。不承载信息，所以不按 4.5:1 要求，
+  /// 但深浅两套都得「隐约看得见」，不能是灰 400（深色下会变亮块）。
+  Color get iconMuted =>
+      Theme.of(this).brightness == Brightness.dark
+      ? const Color(0xFF8D958D)
+      : const Color(0xFFB4B8B4);
 }
 
 /// 随主题变化的语义色。
@@ -101,14 +115,38 @@ extension AppThemeColors on BuildContext {
 extension AppSemanticColors on BuildContext {
   bool get _isDark => Theme.of(this).brightness == Brightness.dark;
 
-  Color get stateSuccess =>
-      _isDark ? const Color(0xFF6FCF85) : AppColors.success;
+  Color get stateSuccess => _isDark ? const Color(0xFF6FCF85) : AppColors.success;
 
   Color get stateDanger => _isDark ? const Color(0xFFFF8A80) : AppColors.danger;
 
-  Color get stateNeutral =>
-      _isDark ? const Color(0xFFADAEAD) : AppColors.neutral;
+  Color get stateNeutral => _isDark ? const Color(0xFFADAEAD) : AppColors.neutral;
 
-  /// 警告色 #F57C00 在深色底上本来就有 6.3:1，深浅通用，不用换
-  Color get stateWarning => AppColors.warning;
+  /// 警告色。深色下不能再沿用 #B45309（在 #181D18 上只有 3.9:1），换成提亮版。
+  Color get stateWarning =>
+      _isDark ? const Color(0xFFFFB74D) : AppColors.warning;
+
+  /// 警告色底上的前景，只在把 warning 当填充色用时需要
+  Color get onStateWarning => _isDark ? const Color(0xFF3A2A0D) : Colors.white;
+
+  // ---- 状态容器（提示条 / 徽标 / 「有新版本」卡片）----
+  // 浅色是浅底深字，深色必须反转成深底浅字；值都验算过 ≥5.7:1。
+  Color get stateSuccessFill =>
+      _isDark ? const Color(0xFF1B3A22) : const Color(0xFFE8F5E9);
+  Color get onStateSuccessFill =>
+      _isDark ? const Color(0xFF8FD9A0) : const Color(0xFF1B5E20);
+  Color get stateSuccessOutline =>
+      _isDark ? const Color(0xFF2E5B39) : const Color(0xFFA5D6A7);
+
+  Color get stateWarningFill =>
+      _isDark ? const Color(0xFF3A2A0D) : const Color(0xFFFFF4E5);
+  Color get onStateWarningFill =>
+      _isDark ? const Color(0xFFFFC06B) : const Color(0xFF7A4A00);
+  Color get stateWarningOutline =>
+      _isDark ? const Color(0xFF6B4A1B) : const Color(0xFFF0C99A);
+
+  Color get stateDangerFill =>
+      _isDark ? const Color(0xFF4A1C1A) : const Color(0xFFFDECEA);
+  Color get onStateDangerFill =>
+      _isDark ? const Color(0xFFFFA9A0) : const Color(0xFFB3261E);
 }
+

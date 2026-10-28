@@ -151,10 +151,10 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (widget.warning != null && widget.warning!.isNotEmpty) ...[
-                    const Icon(
+                    Icon(
                       Icons.warning_amber_rounded,
                       size: 12,
-                      color: Colors.orange,
+                      color: context.stateWarning,
                     ),
                     const SizedBox(width: 4),
                   ],
@@ -165,7 +165,7 @@ class _ParamConfigTileState extends State<ParamConfigTile> {
                         fontSize: 11,
                         height: 1.2,
                         color: widget.warning != null
-                            ? Colors.orange
+                            ? context.stateWarning
                             : context.textSecondary,
                       ),
                       maxLines: 1,

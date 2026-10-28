@@ -623,11 +623,11 @@ class _RunViewState extends ConsumerState<RunView> {
         : l.runParamsRestoredAll;
     return Container(
       width: double.infinity,
-      color: Colors.amber.shade50,
+      color: context.stateWarningFill,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          const Icon(Icons.history_toggle_off, size: 16, color: Colors.amber),
+          Icon(Icons.history_toggle_off, size: 16, color: context.stateWarning),
           const SizedBox(width: 8),
           Expanded(child: Text(text, style: const TextStyle(fontSize: 12))),
         ],
@@ -1024,19 +1024,22 @@ class _RunViewState extends ConsumerState<RunView> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: _isExecuting
+                        ? context.containerFill
+                        : context.accent,
+                    foregroundColor: _isExecuting
                         ? context.textSecondary
-                        : AppColors.primary,
+                        : context.onAccent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   onPressed: _isExecuting ? null : _handleExecute,
                   icon: _isExecuting
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: context.textSecondary,
                             strokeWidth: 2,
                           ),
                         )
@@ -1183,7 +1186,7 @@ class _RunViewState extends ConsumerState<RunView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: context.containerFill,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -1386,7 +1389,7 @@ class _RunViewState extends ConsumerState<RunView> {
               errorBuilder: (_, _, _) => Container(
                 height: 96,
                 width: double.infinity,
-                color: Colors.grey.shade100,
+                color: context.containerFill,
                 child: Center(
                   child: Icon(Icons.broken_image, color: context.textSecondary),
                 ),

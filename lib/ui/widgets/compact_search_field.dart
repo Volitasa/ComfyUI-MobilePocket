@@ -46,7 +46,7 @@ class CompactSearchField extends StatelessWidget {
         decoration: InputDecoration(
           isDense: true,
           filled: true,
-          fillColor: Colors.grey.shade100,
+          fillColor: context.containerFill,
           hintText: hintText,
           hintStyle: TextStyle(fontSize: 13, color: context.textSecondary),
           prefixIcon: const Icon(Icons.search, size: 17),

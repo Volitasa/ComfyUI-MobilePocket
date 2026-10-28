@@ -82,7 +82,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
               icon: const Icon(Icons.system_update_alt),
               label: Text(AppLocalizations.of(context).updateCheckButton),
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: context.accent,
                 // 水平 padding 不能省：styleFrom 会覆盖默认值，
                 // 只给 vertical 会让图标与文字紧贴边缘甚至被裁切
                 padding: const EdgeInsets.symmetric(
@@ -127,10 +127,10 @@ class _AboutViewState extends ConsumerState<AboutView> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: context.containerFill,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.apps, color: Colors.black54),
+              child: Icon(Icons.apps, color: context.textSecondary),
             ),
             const SizedBox(width: 14),
             Column(
@@ -224,10 +224,10 @@ class _AboutViewState extends ConsumerState<AboutView> {
 
     return Card(
       elevation: 0,
-      color: Colors.green.shade50,
+      color: context.stateSuccessFill,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.green.shade200),
+        side: BorderSide(color: context.stateSuccessOutline),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -236,7 +236,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
           children: [
             Row(
               children: [
-                Icon(Icons.new_releases_outlined, color: Colors.green.shade700),
+                Icon(Icons.new_releases_outlined, color: context.stateSuccess),
                 const SizedBox(width: 8),
                 Text(
                   AppLocalizations.of(context)
@@ -244,7 +244,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Colors.green.shade800,
+                    color: context.onStateSuccessFill,
                   ),
                 ),
               ],
@@ -297,8 +297,8 @@ class _AboutViewState extends ConsumerState<AboutView> {
                 children: [
                   LinearProgressIndicator(
                     value: state.progress > 0 ? state.progress : null,
-                    backgroundColor: Colors.green.shade100,
-                    color: AppColors.primary,
+                    backgroundColor: context.stateSuccessOutline,
+                    color: context.stateSuccess,
                     minHeight: 5,
                   ),
                   const SizedBox(height: 8),
@@ -325,7 +325,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
                     AppLocalizations.of(context).updateDownloadInstall,
                   ),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: context.accent,
                     padding: const EdgeInsets.symmetric(
                       vertical: 12,
                       horizontal: 16,

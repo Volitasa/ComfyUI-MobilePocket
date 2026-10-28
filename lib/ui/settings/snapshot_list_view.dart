@@ -145,7 +145,7 @@ class SnapshotListView extends ConsumerWidget {
                                 : AppLocalizations.of(context).snapshotNoRef,
                             style: TextStyle(
                               color: refCount > 0
-                                  ? Colors.black54
+                                  ? context.textSecondary
                                   : context.textSecondary,
                             ),
                           ),

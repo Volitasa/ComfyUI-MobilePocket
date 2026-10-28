@@ -86,7 +86,6 @@ class MediaSaver {
             child: Text(AppLocalizations.of(ctx).saveAlbumPlain),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.green),
             onPressed: () => Navigator.pop(ctx, 'with_workflow'),
             child: Text(AppLocalizations.of(ctx).saveAlbumWithWorkflow),
           ),

@@ -54,7 +54,7 @@ class WorkflowTile extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(_radius),
         side: showBorder
-            ? BorderSide(color: borderColor ?? Colors.grey.shade300)
+            ? BorderSide(color: borderColor ?? context.borderColor)
             : BorderSide.none,
       ),
       child: InkWell(

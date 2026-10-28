@@ -136,7 +136,7 @@ class WorkflowStorageView extends ConsumerWidget {
             child: Text(
               AppLocalizations.of(context)
                   .storageSummary(total, formatBytes(localBytes + parsedBytes)),
-              style: const TextStyle(fontSize: 13, color: Colors.black54),
+              style: TextStyle(fontSize: 13, color: context.textSecondary),
             ),
           ),
           if (local.isNotEmpty) ...[

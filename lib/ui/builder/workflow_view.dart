@@ -431,7 +431,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade700,
+              color: context.stateSuccess,
             ),
           ),
           const SizedBox(height: 2),
@@ -585,17 +585,17 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.info_outline,
                     size: 14,
-                    color: Colors.orange,
+                    color: context.stateWarning,
                   ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       l.configSpecsDegraded,
-                      style: const TextStyle(
-                        color: Colors.orange,
+                      style: TextStyle(
+                        color: context.stateWarning,
                         fontSize: 12,
                       ),
                     ),
@@ -639,7 +639,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: context.accent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

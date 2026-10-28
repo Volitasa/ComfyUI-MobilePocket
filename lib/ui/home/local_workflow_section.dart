@@ -77,12 +77,12 @@ class LocalWorkflowSection extends ConsumerWidget {
                 Icon(
                   Icons.folder_off_outlined,
                   size: 48,
-                  color: Colors.grey.shade400,
+                  color: context.iconMuted,
                 ),
                 const SizedBox(height: 12),
                 Text(
                   AppLocalizations.of(context).localNoWorkflows,
-                  style: const TextStyle(color: Colors.black54, fontSize: 16),
+                  style: TextStyle(color: context.textSecondary, fontSize: 16),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -137,7 +137,7 @@ class LocalWorkflowSection extends ConsumerWidget {
       statusLabel: exposedCount == 0
           ? l.wfStatusUnconfigured
           : l.configParamCount(exposedCount),
-      statusColor: exposedCount == 0 ? null : AppColors.primary,
+      statusColor: exposedCount == 0 ? null : context.accent,
       footnote: meta,
       menu: PopupMenuButton<String>(
         icon: Icon(Icons.more_vert, color: context.textSecondary),

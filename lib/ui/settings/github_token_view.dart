@@ -133,7 +133,7 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
               icon: const Icon(Icons.save_outlined),
               label: Text(AppLocalizations.of(context).save),
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: context.accent,
                 padding: const EdgeInsets.symmetric(
                   vertical: 14,
                   horizontal: 16,

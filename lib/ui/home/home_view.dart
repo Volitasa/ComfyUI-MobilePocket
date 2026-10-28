@@ -128,7 +128,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: selected ? AppColors.primary : Colors.transparent,
+                color: selected ? context.accent : Colors.transparent,
                 width: 2,
               ),
             ),

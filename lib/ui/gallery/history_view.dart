@@ -104,7 +104,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: selected ? AppColors.primary : Colors.grey.shade300,
+                  color: selected ? context.accent : context.borderColor,
                   width: selected ? 1.2 : 1,
                 ),
               ),
@@ -112,7 +112,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                 label,
                 style: TextStyle(
                   fontSize: 13,
-                  color: selected ? AppColors.primary : Colors.grey.shade700,
+                  color: selected ? context.accent : context.textSecondary,
                   fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
                 ),
               ),
@@ -196,7 +196,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     TaskStatus.completed => context.stateSuccess,
     TaskStatus.failed => context.stateDanger,
     TaskStatus.interrupted => context.stateNeutral,
-    TaskStatus.queued || TaskStatus.running => AppColors.warning,
+    TaskStatus.queued || TaskStatus.running => context.stateWarning,
   };
 
   // 无输出时的缩略图占位：终结态给出明确结果，只有进行中才转圈
@@ -303,7 +303,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
             child: Text(l.cancel),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.warning),
+            style: FilledButton.styleFrom(
+              backgroundColor: context.stateWarning,
+              foregroundColor: context.onStateWarning,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l.historyStopConfirm),
           ),
@@ -348,21 +351,21 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   /// 进行中的记录：删除的位置换成停止（橙色，跟红色的删除区分开）。
   Widget _stopOrDeleteAction(TaskHistory task, AppLocalizations l) {
     if (_stopping.contains(task.promptId)) {
-      return const SizedBox(
+      return SizedBox(
         width: 40,
         height: 40,
         child: Padding(
-          padding: EdgeInsets.all(11),
+          padding: const EdgeInsets.all(11),
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: AppColors.warning,
+            color: context.stateWarning,
           ),
         ),
       );
     }
     return _IconAction(
       icon: Icons.stop_circle_outlined,
-      color: AppColors.warning,
+      color: context.stateWarning,
       tooltip: l.historyStopTooltip,
       onTap: () => _stopTask(task),
     );
@@ -390,7 +393,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
       _getMediaUrl(media),
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) => Container(
-        color: Colors.grey.shade200,
+        color: context.containerFill,
         child: Center(
           child: Icon(
             Icons.broken_image,
@@ -522,9 +525,9 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: context.containerFill,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: context.borderColor),
       ),
       clipBehavior: Clip.hardEdge,
       child: task.images.isNotEmpty
@@ -598,7 +601,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: Colors.grey.shade300),
+        side: BorderSide(color: context.borderColor),
       ),
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
@@ -643,7 +646,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                               style: TextStyle(
                                 fontSize: 11,
                                 height: 1.2,
-                                color: Colors.grey.shade600,
+                                color: context.textSecondary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -679,7 +682,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                             const SizedBox(height: 4),
                             LinearProgressIndicator(
                               value: progress,
-                              backgroundColor: Colors.grey.shade200,
+                              backgroundColor: context.containerFill,
                               color: statusColor,
                               minHeight: 3,
                             ),
@@ -884,7 +887,7 @@ class _MediaViewerState extends State<MediaViewer> {
           padding: const EdgeInsets.all(20.0),
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: context.accent,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),

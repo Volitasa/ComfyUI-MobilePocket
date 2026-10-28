@@ -131,17 +131,17 @@ class RemoteWorkflowSection extends ConsumerWidget {
     }
 
     // 未解析的条目不描边：与「能用但还没配」的实线条目区分开
-    final borderColor = stale ? const Color(0xFF854F0B) : Colors.grey.shade300;
+    final borderColor = stale ? context.stateWarning : context.borderColor;
 
     return WorkflowTile(
       title: title,
       statusLabel: subtitle,
-      statusColor: stale ? const Color(0xFF854F0B) : null,
+      statusColor: stale ? context.stateWarning : null,
       // 解析缓存的 id 才是历史记录里记的那个 id
       footnote: cached == null ? l.wfNeverRun : _lastRunText(ref, cached.id, l),
-      footnoteColor: stale ? const Color(0xFF854F0B) : null,
+      footnoteColor: stale ? context.stateWarning : null,
       borderColor: borderColor,
-      fillColor: stale ? const Color(0xFFFAEEDA) : null,
+      fillColor: stale ? context.stateWarningFill : null,
       showBorder: cached != null,
       menu: PopupMenuButton<String>(
         icon: Icon(Icons.more_vert, color: context.textSecondary),
@@ -329,11 +329,11 @@ class RemoteWorkflowSection extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.cloud_off, size: 48, color: Colors.grey.shade400),
+          Icon(Icons.cloud_off, size: 48, color: context.iconMuted),
           const SizedBox(height: 12),
           Text(
             AppLocalizations.of(context).homeDisconnectedTitle,
-            style: const TextStyle(color: Colors.black54, fontSize: 16),
+            style: TextStyle(color: context.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 4),
           Text(
@@ -360,12 +360,12 @@ class RemoteWorkflowSection extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inbox_outlined, size: 48, color: Colors.grey.shade400),
+          Icon(Icons.inbox_outlined, size: 48, color: context.iconMuted),
           const SizedBox(height: 12),
           Text(
             AppLocalizations.of(context).homeEmptyTitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black54, fontSize: 16),
+            style: TextStyle(color: context.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 4),
           Text(
@@ -413,15 +413,15 @@ class RemoteWorkflowSection extends ConsumerWidget {
       subtitle = l.wfStatusConfigured(exposedCount);
     }
 
-    final borderColor = stale ? const Color(0xFF854F0B) : Colors.grey.shade300;
-    final fillColor = stale ? const Color(0xFFFAEEDA) : null;
+    final borderColor = stale ? context.stateWarning : context.borderColor;
+    final fillColor = stale ? context.stateWarningFill : null;
 
     return WorkflowTile(
       title: title,
       statusLabel: subtitle,
-      statusColor: stale ? const Color(0xFF854F0B) : null,
+      statusColor: stale ? context.stateWarning : null,
       footnote: _lastRunText(ref, filename, l),
-      footnoteColor: stale ? const Color(0xFF854F0B) : null,
+      footnoteColor: stale ? context.stateWarning : null,
       borderColor: borderColor,
       fillColor: fillColor,
       menu: _buildMenu(context, ref, filename),

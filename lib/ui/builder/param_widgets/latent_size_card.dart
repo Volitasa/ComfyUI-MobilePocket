@@ -183,7 +183,7 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
     return Container(
       height: 40,
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: context.borderColor),
         borderRadius: BorderRadius.circular(ParamFieldStyle.radius),
       ),
       clipBehavior: Clip.antiAlias,
@@ -208,7 +208,7 @@ class _LatentSizeCardState extends State<LatentSizeCard> {
                     fontSize: 12,
                     color: selected
                         ? scheme.onSecondaryContainer
-                        : Colors.grey.shade700,
+                        : context.textSecondary,
                   ),
                 ),
               ),

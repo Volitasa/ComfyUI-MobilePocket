@@ -45,7 +45,7 @@ class ParamFieldStyle {
     final side = BorderSide(
       color: hasError
           ? Theme.of(context).colorScheme.error
-          : Colors.grey.shade300,
+          : context.borderColor,
     );
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(radius),

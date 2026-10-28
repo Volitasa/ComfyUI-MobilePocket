@@ -115,7 +115,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                   : l.configParamCount(widget.nodes.length),
               style: textStyle.copyWith(
                 color: exposedTotal > 0
-                    ? Colors.green.shade700
+                    ? context.stateSuccess
                     : context.textSecondary,
               ),
             ),
@@ -278,7 +278,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: exposedCount > 0
-                                        ? Colors.green.shade700
+                                        ? context.stateSuccess
                                         : context.textSecondary,
                                   ),
                                 ),
@@ -366,7 +366,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Text(
               l.configPanelHint,
-              style: const TextStyle(color: Colors.black54, fontSize: 13),
+              style: TextStyle(color: context.textSecondary, fontSize: 13),
             ),
           ),
           Expanded(child: _buildGroupList(l)),
@@ -378,7 +378,7 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: context.accent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

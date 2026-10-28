@@ -82,7 +82,7 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                   const SizedBox(height: 12),
                   Text(
                     AppLocalizations.of(context).galleryEmptyTitle,
-                    style: const TextStyle(color: Colors.black54, fontSize: 16),
+                    style: TextStyle(color: context.textSecondary, fontSize: 16),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -115,7 +115,7 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                         file,
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => Container(
-                          color: Colors.grey.shade200,
+                          color: context.containerFill,
                           child: Icon(
                             Icons.broken_image,
                             color: context.textSecondary,
@@ -282,7 +282,7 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
           padding: const EdgeInsets.all(20.0),
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: context.accent,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
@@ -290,11 +290,11 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
             ),
             onPressed: _saving ? null : _saveToGallery,
             icon: _saving
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
+                      color: context.onAccent,
                       strokeWidth: 2,
                     ),
                   )

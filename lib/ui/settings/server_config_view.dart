@@ -56,8 +56,8 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: config.testResult!.ok
-                          ? Colors.green.shade50
-                          : Colors.red.shade50,
+                          ? context.stateSuccessFill
+                          : context.stateDangerFill,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -66,8 +66,8 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                       style: TextStyle(
                         fontSize: 13,
                         color: config.testResult!.ok
-                            ? Colors.green.shade800
-                            : Colors.red.shade800,
+                            ? context.onStateSuccessFill
+                            : context.onStateDangerFill,
                       ),
                     ),
                   ),
@@ -102,7 +102,7 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(l.serverEmpty, style: const TextStyle(color: Colors.black54)),
+          Text(l.serverEmpty, style: TextStyle(color: context.textSecondary)),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: () => _showServerDialog(),
@@ -126,7 +126,7 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isActive ? Colors.green.shade400 : Colors.grey.shade300,
+          color: isActive ? context.stateSuccess : context.borderColor,
           width: isActive ? 1.5 : 1,
         ),
       ),
@@ -143,7 +143,7 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                 isActive
                     ? Icons.radio_button_checked
                     : Icons.radio_button_unchecked,
-                color: isActive ? AppColors.primary : context.textSecondary,
+                color: isActive ? context.accent : context.textSecondary,
               ),
         title: Row(
           children: [
@@ -162,8 +162,8 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: config.isConnected
-                      ? Colors.green.shade50
-                      : Colors.orange.shade50,
+                      ? context.stateSuccessFill
+                      : context.stateWarningFill,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -171,8 +171,8 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                   style: TextStyle(
                     fontSize: 10,
                     color: config.isConnected
-                        ? Colors.green.shade700
-                        : Colors.orange.shade800,
+                        ? context.onStateSuccessFill
+                        : context.onStateWarningFill,
                   ),
                 ),
               ),
@@ -395,8 +395,8 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
                 style: TextStyle(
                   fontSize: 12,
                   color: _testResult!.ok
-                      ? Colors.green.shade700
-                      : Colors.red.shade700,
+                      ? context.stateSuccess
+                      : context.stateDanger,
                 ),
               ),
             ],
@@ -421,7 +421,7 @@ class _ServerFormDialogState extends ConsumerState<_ServerFormDialog> {
           child: Text(l.cancel),
         ),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+          style: FilledButton.styleFrom(backgroundColor: context.accent),
           onPressed: () {
             if (_primaryCtrl.text.trim().isEmpty) return;
             Navigator.pop(
