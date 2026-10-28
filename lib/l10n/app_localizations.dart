@@ -1268,6 +1268,72 @@ abstract class AppLocalizations {
   /// **'服务器 · 已有'**
   String get runImageSourceServer;
 
+  /// 运行页：图片来源标签，图来自服务器 output 目录
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器 · 输出目录'**
+  String get runImageSourceOutput;
+
+  /// 运行页：图片来源标签，图来自服务器 input 目录
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器 · 输入目录'**
+  String get runImageSourceInput;
+
+  /// 运行页：图片参数的第二颗按钮，进服务器目录选图
+  ///
+  /// In zh, this message translates to:
+  /// **'从服务器选'**
+  String get runPickServerImage;
+
+  /// 运行页：没连服务器时点「从服务器选」的提示
+  ///
+  /// In zh, this message translates to:
+  /// **'先连接服务器'**
+  String get runNeedServer;
+
+  /// 选图页：标题
+  ///
+  /// In zh, this message translates to:
+  /// **'选择服务器图片'**
+  String get serverImageTitle;
+
+  /// 选图页：输出目录 Tab
+  ///
+  /// In zh, this message translates to:
+  /// **'输出目录'**
+  String get serverImageTabOutput;
+
+  /// 选图页：输入目录 Tab
+  ///
+  /// In zh, this message translates to:
+  /// **'输入目录'**
+  String get serverImageTabInput;
+
+  /// 选图页：目录为空
+  ///
+  /// In zh, this message translates to:
+  /// **'这个目录里还没有图片'**
+  String get serverImageEmpty;
+
+  /// 选图页：internal 与 history 都失败
+  ///
+  /// In zh, this message translates to:
+  /// **'读不到服务器的图片列表'**
+  String get serverImageFailed;
+
+  /// 选图页：重新读取
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get serverImageRetry;
+
+  /// 选图页：internal 接口不可用，降级用 history
+  ///
+  /// In zh, this message translates to:
+  /// **'这台服务器只能列出生成过的图片'**
+  String get serverImageDegraded;
+
   /// 全屏查看器：大图没加载出来
   ///
   /// In zh, this message translates to:

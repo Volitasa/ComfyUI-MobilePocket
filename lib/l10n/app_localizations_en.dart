@@ -669,6 +669,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get runImageSourceServer => 'On server';
 
   @override
+  String get runImageSourceOutput => 'Server · Output';
+
+  @override
+  String get runImageSourceInput => 'Server · Input';
+
+  @override
+  String get runPickServerImage => 'From server';
+
+  @override
+  String get runNeedServer => 'Connect to a server first';
+
+  @override
+  String get serverImageTitle => 'Choose from server';
+
+  @override
+  String get serverImageTabOutput => 'Output';
+
+  @override
+  String get serverImageTabInput => 'Input';
+
+  @override
+  String get serverImageEmpty => 'No images in this folder yet';
+
+  @override
+  String get serverImageFailed => 'Couldn\'t read the image list';
+
+  @override
+  String get serverImageRetry => 'Retry';
+
+  @override
+  String get serverImageDegraded =>
+      'This server can only list images it has generated';
+
+  @override
   String get imageViewerLoadFailed => 'Image failed to load';
 
   @override

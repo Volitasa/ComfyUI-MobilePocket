@@ -653,6 +653,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get runImageSourceServer => '服务器 · 已有';
 
   @override
+  String get runImageSourceOutput => '服务器 · 输出目录';
+
+  @override
+  String get runImageSourceInput => '服务器 · 输入目录';
+
+  @override
+  String get runPickServerImage => '从服务器选';
+
+  @override
+  String get runNeedServer => '先连接服务器';
+
+  @override
+  String get serverImageTitle => '选择服务器图片';
+
+  @override
+  String get serverImageTabOutput => '输出目录';
+
+  @override
+  String get serverImageTabInput => '输入目录';
+
+  @override
+  String get serverImageEmpty => '这个目录里还没有图片';
+
+  @override
+  String get serverImageFailed => '读不到服务器的图片列表';
+
+  @override
+  String get serverImageRetry => '重试';
+
+  @override
+  String get serverImageDegraded => '这台服务器只能列出生成过的图片';
+
+  @override
   String get imageViewerLoadFailed => '图片加载失败';
 
   @override

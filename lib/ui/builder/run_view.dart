@@ -15,6 +15,7 @@ import '../../providers/task_manager.dart';
 import '../../providers/ws_event_provider.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/object_info_provider.dart';
+import '../../services/image_ref.dart';
 import '../../services/object_info_service.dart';
 import '../../services/submit_check.dart';
 import '../../services/workflow_node_parser.dart';
@@ -27,6 +28,7 @@ import '../widgets/image_viewer.dart';
 import '../widgets/param_field.dart';
 import 'param_widgets/param_card_registry.dart';
 import 'param_widgets/latent_size_card.dart';
+import 'server_image_picker_view.dart';
 import 'workflow_view.dart';
 
 import '../../theme.dart';
@@ -1377,13 +1379,10 @@ class _RunViewState extends ConsumerState<RunView> {
     final l = AppLocalizations.of(context);
 
     final bytes = hasImage ? _formData[k]['bytes'] as Uint8List? : null;
+    final serverRef = hasServer ? parseImageRef(serverImage) : null;
     final name = hasImage
         ? (_formData[k]['filename'] as String? ?? '')
-        : (hasServer ? serverImage : null);
-    // 换了本地图、工作流里又原本有图时，操作列会多出「用原图」这一颗：
-    // 两颗按钮 + 两行文件名 + 来源行 = 129，比 120 高，实测溢出 27px。
-    // 所以这种状态文件名只占一行。
-    final showRestore = hasImage && hasServer;
+        : serverRef?.filename;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1394,11 +1393,13 @@ class _RunViewState extends ConsumerState<RunView> {
               ? _emptyThumb(l)
               : ImageThumb(
                   bytes: bytes,
-                  url: bytes != null ? null : _serverImageUrl(serverImage!),
+                  url: bytes != null
+                      ? null
+                      : _serverImageUrl(serverRef!, thumb: true),
                   onTap: () => openImageViewer(
                     context,
                     bytes: bytes,
-                    url: bytes != null ? null : _serverImageUrl(serverImage!),
+                    url: bytes != null ? null : _serverImageUrl(serverRef!),
                     title: name,
                   ),
                 ),
@@ -1411,14 +1412,13 @@ class _RunViewState extends ConsumerState<RunView> {
             placeholder: l.runImageEmpty,
             sourceLabel: hasImage
                 ? l.runImageSourceLocal
-                : l.runImageSourceServer,
+                : _serverSourceLabel(l, serverRef),
             primaryLabel: hasImage ? l.runChangeImage : l.runPickImage,
             onPrimary: () => _pickImage(k),
-            // 换了本地图之后还能退回工作流里那张
-            secondaryLabel: showRestore ? l.runUseServerImage : null,
-            onSecondary: showRestore
-                ? () => setState(() => _formData.remove(k))
-                : null,
+            // 第二颗永远是「从服务器选」：本地图想换回服务器那张，从选图页点回原图即可，
+            // 不必再单独占一颗「用原图」（两颗已是 120 高的上限，三颗必溢出）
+            secondaryLabel: l.runPickServerImage,
+            onSecondary: () => _pickServerImage(k),
             height: _thumbHeight,
           ),
         ),
@@ -1505,11 +1505,52 @@ class _RunViewState extends ConsumerState<RunView> {
     return false;
   }
 
-  // 组装服务器图片的查看 URL（用于工作流自带参考图的预览）
-  String _serverImageUrl(String filename) {
+  // 组装服务器图片的查看 URL：type / subfolder 全部来自值本身（可能自带注解），
+  // 早期写死 type=input，从输出目录选来的图会直接预览失败。
+  String _serverImageUrl(ImageRef image, {bool thumb = false}) {
     final config = ref.read(connectionProvider);
-    final encoded = Uri.encodeComponent(filename);
-    // LoadImage 的图片通常在 input 目录；type 默认 input
-    return '${config.comfyUrl}/view?filename=$encoded&type=input';
+    // 卡片缩略图让服务端转成 webp：原图动辄 1.4MB，转码后 45KB 左右。
+    // 点开大图仍然走原图，别把转码损失带进去。
+    return imageViewUrl(
+      config.comfyUrl,
+      image,
+      preview: thumb ? 'webp;75' : null,
+    );
+  }
+
+  /// 从服务器目录选图：拿到的是带注解的值，原样提交即可（不需要上传）
+  Future<void> _pickServerImage(String nodeParamKey) async {
+    final config = ref.read(connectionProvider);
+    if (!config.isConnected || config.comfyUrl.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).runNeedServer)),
+      );
+      return;
+    }
+
+    final picked = await Navigator.of(context).push<ImageRef>(
+      MaterialPageRoute(
+        builder: (_) => ServerImagePickerView(baseUrl: config.comfyUrl),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      // 本地待上传的那份要丢掉，否则卡片仍显示本地图、提交的却是服务器值
+      _formData.remove(nodeParamKey);
+      _widgetValues[nodeParamKey] = picked.value;
+    });
+  }
+
+  /// 卡片上的来源标签：按值的注解区分目录，别让用户以为图都在 input 里
+  String _serverSourceLabel(AppLocalizations l, ImageRef? ref) {
+    switch (ref?.type) {
+      case 'output':
+        return l.runImageSourceOutput;
+      case 'input':
+        return l.runImageSourceInput;
+      default:
+        return l.runImageSourceServer;
+    }
   }
 }
