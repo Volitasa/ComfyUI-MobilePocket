@@ -2303,7 +2303,7 @@ abstract class AppLocalizations {
   /// 配置页：主视图副标题
   ///
   /// In zh, this message translates to:
-  /// **'改名或移出只影响手机上的表单'**
+  /// **'长按可拖动排序，改名或移出只影响手机上的表单'**
   String get configFormHint;
 
   /// 配置页：主视图空态
