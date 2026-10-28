@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色下的冷启动底色。与 AppTheme.darkScheme() 的 surface(#101510) 对齐，
+         原来是 Theme.Black 的纯黑，第一帧会亮一档。 -->
+    <color name="launch_background">#101510</color>
+</resources>

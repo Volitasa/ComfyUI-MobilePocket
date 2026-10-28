@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 冷启动底色。与 App 的明色页面底（theme.dart 的 scaffoldBackground
+         #EFF1EF）对齐：原来这里是纯白，第一帧换成 #EFF1EF 时会闪一下。 -->
+    <color name="launch_background">#EFF1EF</color>
+</resources>

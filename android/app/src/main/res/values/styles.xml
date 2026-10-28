@@ -13,6 +13,8 @@
 
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <!-- 也用启动底色：这一层是 Flutter 首帧背后的窗口底，
+             留 ?android:colorBackground（纯白）会在启动瞬间亮一下 -->
+        <item name="android:windowBackground">@color/launch_background</item>
     </style>
 </resources>
