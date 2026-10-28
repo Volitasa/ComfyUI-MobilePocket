@@ -8,6 +8,7 @@ import '../../providers/snapshot_provider.dart';
 import '../../providers/task_manager.dart';
 
 import '../../theme.dart';
+import '../widgets/page_title.dart';
 
 /// 工作流快照管理：查看所有快照、显示被多少条生成记录引用、手动删除。
 ///
@@ -88,7 +89,7 @@ class SnapshotListView extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           AppLocalizations.of(context).snapshotTitle,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: kSubPageTitleStyle,
         ),
         centerTitle: false,
       ),
@@ -102,14 +103,14 @@ class SnapshotListView extends ConsumerWidget {
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: snapshots.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 6),
               itemBuilder: (context, index) {
                 final s = snapshots[index];
                 final refCount = refCountOf(s.id);
                 return Card(
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     side: BorderSide(color: context.borderColor),
                   ),
                   child: ListTile(
@@ -119,7 +120,11 @@ class SnapshotListView extends ConsumerWidget {
                     ),
                     title: Text(
                       s.displayName(l),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      // 列表卡片标题统一 14 / w500，与首页、生成记录、服务器页一致
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 6),

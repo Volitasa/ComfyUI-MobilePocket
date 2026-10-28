@@ -11,6 +11,8 @@ import '../../utils.dart';
 import 'server_config_view.dart' show serverDisplayName;
 
 import '../../theme.dart';
+import '../widgets/page_title.dart';
+import '../widgets/section_title.dart';
 
 /// 工作流存储：汇总所有保存在本机的工作流，显示占用并集中提供清理入口。
 ///
@@ -102,7 +104,7 @@ class WorkflowStorageView extends ConsumerWidget {
         appBar: AppBar(
           title: Text(
             AppLocalizations.of(context).storageTitle,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: kSubPageTitleStyle,
           ),
           centerTitle: false,
         ),
@@ -124,7 +126,7 @@ class WorkflowStorageView extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           AppLocalizations.of(context).storageTitle,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: kSubPageTitleStyle,
         ),
         centerTitle: false,
       ),
@@ -168,13 +170,8 @@ class WorkflowStorageView extends ConsumerWidget {
   }
 
   Widget _buildGroupTitle(BuildContext context, String text) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 12, color: context.textSecondary),
-      ),
-    );
+    // 上方紧接「共 N 项 · 占 X」的摘要行，不需要再压 4px
+    return SectionTitle(text, padding: const EdgeInsets.fromLTRB(4, 0, 4, 8));
   }
 
   Widget _buildLocalTile(
@@ -183,17 +180,18 @@ class WorkflowStorageView extends ConsumerWidget {
     LocalWorkflow workflow,
   ) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 6),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: context.borderColor),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         title: Text(
           workflow.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          // 列表卡片标题统一 14 / w500，与首页、生成记录、服务器页一致
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 6),
@@ -239,17 +237,18 @@ class WorkflowStorageView extends ConsumerWidget {
         .firstWhere((n) => n.isNotEmpty, orElse: () => '');
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 6),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: context.borderColor),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         title: Text(
           workflow.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          // 列表卡片标题统一 14 / w500，与首页、生成记录、服务器页一致
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 6),

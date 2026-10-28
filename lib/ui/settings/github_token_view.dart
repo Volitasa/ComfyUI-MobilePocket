@@ -4,6 +4,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../providers/github_token_provider.dart';
 import '../../theme.dart';
+import '../widgets/page_title.dart';
 
 /// GitHub 访问令牌配置页。
 ///
@@ -61,7 +62,7 @@ class _GithubTokenViewState extends ConsumerState<GithubTokenView> {
       appBar: AppBar(
         title: Text(
           AppLocalizations.of(context).tokenTitle,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: kSubPageTitleStyle,
         ),
         centerTitle: false,
       ),

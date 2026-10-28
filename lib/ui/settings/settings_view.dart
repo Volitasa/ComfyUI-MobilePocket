@@ -8,6 +8,7 @@ import '../../providers/theme_mode_provider.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../providers/github_token_provider.dart';
+import '../widgets/section_title.dart';
 import 'server_config_view.dart';
 import 'about_view.dart';
 import 'snapshot_list_view.dart';
@@ -219,22 +220,16 @@ class SettingsView extends ConsumerWidget {
   }
 }
 
+/// 设置页没有卡片左右边距，分组标题贴 16；样式与首页、工作流存储页共用一个控件。
 class _SectionTitle extends StatelessWidget {
   final String text;
   const _SectionTitle(this.text);
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SectionTitle(
+      text,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          color: context.textSecondary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
     );
   }
 }

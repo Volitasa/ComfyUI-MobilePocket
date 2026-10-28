@@ -11,6 +11,7 @@ import '../../providers/github_token_provider.dart';
 import '../../services/update_service.dart';
 import '../../theme.dart';
 import '../../utils/release_notes.dart';
+import '../widgets/page_title.dart';
 import 'github_token_view.dart';
 
 /// 关于页：展示版本号，并提供手动检查更新入口。
@@ -64,7 +65,7 @@ class _AboutViewState extends ConsumerState<AboutView> {
       appBar: AppBar(
         title: Text(
           AppLocalizations.of(context).settingsAbout,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: kSubPageTitleStyle,
         ),
         centerTitle: false,
       ),
@@ -241,8 +242,9 @@ class _AboutViewState extends ConsumerState<AboutView> {
                 Text(
                   AppLocalizations.of(context)
                       .updateAvailableTitle(release.version),
+                  // 与同页应用名（16 / bold）同一档；15 是全项目唯一的孤立字号
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: context.onStateSuccessFill,
                   ),

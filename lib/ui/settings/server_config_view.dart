@@ -6,6 +6,7 @@ import '../../providers/connection_provider.dart';
 import '../../providers/parsed_workflow_provider.dart';
 
 import '../../theme.dart';
+import '../widgets/page_title.dart';
 
 /// 连接探测结果 → 展示文案。结果本身只描述“发生了什么”，
 /// 这里才按当前语言拼出句子（颜色也由 ok 决定，不再靠文案里的字眼判断）。
@@ -41,7 +42,7 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
       appBar: AppBar(
         title: Text(
           l.serverTitle,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: kSubPageTitleStyle,
         ),
         centerTitle: false,
       ),
@@ -121,10 +122,12 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
   ) {
     final isActive = config.activeServerId == server.id;
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      // 列表卡片统一：圆角 10、间距 6（与首页工作流列表、生成记录一致）；
+      // 12 是面板级容器（如底部抽屉）用的，卡片别跟着用
+      margin: const EdgeInsets.only(bottom: 6),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(
           color: isActive ? context.stateSuccess : context.borderColor,
           width: isActive ? 1.5 : 1,
@@ -150,9 +153,10 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
             Expanded(
               child: Text(
                 serverDisplayName(l, server.name),
+                // 与首页工作流列表、生成记录同一规格：14 / w500
                 style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -169,7 +173,7 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
                 child: Text(
                   config.isConnected ? l.serverConnected : l.serverActivated,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     color: config.isConnected
                         ? context.onStateSuccessFill
                         : context.onStateWarningFill,

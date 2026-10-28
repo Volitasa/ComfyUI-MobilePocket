@@ -18,6 +18,7 @@ import '../builder/run_view.dart';
 import '../builder/workflow_parse_view.dart';
 import '../builder/workflow_view.dart';
 import '../settings/server_config_view.dart';
+import '../widgets/section_title.dart';
 import '../widgets/workflow_tile.dart';
 
 import '../../theme.dart';
@@ -77,13 +78,7 @@ class RemoteWorkflowSection extends ConsumerWidget {
   }
 
   Widget _buildGroupTitle(BuildContext context, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 12, color: context.textSecondary),
-      ),
-    );
+    return SectionTitle(text);
   }
 
   /// UI 格式工作流：需要先用 ComfyUI 前端转换成 API 结构才能运行。
