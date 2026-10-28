@@ -660,6 +660,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get runPickImage => 'Choose image';
 
   @override
+  String get runImageEmpty => 'No image selected';
+
+  @override
+  String get runImageSourceLocal => 'Local · not uploaded yet';
+
+  @override
+  String get runImageSourceServer => 'On server';
+
+  @override
+  String get imageViewerLoadFailed => 'Image failed to load';
+
+  @override
   String get runFoldMenu => 'Expand / collapse';
 
   @override

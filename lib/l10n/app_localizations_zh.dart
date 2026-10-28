@@ -644,6 +644,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get runPickImage => '选择图片';
 
   @override
+  String get runImageEmpty => '未选择图片';
+
+  @override
+  String get runImageSourceLocal => '本地 · 待上传';
+
+  @override
+  String get runImageSourceServer => '服务器 · 已有';
+
+  @override
+  String get imageViewerLoadFailed => '图片加载失败';
+
+  @override
   String get runFoldMenu => '展开与折叠';
 
   @override

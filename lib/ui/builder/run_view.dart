@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +21,9 @@ import '../../services/workflow_node_parser.dart';
 import '../../utils.dart';
 import '../main_screen.dart';
 import '../widgets/page_title.dart';
+import '../widgets/image_param_actions.dart';
+import '../widgets/image_thumb.dart';
+import '../widgets/image_viewer.dart';
 import '../widgets/param_field.dart';
 import 'param_widgets/param_card_registry.dart';
 import 'param_widgets/latent_size_card.dart';
@@ -1355,77 +1359,98 @@ class _RunViewState extends ConsumerState<RunView> {
     }
   }
 
-  /// 图片上传卡：缩略图 96 + 两个按钮并排，不再把按钮压在图下面。
+  /// 图片上传卡：左边缩略图、右边操作列（文件名 + 来源 + 按钮）。
   ///
   /// ⚠️ 只要是图片参数就一定走这里（方案 §8.1 约束 3）：服务器说明书说它是
   /// COMBO 也不听 —— 否则下拉里会是一串服务器文件名，用户就传不了新图了。
+  ///
+  /// 卡片高度是硬指标 —— 图区铺满整行的话，一张卡片就占掉大半屏，连两个图
+  /// 就把别的参数挤没了。所以图压到左侧 60% 宽、120 高，右侧 40% 那条纵向
+  /// 空间用来放文件名、来源和按钮，两者共用同一行高度。
+  /// 卡片总高因此比改之前（图 96 裁切 + 下方两行）还矮了约 50。
+  /// 右侧操作列单独成 [ImageParamActions]，高度写死 —— 那里溢出过一次。
   Widget _imageUploader(WorkflowNode node) {
     final k = nodeParamKey(node.id, node.key);
     final hasImage = _formData[k] != null;
     final serverImage = _widgetValues[k] as String?;
+    final hasServer = serverImage != null && serverImage.isNotEmpty;
     final l = AppLocalizations.of(context);
-    return Column(
+
+    final bytes = hasImage ? _formData[k]['bytes'] as Uint8List? : null;
+    final name = hasImage
+        ? (_formData[k]['filename'] as String? ?? '')
+        : (hasServer ? serverImage : null);
+    // 换了本地图、工作流里又原本有图时，操作列会多出「用原图」这一颗：
+    // 两颗按钮 + 两行文件名 + 来源行 = 129，比 120 高，实测溢出 27px。
+    // 所以这种状态文件名只占一行。
+    final showRestore = hasImage && hasServer;
+
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (hasImage)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.memory(
-              _formData[k]['bytes'],
-              height: 96,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          )
-        else if (serverImage != null && serverImage.isNotEmpty) ...[
-          // 工作流自带的服务器图片：从 /view 拉预览
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              _serverImageUrl(serverImage),
-              height: 96,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
-                height: 96,
-                width: double.infinity,
-                color: context.containerFill,
-                child: Center(
-                  child: Icon(Icons.broken_image, color: context.textSecondary),
+        Expanded(
+          flex: 3,
+          child: name == null
+              ? _emptyThumb(l)
+              : ImageThumb(
+                  bytes: bytes,
+                  url: bytes != null ? null : _serverImageUrl(serverImage!),
+                  onTap: () => openImageViewer(
+                    context,
+                    bytes: bytes,
+                    url: bytes != null ? null : _serverImageUrl(serverImage!),
+                    title: name,
+                  ),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l.runUsingServerImage(serverImage),
-            style: TextStyle(fontSize: 12, color: context.textSecondary),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _pickImage(k),
-                icon: const Icon(Icons.image, size: 18),
-                label: Text(hasImage ? l.runChangeImage : l.runPickImage),
-              ),
-            ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 2,
+          child: ImageParamActions(
+            filename: name,
+            placeholder: l.runImageEmpty,
+            sourceLabel: hasImage
+                ? l.runImageSourceLocal
+                : l.runImageSourceServer,
+            primaryLabel: hasImage ? l.runChangeImage : l.runPickImage,
+            onPrimary: () => _pickImage(k),
             // 换了本地图之后还能退回工作流里那张
-            if (hasImage && serverImage != null && serverImage.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => setState(() => _formData.remove(k)),
-                  child: Text(l.runUseServerImage),
-                ),
-              ),
-            ],
-          ],
+            secondaryLabel: showRestore ? l.runUseServerImage : null,
+            onSecondary: showRestore
+                ? () => setState(() => _formData.remove(k))
+                : null,
+            height: _thumbHeight,
+          ),
         ),
       ],
+    );
+  }
+
+  /// 图区高度。卡片矮不矮就看它；> 140 一个卡片又会吃掉半屏。
+  static const double _thumbHeight = 120;
+
+  /// 没选图时的占位：跟有图时一样高，别让卡片忽高忽低。
+  Widget _emptyThumb(AppLocalizations l) {
+    return Container(
+      height: _thumbHeight,
+      decoration: BoxDecoration(
+        color: context.containerFill,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: context.borderColor),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.image_outlined, size: 22, color: context.iconMuted),
+            const SizedBox(height: 4),
+            Text(
+              l.runImageEmpty,
+              style: TextStyle(fontSize: 11, color: context.textSecondary),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

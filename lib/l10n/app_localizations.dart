@@ -1250,6 +1250,30 @@ abstract class AppLocalizations {
   /// **'选择图片'**
   String get runPickImage;
 
+  /// 运行页：图片参数还没选图时的占位文案
+  ///
+  /// In zh, this message translates to:
+  /// **'未选择图片'**
+  String get runImageEmpty;
+
+  /// 运行页：图片来源标签，本地选的图会在生成时才上传
+  ///
+  /// In zh, this message translates to:
+  /// **'本地 · 待上传'**
+  String get runImageSourceLocal;
+
+  /// 运行页：图片来源标签，服务器 input 目录已有
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器 · 已有'**
+  String get runImageSourceServer;
+
+  /// 全屏查看器：大图没加载出来
+  ///
+  /// In zh, this message translates to:
+  /// **'图片加载失败'**
+  String get imageViewerLoadFailed;
+
   /// 运行页：节点卡片展开/折叠菜单
   ///
   /// In zh, this message translates to:

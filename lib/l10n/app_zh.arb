@@ -503,6 +503,16 @@
   "@runChangeImage": { "description": "运行页：更换图片按钮" },
   "runPickImage": "选择图片",
   "@runPickImage": { "description": "运行页：选择图片按钮" },
+  "runImageEmpty": "未选择图片",
+  "@runImageEmpty": { "description": "运行页：图片参数还没选图时的占位文案" },
+  "runImageSourceLocal": "本地 · 待上传",
+  "@runImageSourceLocal": {
+    "description": "运行页：图片来源标签，本地选的图会在生成时才上传"
+  },
+  "runImageSourceServer": "服务器 · 已有",
+  "@runImageSourceServer": { "description": "运行页：图片来源标签，服务器 input 目录已有" },
+  "imageViewerLoadFailed": "图片加载失败",
+  "@imageViewerLoadFailed": { "description": "全屏查看器：大图没加载出来" },
   "runFoldMenu": "展开与折叠",
   "@runFoldMenu": { "description": "运行页：节点卡片展开/折叠菜单" },
   "runExpandAll": "展开全部",
