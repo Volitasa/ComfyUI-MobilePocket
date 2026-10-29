@@ -18,6 +18,7 @@ import '../builder/run_view.dart';
 import '../builder/workflow_parse_view.dart';
 import '../builder/workflow_view.dart';
 import '../settings/server_config_view.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/section_title.dart';
 import '../widgets/workflow_tile.dart';
 
@@ -41,10 +42,8 @@ class RemoteWorkflowSection extends ConsumerWidget {
 
     if (!configState.isConnected) return _buildDisconnected(context);
     if (workflowState.isLoading) {
-      return const Padding(
-        padding: EdgeInsets.all(40),
-        child: Center(child: CircularProgressIndicator()),
-      );
+      // 骨架而不是转圈：列表的形状先摆好，内容到了直接填进去
+      return const WorkflowListSkeleton();
     }
     if (workflowState.isEmpty) return _buildEmpty(context);
 

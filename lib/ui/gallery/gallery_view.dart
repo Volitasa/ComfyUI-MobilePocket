@@ -7,6 +7,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import '../../providers/gallery_revision_provider.dart';
 import '../../services/gallery_store.dart';
 import '../../services/media_saver.dart';
+import '../widgets/skeleton.dart';
 
 import '../../theme.dart';
 
@@ -68,7 +69,7 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const GalleryGridSkeleton()
           : _images.isEmpty
           ? Center(
               child: Column(
