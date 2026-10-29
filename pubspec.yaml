@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 # 版本号即 APK 的 versionName（+后为构建号/versionCode），
 # 必须与发布用的 git tag 保持一致（如 v1.0.3），否则应用内更新会误判。
-version: 1.3.5+22
+version: 1.3.6+23
 
 environment:
   sdk: ^3.13.5
