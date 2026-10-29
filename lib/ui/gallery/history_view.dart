@@ -49,6 +49,18 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   /// 正在请求停止的记录：按钮换成转圈，也挡住连点。
   final Set<String> _stopping = {};
 
+  /// 正在收拢（即将删除）的记录：卡片按高度被裁短、下面的行跟着顶上来，再真正删掉。
+  final Set<String> _collapsing = {};
+
+  /// 收拢时长。与 [_CollapsibleRow] 用的是同一个值，否则会动画没播完就删。
+  static const Duration _collapseDuration = Duration(milliseconds: 240);
+
+  /// 确认框退场后再开始收拢的等待。
+  ///
+  /// `showDialog` 的 future 在 `pop` 那一刻就完成了，但弹窗还要退场约 150ms。
+  /// 不等这一下，用户在盯着弹窗的时候动画已经播完 —— 这正是上一版「看不出效果」的原因之一。
+  static const Duration _afterDialogDelay = Duration(milliseconds: 180);
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -284,9 +296,16 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     );
 
     if (choice == null || !mounted) return;
+    await Future<void>.delayed(_afterDialogDelay);
+    if (!mounted) return;
+    setState(() => _collapsing.add(task.promptId));
+    await Future<void>.delayed(_collapseDuration);
+    if (!mounted) return;
     await ref
         .read(taskManagerProvider.notifier)
         .removeTask(task.promptId, deleteLocalImages: choice);
+    if (!mounted) return;
+    setState(() => _collapsing.remove(task.promptId));
   }
 
   /// 远程停止一条还没结束的任务：先确认，再让服务器把它停掉。
@@ -517,8 +536,18 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                           itemCount: hits.length,
-                          itemBuilder: (context, index) =>
-                              _buildHistoryCard(hits[index], snapshots, l),
+                          itemBuilder: (context, index) {
+                            final hit = hits[index];
+                            // key 必须跟着记录走：删掉一条后按下标复用元素，
+                            // 会把上一条的「已收拢」状态串给下一条（上一版闪烁的另一半原因）
+                            return _CollapsibleRow(
+                              key: ValueKey<String>(hit.task.promptId),
+                              collapsed: _collapsing.contains(
+                                hit.task.promptId,
+                              ),
+                              child: _buildHistoryCard(hit, snapshots, l),
+                            );
+                          },
                         ),
                 ),
               ],
@@ -748,6 +777,66 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 删除前的收拢：卡片留在原地，按高度被裁短，而不是把内容换成空白。
+///
+/// ⚠️ 上一版写的是 `_collapsing ? SizedBox() : card`：卡片在**收拢第一帧就消失**，
+/// 之后缩的是一段空白。实测逐帧日志里 t=160ms 还有 3 张 78 高的卡，
+/// t=200ms 就只剩 2 张 —— 内容"没了"，没有任何"被抽走"的过程，所以既看不出、又闪。
+class _CollapsibleRow extends StatefulWidget {
+  const _CollapsibleRow({
+    super.key,
+    required this.collapsed,
+    required this.child,
+  });
+
+  final bool collapsed;
+  final Widget child;
+
+  @override
+  State<_CollapsibleRow> createState() => _CollapsibleRowState();
+}
+
+class _CollapsibleRowState extends State<_CollapsibleRow>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: _HistoryViewState._collapseDuration,
+    // 控制器 1 = 完整高度、0 = 收拢到底。正常行进列表时必须是 1，
+    // 写成 0 整张列表会全部零高（上一版就在这里翻过车）
+    value: widget.collapsed ? 0 : 1,
+  );
+
+  @override
+  void didUpdateWidget(covariant _CollapsibleRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.collapsed != oldWidget.collapsed) {
+      // 收起 1→0（先慢后快，像被抽走）；万一被撤销则 0→1 原路退回
+      widget.collapsed ? _controller.reverse() : _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: SizeTransition(
+        sizeFactor: CurvedAnimation(
+          parent: _controller,
+          curve: Curves.easeInCubic,
+        ),
+        // 顶边不动、底边向上收
+        alignment: Alignment.topCenter,
+        child: widget.child,
       ),
     );
   }

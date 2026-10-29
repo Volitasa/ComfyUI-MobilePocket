@@ -76,6 +76,46 @@ Map<String, dynamic> _task({
 }
 
 void main() {
+  group('删除记录：先收拢再消失', () {
+    testWidgets('确认后不是瞬间消失，且只收拢被删的那一条', (tester) async {
+      await _pumpHistory(tester, [
+        _task(status: 'completed', promptId: 'p1'),
+        _task(status: 'completed', promptId: 'p2'),
+        _task(status: 'completed', promptId: 'p3'),
+      ]);
+
+      final row1 = find.byKey(const ValueKey<String>('p1'));
+      final row2 = find.byKey(const ValueKey<String>('p2'));
+      final full = tester.getSize(row1).height;
+      expect(full, greaterThan(40)); // 正常行必须是完整高度
+
+      await tester.tap(find.byIcon(Icons.delete_outline).first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // 没有本地图片时确认框只有「删除」一颗（有图片才会多出「仅删除记录」）
+      await tester.tap(find.widgetWithText(FilledButton, '删除'));
+      await tester.pump();
+
+      // 弹窗退场期间（< 180ms）什么都不该发生
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.getSize(row1).height, moreOrLessEquals(full, epsilon: 0.5));
+
+      // 收拢中：这一条在变矮，邻居一丝不动
+      await tester.pump(const Duration(milliseconds: 120));
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(tester.getSize(row1).height, lessThan(full - 10));
+      expect(tester.getSize(row2).height, moreOrLessEquals(full, epsilon: 0.5));
+
+      // 收拢播完才从数据里去掉
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(row1, findsNothing);
+      expect(row2, findsOneWidget);
+      expect(find.byType(Card), findsNWidgets(2));
+    });
+  });
+
   group('HistoryView 无输出时的缩略图占位', () {
     testWidgets('已失败记录不再显示加载动画，改为错误图标', (tester) async {
       await _pumpHistory(tester, [
