@@ -31,7 +31,7 @@
 <p><b>简体中文</b> ｜ <a href="README_EN.md">English</a></p>
 
 <p>
-  <img src="https://img.shields.io/badge/version-1.3.6-2ea043?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-1.3.7-2ea043?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/platform-Android-3ddc84?style=flat-square&logo=android&logoColor=white" alt="platform">
   <img src="https://img.shields.io/badge/Flutter-3.x-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Flutter">
   <img src="https://img.shields.io/badge/ComfyUI-compatible-8957e5?style=flat-square" alt="ComfyUI">
