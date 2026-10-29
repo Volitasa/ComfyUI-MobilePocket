@@ -57,7 +57,7 @@ void main() {
       'lib/ui/settings/workflow_storage_view.dart',
     ];
 
-    test('三处分组标题共用 SectionTitle 控件，不再各写一份', () {
+    test('分组标题共用 SectionTitle 控件，不再各写一份', () {
       for (final path in groupTitleOwners) {
         final text = File(path).readAsStringSync();
         // 锚点必须是**定义处**：`_buildGroupTitle(` 在 build 里还有一堆调用点

@@ -303,12 +303,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSectionData => 'Data';
 
   @override
-  String get settingsSectionUpdate => 'Updates';
-
-  @override
-  String get settingsSectionAbout => 'About';
-
-  @override
   String get settingsLanguage => 'Language';
 
   @override

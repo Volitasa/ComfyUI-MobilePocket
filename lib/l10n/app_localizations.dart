@@ -620,18 +620,6 @@ abstract class AppLocalizations {
   /// **'数据'**
   String get settingsSectionData;
 
-  /// 设置页分组：更新
-  ///
-  /// In zh, this message translates to:
-  /// **'更新'**
-  String get settingsSectionUpdate;
-
-  /// 设置页分组：关于
-  ///
-  /// In zh, this message translates to:
-  /// **'关于'**
-  String get settingsSectionAbout;
-
   /// 设置项：界面语言
   ///
   /// In zh, this message translates to:

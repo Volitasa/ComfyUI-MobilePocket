@@ -51,29 +51,8 @@ class SettingsView extends ConsumerWidget {
       ),
       body: ListView(
         children: [
-          _SectionTitle(l.settingsSectionGeneral),
-          _EntryTile(
-            icon: Icons.language_outlined,
-            title: l.settingsLanguage,
-            subtitle: _languageLabel(l, preferred?.languageCode),
-            onTap: () => _pickLanguage(context, ref),
-          ),
-          _EntryTile(
-            icon: Icons.brightness_6_outlined,
-            title: l.settingsAppearance,
-            subtitle: _appearanceLabel(l, themeChoice),
-            onTap: () => _pickAppearance(context, ref),
-          ),
-          // 与语言 / 外观同一套交互：点开弹窗选，不在这页再引入一种「开关」控件
-          _EntryTile(
-            icon: Icons.vibration,
-            title: l.settingsHaptics,
-            subtitle: haptics.isEmpty
-                ? l.settingsHapticsOff
-                : l.settingsHapticsCount(haptics.length),
-            onTap: () => _pickHaptics(context, ref),
-          ),
-          const Divider(height: 24),
+          // 顺序 = 频率：换机器/换地址要反复改的排在前面，
+          // 「选一次就不动」的语言、外观、震动压在后面。
           _SectionTitle(l.settingsSectionConnection),
           _EntryTile(
             icon: Icons.dns_outlined,
@@ -111,7 +90,31 @@ class SettingsView extends ConsumerWidget {
             ),
           ),
           const Divider(height: 24),
-          _SectionTitle(l.settingsSectionUpdate),
+          // 通用段不再拆「更新」「关于」两个单条分组 —— 各只有一条时，
+          // 分组标题比它承载的信息还多。令牌自解释（「GitHub 访问令牌」），
+          // 关于页里本来就有配令牌的引导入口，不必再单占一段。
+          _SectionTitle(l.settingsSectionGeneral),
+          _EntryTile(
+            icon: Icons.language_outlined,
+            title: l.settingsLanguage,
+            subtitle: _languageLabel(l, preferred?.languageCode),
+            onTap: () => _pickLanguage(context, ref),
+          ),
+          _EntryTile(
+            icon: Icons.brightness_6_outlined,
+            title: l.settingsAppearance,
+            subtitle: _appearanceLabel(l, themeChoice),
+            onTap: () => _pickAppearance(context, ref),
+          ),
+          // 与语言 / 外观同一套交互：点开弹窗选，不在这页再引入一种「开关」控件
+          _EntryTile(
+            icon: Icons.vibration,
+            title: l.settingsHaptics,
+            subtitle: haptics.isEmpty
+                ? l.settingsHapticsOff
+                : l.settingsHapticsCount(haptics.length),
+            onTap: () => _pickHaptics(context, ref),
+          ),
           _EntryTile(
             icon: Icons.key_outlined,
             title: l.settingsToken,
@@ -123,8 +126,8 @@ class SettingsView extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const GithubTokenView()),
             ),
           ),
-          const Divider(height: 24),
-          _SectionTitle(l.settingsSectionAbout),
+          // 「关于」是导航终点而不是配置项，放整页最后一条；
+          // 别再给它加 Divider，否则视觉上又变回「通用 + 关于」两段
           _EntryTile(
             icon: Icons.info_outline,
             title: l.settingsAbout,

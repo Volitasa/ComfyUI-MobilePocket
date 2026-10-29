@@ -297,12 +297,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSectionData => '数据';
 
   @override
-  String get settingsSectionUpdate => '更新';
-
-  @override
-  String get settingsSectionAbout => '关于';
-
-  @override
   String get settingsLanguage => '界面语言';
 
   @override
