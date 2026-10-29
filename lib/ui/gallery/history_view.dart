@@ -411,7 +411,11 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     return ['mp4', 'webm', 'mov'].contains(ext);
   }
 
-  void _openViewer(List<Map<String, dynamic>> images, int initialIndex) {
+  void _openViewer(
+    List<Map<String, dynamic>> images,
+    int initialIndex, {
+    String? heroTag,
+  }) {
     if (images.isEmpty) return;
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -420,11 +424,19 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
           initialIndex: initialIndex,
           urlBuilder: _getMediaUrl,
           isVideoChecker: _isVideo,
+          // 首图与列表里那张缩略图之间做共享元素：点开时图自己长大，
+          // 关掉时缩回原位，而不是「黑一下再出现」。
+          heroTag: heroTag,
         ),
         fullscreenDialog: true,
       ),
     );
   }
+
+  /// 缩略图 ↔ 大图共用的标签。同一条记录只在首图上挂，别让多图互相抢。
+  /// 用 promptId（服务端给的唯一 id），不用列表下标：下标会随排序/删除整体前移。
+  static String thumbHeroTagOf(TaskHistory task) =>
+      'history-media-${task.promptId}-0';
 
   @override
   Widget build(BuildContext context) {
@@ -541,7 +553,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                           color: context.textSecondary,
                         ),
                       )
-                    : _thumbnail(task.images[0]),
+                    : Hero(
+                        tag: thumbHeroTagOf(task),
+                        child: _thumbnail(task.images[0]),
+                      ),
                 if (task.images.length > 1)
                   Positioned(
                     right: 3,
@@ -616,7 +631,11 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                 child: Row(
                   children: [
                     GestureDetector(
-                      onTap: () => _openViewer(task.images, 0),
+                      onTap: () => _openViewer(
+                        task.images,
+                        0,
+                        heroTag: _HistoryViewState.thumbHeroTagOf(task),
+                      ),
                       child: _buildThumbnail(task, statusColor, l),
                     ),
                     const SizedBox(width: 10),
@@ -680,11 +699,22 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                           // 终结态不再显示进度条（失败/中断时它是条永远不动的空槽）
                           if (task.status.isPending) ...[
                             const SizedBox(height: 4),
-                            LinearProgressIndicator(
-                              value: progress,
-                              backgroundColor: context.containerFill,
-                              color: statusColor,
-                              minHeight: 3,
+                            // 进度是服务端「跳着」报的（20% → 35%），直接画会一格一格蹦。
+                            // 补一次 400ms 的过渡，读起来像水在往前走；数值本身不加工，
+                            // 只把超出 0~1 的乱序值夹掉。
+                            TweenAnimationBuilder<double>(
+                              tween: Tween<double>(
+                                end: progress.clamp(0.0, 1.0),
+                              ),
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeOut,
+                              builder: (context, value, _) =>
+                                  LinearProgressIndicator(
+                                    value: value,
+                                    backgroundColor: context.containerFill,
+                                    color: statusColor,
+                                    minHeight: 3,
+                                  ),
                             ),
                           ],
                         ],
@@ -759,12 +789,16 @@ class MediaViewer extends StatefulWidget {
   final String Function(Map<String, dynamic>) urlBuilder;
   final bool Function(String) isVideoChecker;
 
+  /// 与列表缩略图共用的共享元素标签；只在 [initialIndex] 那一页挂。
+  final String? heroTag;
+
   const MediaViewer({
     super.key,
     required this.mediaList,
     required this.initialIndex,
     required this.urlBuilder,
     required this.isVideoChecker,
+    this.heroTag,
   });
 
   @override
@@ -860,26 +894,18 @@ class _MediaViewerState extends State<MediaViewer> {
           // 与缩略图一致：已经存进画廊的图直接读本地文件，
           // 不再为了看一眼就把整张原图从服务器重新拉一遍
           final localFile = _localFileOf(media);
-          if (localFile != null) {
-            return InteractiveViewer(
-              child: Center(
-                child: Image.file(
+          final tag = index == widget.initialIndex ? widget.heroTag : null;
+          Widget image = localFile != null
+              ? Image.file(
                   localFile,
                   fit: BoxFit.contain,
                   errorBuilder: (_, _, _) =>
                       _LoadFailed(text: l.historyImageLoadFailed),
-                ),
-              ),
-            );
-          }
-          return InteractiveViewer(
-            child: Center(
-              child: _RemoteImage(
-                url: url,
-                failedText: l.historyImageLoadFailed,
-              ),
-            ),
-          );
+                )
+              : _RemoteImage(url: url, failedText: l.historyImageLoadFailed);
+          // 只给首帧挂 Hero：翻到第二张时不能有两个同标签的共享元素
+          if (tag != null) image = Hero(tag: tag, child: image);
+          return InteractiveViewer(child: Center(child: image));
         },
       ),
       bottomNavigationBar: SafeArea(

@@ -109,16 +109,21 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                   final file = _images[index];
                   return GestureDetector(
                     onTap: () => _openViewer(index),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        file,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Container(
-                          color: context.containerFill,
-                          child: Icon(
-                            Icons.broken_image,
-                            color: context.textSecondary,
+                    // 共享元素：点了之后这张小图自己长大铺满全屏，
+                    // 退出时再缩回格子里，中间不黑屏。
+                    child: Hero(
+                      tag: _heroTagOf(file),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          file,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            color: context.containerFill,
+                            child: Icon(
+                              Icons.broken_image,
+                              color: context.textSecondary,
+                            ),
                           ),
                         ),
                       ),
@@ -130,13 +135,21 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
     );
   }
 
+  /// 网格 ↔ 大图共用的标签。用文件路径而不是下标：删图后下标会整体前移，
+  /// 用下标会让「点这张、飞那张」。
+  static String _heroTagOf(File file) => 'gallery-${file.path}';
+
   void _openViewer(int index) {
     // 查看器里可能删图；删完由它递增画廊计数，本页自动跟着重扫，
     // 不需要再靠返回值手动刷一次
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => _GalleryViewer(images: _images, initialIndex: index),
+        builder: (_) => _GalleryViewer(
+          images: _images,
+          initialIndex: index,
+          heroTag: _heroTagOf(_images[index]),
+        ),
       ),
     );
   }
@@ -146,7 +159,14 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
 class _GalleryViewer extends ConsumerStatefulWidget {
   final List<File> images;
   final int initialIndex;
-  const _GalleryViewer({required this.images, required this.initialIndex});
+
+  /// 与网格里那张图共用的共享元素标签；只挂在 [initialIndex] 那一页。
+  final String? heroTag;
+  const _GalleryViewer({
+    required this.images,
+    required this.initialIndex,
+    this.heroTag,
+  });
 
   @override
   ConsumerState<_GalleryViewer> createState() => _GalleryViewerState();
@@ -270,10 +290,14 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
         onPageChanged: (idx) => setState(() => _currentIndex = idx),
         itemCount: widget.images.length,
         itemBuilder: (context, index) {
+          final image = Center(
+            child: Image.file(widget.images[index], fit: BoxFit.contain),
+          );
           return InteractiveViewer(
-            child: Center(
-              child: Image.file(widget.images[index], fit: BoxFit.contain),
-            ),
+            // 只给首帧挂 Hero：翻到第二张时不能有两个同标签的共享元素
+            child: index == widget.initialIndex && widget.heroTag != null
+                ? Hero(tag: widget.heroTag!, child: image)
+                : image,
           );
         },
       ),
