@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 import 'dart:io';
 
 import '../../theme.dart';
+import '../widgets/media_route.dart';
 import '../../services/media_saver.dart';
 import '../../providers/task_manager.dart';
 import '../../providers/connection_provider.dart';
@@ -47,15 +48,6 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
 
   /// 正在请求停止的记录：按钮换成转圈，也挡住连点。
   final Set<String> _stopping = {};
-
-  /// 正在收拢（准备删除）的记录：卡片先缩到零高，再真的从列表里去掉。
-  ///
-  /// 不做这一步的话，删掉的一瞬间整行消失、下面的记录直接顶上来，
-  /// 手指还停在原处，很容易误判成「删错了」。
-  final Set<String> _collapsing = {};
-
-  /// 收起动画时长；与 [AnimatedSize] 里的值必须一致，否则会在动画中途就删掉。
-  static const Duration _collapseDuration = Duration(milliseconds: 220);
 
   @override
   void dispose() {
@@ -292,15 +284,9 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     );
 
     if (choice == null || !mounted) return;
-    // 先让这张卡片收拢，再真的删：顺序反过来就看不到任何过渡
-    setState(() => _collapsing.add(task.promptId));
-    await Future<void>.delayed(_collapseDuration);
-    if (!mounted) return;
     await ref
         .read(taskManagerProvider.notifier)
         .removeTask(task.promptId, deleteLocalImages: choice);
-    if (!mounted) return;
-    setState(() => _collapsing.remove(task.promptId));
   }
 
   /// 远程停止一条还没结束的任务：先确认，再让服务器把它停掉。
@@ -433,8 +419,9 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   }) {
     if (images.isEmpty) return;
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => MediaViewer(
+      // 用专属路由：前半程页面透明，黑底在后半程才淡进来（见 media_route.dart）
+      mediaViewerRoute(
+        (_) => MediaViewer(
           mediaList: images,
           initialIndex: initialIndex,
           urlBuilder: _getMediaUrl,
@@ -443,7 +430,6 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
           // 关掉时缩回原位，而不是「黑一下再出现」。
           heroTag: heroTag,
         ),
-        fullscreenDialog: true,
       ),
     );
   }
@@ -531,20 +517,8 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                           itemCount: hits.length,
-                          itemBuilder: (context, index) {
-                            final hit = hits[index];
-                            // 删除前先收拢：卡片缩到零高，下面的记录再补位
-                            return ClipRect(
-                              child: AnimatedSize(
-                                duration: _collapseDuration,
-                                curve: Curves.easeInCubic,
-                                alignment: Alignment.topCenter,
-                                child: _collapsing.contains(hit.task.promptId)
-                                    ? const SizedBox(width: double.infinity)
-                                    : _buildHistoryCard(hit, snapshots, l),
-                              ),
-                            );
-                          },
+                          itemBuilder: (context, index) =>
+                              _buildHistoryCard(hits[index], snapshots, l),
                         ),
                 ),
               ],

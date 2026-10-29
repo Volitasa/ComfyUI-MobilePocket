@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
+import 'media_route.dart';
+
 /// 单图全屏查看器：卡片里的缩略图小，看细节得点开这里。
 ///
 /// 与画廊页 / 生成记录页那两个查看器分开：那两个绑着分享、删除、保存到相册、
@@ -79,9 +81,9 @@ void openImageViewer(
   String? title,
 }) {
   Navigator.of(context).push<void>(
-    MaterialPageRoute(
-      builder: (_) =>
-          FullscreenImageViewer(bytes: bytes, url: url, title: title),
+    // 与列表里的大图共用一个路由：黑底不会跟着转场一起切进来
+    mediaViewerRoute(
+      (_) => FullscreenImageViewer(bytes: bytes, url: url, title: title),
     ),
   );
 }

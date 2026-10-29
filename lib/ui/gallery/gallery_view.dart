@@ -7,6 +7,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import '../../providers/gallery_revision_provider.dart';
 import '../../services/gallery_store.dart';
 import '../../services/media_saver.dart';
+import '../widgets/media_route.dart';
 import '../widgets/skeleton.dart';
 
 import '../../theme.dart';
@@ -145,8 +146,8 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
     // 不需要再靠返回值手动刷一次
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => _GalleryViewer(
+      mediaViewerRoute(
+        (_) => _GalleryViewer(
           images: _images,
           initialIndex: index,
           heroTag: _heroTagOf(_images[index]),
