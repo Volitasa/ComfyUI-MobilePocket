@@ -1370,4 +1370,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wfNeverRun => 'Never run';
+
+  @override
+  String get badgeReconnecting => 'Reconnecting';
 }

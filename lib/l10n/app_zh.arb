@@ -945,5 +945,8 @@
     "placeholders": { "time": { "type": "String" } }
   },
   "wfNeverRun": "尚未运行",
-  "@wfNeverRun": { "description": "工作流列表：一次都没跑过" }
+  "@wfNeverRun": { "description": "工作流列表：一次都没跑过" },
+
+  "badgeReconnecting": "重连中",
+  "@badgeReconnecting": { "description": "顶部连接徽标：已连过但此刻断开、正在自动重连" }
 }

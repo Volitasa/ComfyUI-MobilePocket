@@ -505,5 +505,8 @@
     "placeholders": { "time": { "type": "String" } }
   },
   "wfNeverRun": "Never run",
-  "@wfNeverRun": { "description": "Workflow list: never run before" }
+  "@wfNeverRun": { "description": "Workflow list: never run before" },
+
+  "badgeReconnecting": "Reconnecting",
+  "@badgeReconnecting": { "description": "Connection badge: was connected, currently dropped, auto-reconnecting" }
 }

@@ -2467,6 +2467,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'尚未运行'**
   String get wfNeverRun;
+
+  /// 顶部连接徽标：已连过但此刻断开、正在自动重连
+  ///
+  /// In zh, this message translates to:
+  /// **'重连中'**
+  String get badgeReconnecting;
 }
 
 class _AppLocalizationsDelegate

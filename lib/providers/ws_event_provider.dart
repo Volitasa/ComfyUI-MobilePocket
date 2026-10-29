@@ -10,7 +10,14 @@ import 'task_manager.dart';
 
 class WsState {
   final bool isConnected;
-  WsState({this.isConnected = false});
+
+  /// 已经连过、此刻掉了、正在等退避计时到点重连。
+  ///
+  /// 顶部徽标靠它说「重连中」——**不能**只看「没连上」就说重连中：
+  /// 重连次数用完、或者压根没配服务器时也是「没连上」，那时候说重连中是假话。
+  final bool isReconnecting;
+
+  WsState({this.isConnected = false, this.isReconnecting = false});
 }
 
 class WsNotifier extends Notifier<WsState> {
@@ -156,7 +163,11 @@ class WsNotifier extends Notifier<WsState> {
     // 已在等待重连就不重复排：onDone 与 onError 可能都触发，
     // 叠加会让重连次数被快速耗尽
     if (_reconnectTimer != null) return;
-    if (_reconnectAttempts >= _maxReconnectAttempts) return;
+    if (_reconnectAttempts >= _maxReconnectAttempts) {
+      // 次数用完就不再重连了，徽标也不能继续显示「重连中」
+      state = WsState(isConnected: false);
+      return;
+    }
 
     final delay = _reconnectBaseDelay * (1 << _reconnectAttempts);
     _reconnectAttempts++;
@@ -166,6 +177,7 @@ class WsNotifier extends Notifier<WsState> {
         connect();
       }
     });
+    state = WsState(isConnected: false, isReconnecting: true);
   }
 
   /// 供页面回到前台时调用：连接已失效就重建。

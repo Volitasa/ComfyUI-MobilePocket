@@ -1321,4 +1321,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get wfNeverRun => '尚未运行';
+
+  @override
+  String get badgeReconnecting => '重连中';
 }
