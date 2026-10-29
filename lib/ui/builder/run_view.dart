@@ -1014,16 +1014,32 @@ class _RunViewState extends ConsumerState<RunView> {
                               ),
                             ),
                           ),
-                          if (expanded)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                              child: Column(
-                                children: [
-                                  const Divider(height: 1),
-                                  ..._buildParamBody(params),
-                                ],
-                              ),
+                          // 箭头转 150ms、内容却是瞬间出现/消失 —— 两个动作对不上。
+                          // 这里让内容自己「抽出来 / 收回去」：收起时换成零高占位，
+                          // AnimatedSize 才有得可动（直接 if 掉就没有过渡可播）。
+                          ClipRect(
+                            child: AnimatedSize(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                              alignment: Alignment.topCenter,
+                              child: expanded
+                                  ? Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        12,
+                                        0,
+                                        12,
+                                        10,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          const Divider(height: 1),
+                                          ..._buildParamBody(params),
+                                        ],
+                                      ),
+                                    )
+                                  : const SizedBox(width: double.infinity),
                             ),
+                          ),
                         ],
                       ),
                     );
@@ -1037,39 +1053,86 @@ class _RunViewState extends ConsumerState<RunView> {
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               child: SizedBox(
                 width: double.infinity,
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: _isExecuting
-                        ? context.containerFill
-                        : context.accent,
-                    foregroundColor: _isExecuting
-                        ? context.textSecondary
-                        : context.onAccent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: _isExecuting ? null : _handleExecute,
-                  icon: _isExecuting
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: context.textSecondary,
-                            strokeWidth: 2,
+                // 按钮本身是满宽的，会「跳」的是里面那一组图标 + 文字：
+                // 文案一换，整组在按钮里横向挪位，同时火箭变成转圈。
+                // 这里把「换」改成一次 180ms 的淡入淡出，底色另走 240ms 过渡。
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(end: _isExecuting ? 1 : 0),
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeOut,
+                  builder: (context, t, _) {
+                    final l = AppLocalizations.of(context);
+                    return FilledButton(
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 16,
+                        ),
+                        backgroundColor: Color.lerp(
+                          context.accent,
+                          context.containerFill,
+                          t,
+                        ),
+                        foregroundColor: Color.lerp(
+                          context.onAccent,
+                          context.textSecondary,
+                          t,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: _isExecuting ? null : _handleExecute,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        transitionBuilder: (child, anim) => FadeTransition(
+                          opacity: anim,
+                          child: ScaleTransition(
+                            scale: Tween<double>(
+                              begin: 0.94,
+                              end: 1,
+                            ).animate(anim),
+                            child: child,
                           ),
-                        )
-                      : const Icon(Icons.rocket_launch),
-                  label: Text(
-                    _isExecuting
-                        ? AppLocalizations.of(context).runSubmitting
-                        : AppLocalizations.of(context).runGenerateNow,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                        ),
+                        child: Row(
+                          // 键随状态变：不换键的话 AnimatedSwitcher 认为还是同一个
+                          // child，只更新文字，动画不会触发
+                          key: ValueKey<bool>(_isExecuting),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // 固定 24 见方：转圈只有 20，尺寸一换按钮高度就会抽一下
+                            SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: Center(
+                                child: _isExecuting
+                                    ? SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: context.textSecondary,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.rocket_launch),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _isExecuting ? l.runSubmitting : l.runGenerateNow,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

@@ -326,24 +326,34 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                   ),
                 ),
               ),
-              if (expanded)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-                  child: Column(
-                    children: [
-                      const Divider(height: 1),
-                      ...params.map(
-                        (node) => buildParamConfigRow(
-                          context,
-                          node: node,
-                          aliasControllers: widget.aliasControllers,
-                          issues: widget.issues,
-                          onChanged: () => setState(() {}),
-                        ),
-                      ),
-                    ],
-                  ),
+              // 与运行页同一条规则：箭头转、内容也要跟着长出来，
+              // 否则「箭头在动、卡片没动」看起来像卡了一下。
+              ClipRect(
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.topCenter,
+                  child: expanded
+                      ? Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                          child: Column(
+                            children: [
+                              const Divider(height: 1),
+                              ...params.map(
+                                (node) => buildParamConfigRow(
+                                  context,
+                                  node: node,
+                                  aliasControllers: widget.aliasControllers,
+                                  issues: widget.issues,
+                                  onChanged: () => setState(() {}),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : const SizedBox(width: double.infinity),
                 ),
+              ),
             ],
           ),
         );

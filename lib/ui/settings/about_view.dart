@@ -297,11 +297,20 @@ class _AboutViewState extends ConsumerState<AboutView> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  LinearProgressIndicator(
-                    value: state.progress > 0 ? state.progress : null,
-                    backgroundColor: context.stateSuccessOutline,
-                    color: context.stateSuccess,
-                    minHeight: 5,
+                  // 下载进度是分段跳的（每次收到一块才更新一次），补 400ms 过渡，
+                  // 否则进度条看起来像在随机闪。进度未知时仍走不定态。
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(
+                      end: state.progress.clamp(0.0, 1.0),
+                    ),
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOut,
+                    builder: (context, value, _) => LinearProgressIndicator(
+                      value: state.progress > 0 ? value : null,
+                      backgroundColor: context.stateSuccessOutline,
+                      color: context.stateSuccess,
+                      minHeight: 5,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
