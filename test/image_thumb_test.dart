@@ -30,20 +30,27 @@ void main() {
   testWidgets('铺底按 cover 撑满、上层按 contain 完整显示', (tester) async {
     await tester.pumpWidget(wrap(ImageThumb(bytes: png)));
 
-    final images = tester
-        .widgetList<Image>(find.byType(Image))
-        .map((i) => i.fit)
-        .toList();
-    expect(images, contains(BoxFit.cover));
-    expect(images, contains(BoxFit.contain));
+    final widgets = tester.widgetList<Image>(find.byType(Image)).toList();
+    final fits = widgets.map((i) => i.fit).toList();
+    expect(fits, contains(BoxFit.cover));
+    expect(fits, contains(BoxFit.contain));
 
-    // 铺底反正是模糊的，解码尺寸要压住，别为一张背景图吃满内存
-    final thumb = tester
-        .widgetList<Image>(find.byType(Image))
-        .firstWhere((i) => i.fit == BoxFit.cover);
-    final provider = thumb.image;
-    expect(provider, isA<ResizeImage>());
-    expect((provider as ResizeImage).width, lessThanOrEqualTo(120));
+    // ⚠️ 两层必须共用**同一个解码尺寸**（同一个 ImageProvider）。
+    //
+    // 以前铺底写成 `cacheWidth: 120`、上层 560：`Image.network` 内部的缓存键是
+    // `ResizeImage(provider, width:)`，而 `ResizeImage` 的相等性包含 width ——
+    // 两个宽度就是两个键，ImageCache 当成两张不同的图，
+    // **同一张缩略图向服务器请求两次**。服务端每张 `preview` 都是同步转码
+    // （webp;50 实测约 216ms），多出来的那次纯属白占事件循环。
+    // 而且内存也不省：ImageCache 里存的是两份（120 一份 + 560 一份）。
+    final cover = widgets.firstWhere((i) => i.fit == BoxFit.cover);
+    final contain = widgets.firstWhere((i) => i.fit == BoxFit.contain);
+    expect(
+      cover.image,
+      equals(contain.image),
+      reason: '两层的 provider 必须相等，否则同一张图会被请求两次',
+    );
+    expect((cover.image as ResizeImage).width, kThumbDecodeWidth);
 
     // 高度是写死的，卡片才不会跟着图片比例变高变矮
     final box = tester.widget<SizedBox>(
