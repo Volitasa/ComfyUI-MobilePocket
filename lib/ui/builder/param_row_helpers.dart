@@ -156,6 +156,12 @@ Widget buildParamConfigRow(
   /// 数据改动必须发生在调用方的 State 里（`setState`），否则
   /// 受控的 Checkbox 点了没反应。
   required VoidCallback onChanged,
+
+  /// 勾选框被点时的触感回调。
+  ///
+  /// 与 [onChanged] 分开：那个在改别名时也会触发，挂上去会变成「每敲一个字震一次」。
+  VoidCallback? onToggle,
+
   bool showCheckbox = true,
 
   /// 行尾是否带上「属于哪个节点」。见 [paramSummaryText]。
@@ -186,6 +192,7 @@ Widget buildParamConfigRow(
       onChanged: showCheckbox
           ? (val) {
               node.exposed = val ?? false;
+              onToggle?.call();
               onChanged();
             }
           : null,

@@ -8,6 +8,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../../models/workflow_node.dart';
+import '../../providers/haptics_provider.dart';
 import '../../providers/workflow_provider.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
@@ -825,6 +826,12 @@ class _RunViewState extends ConsumerState<RunView> {
         );
 
         if (!mounted) return;
+        // 下发成功给一下轻震：这是本页唯一「做完了一件事」的时刻
+        hapticFeedback(
+          ref,
+          HapticCategory.submit,
+          strength: HapticStrength.light,
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context).runTaskSubmitted),
@@ -966,15 +973,18 @@ class _RunViewState extends ConsumerState<RunView> {
                             borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(12),
                             ),
-                            onTap: () => setState(() {
-                              if (expanded) {
-                                _collapsedNodeIds.add(nodeId);
-                                _expandedNodeIds.remove(nodeId);
-                              } else {
-                                _expandedNodeIds.add(nodeId);
-                                _collapsedNodeIds.remove(nodeId);
-                              }
-                            }),
+                            onTap: () {
+                              hapticFeedback(ref, HapticCategory.fold);
+                              setState(() {
+                                if (expanded) {
+                                  _collapsedNodeIds.add(nodeId);
+                                  _expandedNodeIds.remove(nodeId);
+                                } else {
+                                  _expandedNodeIds.add(nodeId);
+                                  _collapsedNodeIds.remove(nodeId);
+                                }
+                              });
+                            },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,

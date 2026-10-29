@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../models/workflow_node.dart';
+import '../../providers/haptics_provider.dart';
 import '../../providers/workflow_provider.dart';
 import '../../services/param_order.dart';
 import '../../services/workflow_node_parser.dart';
@@ -500,8 +500,17 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
       ),
       onReorderItem: _onReorder,
       // 起拖 / 落位各震一下：没有手柄，全靠这下反馈告诉用户"已经拿起来了"。
-      onReorderStart: (_) => HapticFeedback.mediumImpact(),
-      onReorderEnd: (_) => HapticFeedback.lightImpact(),
+      // 走统一入口，才归「拖动排序」这个开关管（关掉后落位也不再震）。
+      onReorderStart: (_) => hapticFeedback(
+        ref,
+        HapticCategory.reorder,
+        strength: HapticStrength.medium,
+      ),
+      onReorderEnd: (_) => hapticFeedback(
+        ref,
+        HapticCategory.reorder,
+        strength: HapticStrength.light,
+      ),
       proxyDecorator: (child, index, animation) =>
           _buildDragProxy(sections, child, index, animation),
     );

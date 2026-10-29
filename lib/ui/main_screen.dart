@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../providers/connection_provider.dart';
+import '../providers/haptics_provider.dart';
 import '../providers/task_manager.dart';
 import '../providers/ws_event_provider.dart';
 import 'home/home_view.dart';
@@ -86,6 +87,10 @@ class _MainScreenState extends ConsumerState<MainScreen>
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
         onDestinationSelected: (int index) {
+          // 只有真的换页才震：重复点同一个标签不该有反馈
+          if (index != currentIndex) {
+            hapticFeedback(ref, HapticCategory.nav);
+          }
           // 更新全局索引
           ref.read(mainTabIndexProvider.notifier).state = index;
         },

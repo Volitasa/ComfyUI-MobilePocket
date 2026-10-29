@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../providers/haptics_provider.dart';
 import '../../models/workflow_node.dart';
 import '../../services/node_role.dart';
 import '../../services/workflow_node_parser.dart';
@@ -17,7 +19,7 @@ import '../../theme.dart';
 ///
 /// [nodes] 传的是引用：这里的勾选直接改在主视图那份数据上，
 /// 不需要返回值。返回时主视图自己 `setState` 重算已选列表。
-class ParamPickerView extends StatefulWidget {
+class ParamPickerView extends ConsumerStatefulWidget {
   const ParamPickerView({
     super.key,
     required this.nodes,
@@ -34,7 +36,7 @@ class ParamPickerView extends StatefulWidget {
   final Map<String, NodeRole> roles;
 
   @override
-  State<ParamPickerView> createState() => _ParamPickerViewState();
+  ConsumerState<ParamPickerView> createState() => _ParamPickerViewState();
 }
 
 /// 列表里的一行：要么是一段的标题，要么是一张节点卡片。
@@ -49,7 +51,7 @@ class _PickerRow {
   final String? nodeId;
 }
 
-class _ParamPickerViewState extends State<ParamPickerView> {
+class _ParamPickerViewState extends ConsumerState<ParamPickerView> {
   final Set<String> _expandedNodeIds = {};
   final Set<String> _collapsedNodeIds = {};
   final TextEditingController _searchController = TextEditingController();
@@ -219,15 +221,18 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(12),
                 ),
-                onTap: () => setState(() {
-                  if (expanded) {
-                    _collapsedNodeIds.add(nodeId);
-                    _expandedNodeIds.remove(nodeId);
-                  } else {
-                    _expandedNodeIds.add(nodeId);
-                    _collapsedNodeIds.remove(nodeId);
-                  }
-                }),
+                onTap: () {
+                  hapticFeedback(ref, HapticCategory.fold);
+                  setState(() {
+                    if (expanded) {
+                      _collapsedNodeIds.add(nodeId);
+                      _expandedNodeIds.remove(nodeId);
+                    } else {
+                      _expandedNodeIds.add(nodeId);
+                      _collapsedNodeIds.remove(nodeId);
+                    }
+                  });
+                },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -291,11 +296,17 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                                   tooltip: allExposed
                                       ? l.configNodeClearAll
                                       : l.configNodeSelectAll,
-                                  onPressed: () => setState(() {
-                                    for (final p in params) {
-                                      p.exposed = !allExposed;
-                                    }
-                                  }),
+                                  onPressed: () {
+                                    hapticFeedback(
+                                      ref,
+                                      HapticCategory.check,
+                                    );
+                                    setState(() {
+                                      for (final p in params) {
+                                        p.exposed = !allExposed;
+                                      }
+                                    });
+                                  },
                                   icon: Icon(
                                     allExposed
                                         ? Icons.deselect
@@ -346,6 +357,10 @@ class _ParamPickerViewState extends State<ParamPickerView> {
                                   aliasControllers: widget.aliasControllers,
                                   issues: widget.issues,
                                   onChanged: () => setState(() {}),
+                                  onToggle: () => hapticFeedback(
+                                    ref,
+                                    HapticCategory.check,
+                                  ),
                                 ),
                               ),
                             ],
