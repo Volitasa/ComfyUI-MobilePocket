@@ -484,6 +484,13 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     final sections = _sections;
     return ReorderableListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      // ⚠️ 必须关掉：默认会在 Android 上给每个 item 套一层
+      // `ReorderableDelayedDragStartListener`（500ms），
+      // 与我们的 `ParamDragStartListener`（300ms）**两套手势同时抢**，
+      // 长按到底几毫秒起拖变得不确定。
+      // 它还会把这一层插进 proxy 的 child 里，让 `_buildDragProxy` 拿不到我们的 Padding
+      // —— 段间距被框进绿框的根因之一（另一层是 `_wrapWithSemantics` 的 Semantics）。
+      buildDefaultDragHandles: false,
       itemCount: sections.length,
       itemBuilder: (context, index) => _buildSection(
         context,
@@ -576,8 +583,18 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     int index,
     Animation<double> animation,
   ) {
-    final padding = child is Padding ? child.padding : EdgeInsets.zero;
-    final body = child is Padding ? child.child! : child;
+    // ⚠️⚠️ `child` **不是** `_buildSection` 的返回值，不能直接判 `is Padding`！
+    //
+    // Flutter 在把 item 交给 proxy 之前包了一层 `Semantics`
+    // （`reorderable_list.dart` 的 `_wrapWithSemantics` → `_DragInfo.child = item.widget.child`），
+    // 所以这里拿到的是 `Semantics(child: Padding(...))`。
+    // 直接写 `child is Padding` 恒为 false —— 这正是「底下多出一块」一直没修好的原因：
+    // 拆分代码从没执行过，绿框照旧把 10dp 段间距圈进去了。
+    // 真机实测（1080×2400 / density 420）：卡片本体 365→613，绿框 365→646，
+    // 中间 616..644 是纯白 (255,255,255)，即被框进去的间距。
+    final item = _unwrapProxyChild(child);
+    final padding = item is Padding ? item.padding : EdgeInsets.zero;
+    final body = item is Padding ? (item.child ?? item) : item;
     final compact = index < sections.length &&
         sections[index].params.length > kCompactDragThreshold;
 
@@ -616,6 +633,7 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     return Padding(
       padding: padding,
       child: Container(
+        key: const ValueKey('param-drag-proxy'),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
@@ -634,6 +652,33 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
         ),
       ),
     );
+  }
+
+  /// 剥掉 Flutter 在交给 proxy 前给 item 套的透明包裹。
+  ///
+  /// 见 `_buildDragProxy` 的说明。Flutter 3.47.7 实测拿到的层级是：
+  /// `Semantics` → `KeyedSubtree`（关掉 `buildDefaultDragHandles` 后）
+  /// → `Padding`（我们的段间距）→ `ParamDragStartListener` → `Card`。
+  ///
+  /// 逐层剥到**第一个 `Padding`** 为止：那一定是我们自己包段间距的那层，
+  /// 再往里不会有 Padding（卡片内部用的是 Column/Divider）。
+  /// 剥不到就原样返回 —— 退化成「间距不拆」的旧行为，不会比现在更糟。
+  Widget _unwrapProxyChild(Widget child) {
+    var w = child;
+    // 上限 4 层：够覆盖上面三层，也防止将来套多了无限循环
+    for (var i = 0; i < 4; i++) {
+      if (w is Padding) break;
+      final Widget? next = switch (w) {
+        Semantics() => w.child,
+        KeyedSubtree() => w.child,
+        // `ReorderableDelayedDragStartListener` 继承自它，一并覆盖
+        ReorderableDragStartListener() => w.child,
+        _ => null,
+      };
+      if (next == null) break;
+      w = next;
+    }
+    return w;
   }
 
   /// 整段换位。段顺序写回「已选项原本占据的槽位」，未暴露的参数原地不动。
