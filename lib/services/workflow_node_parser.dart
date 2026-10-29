@@ -488,6 +488,15 @@ class WorkflowNodeParser {
       return ParamControl.upload;
     }
 
+    // 2) 种子同样优先于说明书结论。
+    //    ComfyUI 的说明书把 `seed` 声明成 INT，一进下面的 INT 分支就返回
+    //    `number` / `slider`，「换一个随机值」的骰子按钮直接消失 ——
+    //    而改种子的动作几乎就等于摇一下骰子，这个入口比档位滑块重要得多。
+    //    （C2「按说明书定型」时漏了这条；断网拿不到说明书反而有骰子，很难发现。）
+    if (kSeedParamKeys.contains(key) && rawValue is! List) {
+      return ParamControl.seed;
+    }
+
     switch (spec?.declaredType) {
       case 'COMBO':
         // 声明了 COMBO 却没给选项 → 不当下拉，落到第 7 条按 paramType 推断

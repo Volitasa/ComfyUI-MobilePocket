@@ -132,6 +132,57 @@ void main() {
       );
     });
 
+    test('1b 种子 → seed，优先于说明书结论', () {
+      // 回归：ComfyUI 的说明书把 `seed` 声明成 INT，C2「按说明书定型」之后
+      // 一进 INT 分支就返回 number / slider，「换一个随机值」的骰子就没了。
+      // 断网拿不到说明书时反而正常（走 `_controlFromParamType` 认出 seed），
+      // 所以这个回归平时极难发现 —— 只有真机上对着 KSampler 才看得见。
+      expect(
+        WorkflowNodeParser.resolveControl(
+          key: 'seed',
+          rawValue: 123,
+          paramType: ParamType.seed,
+          spec: const NodeInputSpec(isCombo: false, declaredType: 'INT'),
+        ),
+        ParamControl.seed,
+      );
+      // 档位再少也不能退化成滑块：种子要的是骰子，不是拖动条
+      expect(
+        WorkflowNodeParser.resolveControl(
+          key: 'noise_seed',
+          rawValue: 1,
+          paramType: ParamType.seed,
+          spec: const NodeInputSpec(
+            isCombo: false,
+            declaredType: 'INT',
+            min: 0,
+            max: 100,
+            step: 1,
+          ),
+        ),
+        ParamControl.seed,
+      );
+    });
+
+    test('1c 非种子的数值参数不受影响', () {
+      // steps 0–100 共 99 档 ≤ kSliderMaxDivisions → 仍然是滑块
+      expect(
+        WorkflowNodeParser.resolveControl(
+          key: 'steps',
+          rawValue: 20,
+          paramType: ParamType.intType,
+          spec: const NodeInputSpec(
+            isCombo: false,
+            declaredType: 'INT',
+            min: 1,
+            max: 100,
+            step: 1,
+          ),
+        ),
+        ParamControl.slider,
+      );
+    });
+
     test('2 COMBO → select', () {
       expect(
         WorkflowNodeParser.resolveControl(
