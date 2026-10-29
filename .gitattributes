@@ -1,0 +1,4 @@
+# Flutter 生成产物：l10n 每次 gen-l10n 都写 LF。
+# Windows 上默认 checkout 成 CRLF，于是每跑一次构建这三个文件就被标记成「已修改」，
+# 而 git diff 又是空的（只在换行上不同）。固定成 LF，省掉这份噪音。
+lib/l10n/*.dart text eol=lf
