@@ -48,6 +48,15 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
   /// 正在请求停止的记录：按钮换成转圈，也挡住连点。
   final Set<String> _stopping = {};
 
+  /// 正在收拢（准备删除）的记录：卡片先缩到零高，再真的从列表里去掉。
+  ///
+  /// 不做这一步的话，删掉的一瞬间整行消失、下面的记录直接顶上来，
+  /// 手指还停在原处，很容易误判成「删错了」。
+  final Set<String> _collapsing = {};
+
+  /// 收起动画时长；与 [AnimatedSize] 里的值必须一致，否则会在动画中途就删掉。
+  static const Duration _collapseDuration = Duration(milliseconds: 220);
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -283,9 +292,15 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     );
 
     if (choice == null || !mounted) return;
+    // 先让这张卡片收拢，再真的删：顺序反过来就看不到任何过渡
+    setState(() => _collapsing.add(task.promptId));
+    await Future<void>.delayed(_collapseDuration);
+    if (!mounted) return;
     await ref
         .read(taskManagerProvider.notifier)
         .removeTask(task.promptId, deleteLocalImages: choice);
+    if (!mounted) return;
+    setState(() => _collapsing.remove(task.promptId));
   }
 
   /// 远程停止一条还没结束的任务：先确认，再让服务器把它停掉。
@@ -516,8 +531,20 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                           itemCount: hits.length,
-                          itemBuilder: (context, index) =>
-                              _buildHistoryCard(hits[index], snapshots, l),
+                          itemBuilder: (context, index) {
+                            final hit = hits[index];
+                            // 删除前先收拢：卡片缩到零高，下面的记录再补位
+                            return ClipRect(
+                              child: AnimatedSize(
+                                duration: _collapseDuration,
+                                curve: Curves.easeInCubic,
+                                alignment: Alignment.topCenter,
+                                child: _collapsing.contains(hit.task.promptId)
+                                    ? const SizedBox(width: double.infinity)
+                                    : _buildHistoryCard(hit, snapshots, l),
+                              ),
+                            );
+                          },
                         ),
                 ),
               ],
