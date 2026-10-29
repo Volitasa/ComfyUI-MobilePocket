@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../providers/connection_provider.dart';
+import '../../providers/haptics_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/theme_mode_provider.dart';
 import '../../providers/snapshot_provider.dart';
@@ -38,6 +39,7 @@ class SettingsView extends ConsumerWidget {
     final tokenConfigured = ref.watch(githubTokenProvider).trim().isNotEmpty;
     final preferred = ref.watch(localeProvider);
     final themeChoice = ref.watch(themeModeProvider);
+    final haptics = ref.watch(hapticsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -61,6 +63,15 @@ class SettingsView extends ConsumerWidget {
             title: l.settingsAppearance,
             subtitle: _appearanceLabel(l, themeChoice),
             onTap: () => _pickAppearance(context, ref),
+          ),
+          // 与语言 / 外观同一套交互：点开弹窗选，不在这页再引入一种「开关」控件
+          _EntryTile(
+            icon: Icons.vibration,
+            title: l.settingsHaptics,
+            subtitle: haptics.isEmpty
+                ? l.settingsHapticsOff
+                : l.settingsHapticsCount(haptics.length),
+            onTap: () => _pickHaptics(context, ref),
           ),
           const Divider(height: 24),
           _SectionTitle(l.settingsSectionConnection),
@@ -180,6 +191,76 @@ class SettingsView extends ConsumerWidget {
         break;
     }
   }
+
+  /// 震动分类：可多选，改完立即生效（弹窗不关，方便逐项试）。
+  ///
+  /// 与语言 / 外观同一套交互：这条也是「点开弹窗选」，不在这页引入开关控件。
+  Future<void> _pickHaptics(BuildContext context, WidgetRef ref) async {
+    final l = AppLocalizations.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(l.settingsHaptics),
+        children: [
+          Consumer(
+            builder: (dialogContext, ref, _) {
+              final enabled = ref.watch(hapticsProvider);
+              final notifier = ref.read(hapticsProvider.notifier);
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final category in HapticCategory.values)
+                    ListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                      ),
+                      title: Text(
+                        _hapticLabel(l, category),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      // 关闭时也占住 20 的位置，勾选状态一变整行不会左右跳
+                      trailing: Icon(
+                        enabled.contains(category) ? Icons.check : null,
+                        size: 20,
+                        color: dialogContext.accent,
+                      ),
+                      onTap: () => notifier.toggle(category),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => notifier.setAll(true),
+                          child: Text(l.hapticsAllOn),
+                        ),
+                        TextButton(
+                          onPressed: () => notifier.setAll(false),
+                          child: Text(l.hapticsAllOff),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 分类名：只用于展示，不落盘（落盘的是枚举名）。
+  String _hapticLabel(AppLocalizations l, HapticCategory category) =>
+      switch (category) {
+        HapticCategory.nav => l.hapticsNav,
+        HapticCategory.check => l.hapticsCheck,
+        HapticCategory.reorder => l.hapticsReorder,
+        HapticCategory.fold => l.hapticsFold,
+        HapticCategory.submit => l.hapticsSubmit,
+      };
 
   Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
     final l = AppLocalizations.of(context);

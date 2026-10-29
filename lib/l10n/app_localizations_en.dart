@@ -1373,4 +1373,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get badgeReconnecting => 'Reconnecting';
+
+  @override
+  String get settingsHaptics => 'Haptic feedback';
+
+  @override
+  String get settingsHapticsOff => 'Off';
+
+  @override
+  String settingsHapticsCount(int count) {
+    return '$count on';
+  }
+
+  @override
+  String get hapticsNav => 'Switching tabs';
+
+  @override
+  String get hapticsCheck => 'Ticking parameters';
+
+  @override
+  String get hapticsReorder => 'Drag to reorder';
+
+  @override
+  String get hapticsFold => 'Expanding cards';
+
+  @override
+  String get hapticsSubmit => 'Running a task';
+
+  @override
+  String get hapticsAllOn => 'Turn all on';
+
+  @override
+  String get hapticsAllOff => 'Turn all off';
 }

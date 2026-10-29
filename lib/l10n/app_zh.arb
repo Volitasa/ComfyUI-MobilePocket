@@ -948,5 +948,29 @@
   "@wfNeverRun": { "description": "工作流列表：一次都没跑过" },
 
   "badgeReconnecting": "重连中",
-  "@badgeReconnecting": { "description": "顶部连接徽标：已连过但此刻断开、正在自动重连" }
+  "@badgeReconnecting": { "description": "顶部连接徽标：已连过但此刻断开、正在自动重连" },
+
+  "settingsHaptics": "震动反馈",
+  "@settingsHaptics": { "description": "设置项：点开选择哪些操作会震动" },
+  "settingsHapticsOff": "已关闭",
+  "@settingsHapticsOff": { "description": "设置项副标题：一类震动都没开" },
+  "settingsHapticsCount": "已开启 {count} 项",
+  "@settingsHapticsCount": {
+    "description": "设置项副标题：当前开启的震动词条数",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "hapticsNav": "切换标签页",
+  "@hapticsNav": { "description": "震动分类：切换底部标签" },
+  "hapticsCheck": "勾选参数",
+  "@hapticsCheck": { "description": "震动分类：勾选 / 取消勾选 / 节点内全选参数" },
+  "hapticsReorder": "拖动排序",
+  "@hapticsReorder": { "description": "震动分类：长按拖动参数排序" },
+  "hapticsFold": "折叠卡片",
+  "@hapticsFold": { "description": "震动分类：展开 / 折叠参数卡" },
+  "hapticsSubmit": "提交成功",
+  "@hapticsSubmit": { "description": "震动分类：任务下发成功" },
+  "hapticsAllOn": "全部开启",
+  "@hapticsAllOn": { "description": "震动选择弹窗：一次打开所有分类" },
+  "hapticsAllOff": "全部关闭",
+  "@hapticsAllOff": { "description": "震动选择弹窗：一次关掉所有分类" }
 }

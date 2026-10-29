@@ -2473,6 +2473,66 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'重连中'**
   String get badgeReconnecting;
+
+  /// 设置项：点开选择哪些操作会震动
+  ///
+  /// In zh, this message translates to:
+  /// **'震动反馈'**
+  String get settingsHaptics;
+
+  /// 设置项副标题：一类震动都没开
+  ///
+  /// In zh, this message translates to:
+  /// **'已关闭'**
+  String get settingsHapticsOff;
+
+  /// 设置项副标题：当前开启的震动词条数
+  ///
+  /// In zh, this message translates to:
+  /// **'已开启 {count} 项'**
+  String settingsHapticsCount(int count);
+
+  /// 震动分类：切换底部标签
+  ///
+  /// In zh, this message translates to:
+  /// **'切换标签页'**
+  String get hapticsNav;
+
+  /// 震动分类：勾选 / 取消勾选 / 节点内全选参数
+  ///
+  /// In zh, this message translates to:
+  /// **'勾选参数'**
+  String get hapticsCheck;
+
+  /// 震动分类：长按拖动参数排序
+  ///
+  /// In zh, this message translates to:
+  /// **'拖动排序'**
+  String get hapticsReorder;
+
+  /// 震动分类：展开 / 折叠参数卡
+  ///
+  /// In zh, this message translates to:
+  /// **'折叠卡片'**
+  String get hapticsFold;
+
+  /// 震动分类：任务下发成功
+  ///
+  /// In zh, this message translates to:
+  /// **'提交成功'**
+  String get hapticsSubmit;
+
+  /// 震动选择弹窗：一次打开所有分类
+  ///
+  /// In zh, this message translates to:
+  /// **'全部开启'**
+  String get hapticsAllOn;
+
+  /// 震动选择弹窗：一次关掉所有分类
+  ///
+  /// In zh, this message translates to:
+  /// **'全部关闭'**
+  String get hapticsAllOff;
 }
 
 class _AppLocalizationsDelegate

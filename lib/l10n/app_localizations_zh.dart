@@ -1324,4 +1324,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get badgeReconnecting => '重连中';
+
+  @override
+  String get settingsHaptics => '震动反馈';
+
+  @override
+  String get settingsHapticsOff => '已关闭';
+
+  @override
+  String settingsHapticsCount(int count) {
+    return '已开启 $count 项';
+  }
+
+  @override
+  String get hapticsNav => '切换标签页';
+
+  @override
+  String get hapticsCheck => '勾选参数';
+
+  @override
+  String get hapticsReorder => '拖动排序';
+
+  @override
+  String get hapticsFold => '折叠卡片';
+
+  @override
+  String get hapticsSubmit => '提交成功';
+
+  @override
+  String get hapticsAllOn => '全部开启';
+
+  @override
+  String get hapticsAllOff => '全部关闭';
 }

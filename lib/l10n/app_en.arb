@@ -508,5 +508,29 @@
   "@wfNeverRun": { "description": "Workflow list: never run before" },
 
   "badgeReconnecting": "Reconnecting",
-  "@badgeReconnecting": { "description": "Connection badge: was connected, currently dropped, auto-reconnecting" }
+  "@badgeReconnecting": { "description": "Connection badge: was connected, currently dropped, auto-reconnecting" },
+
+  "settingsHaptics": "Haptic feedback",
+  "@settingsHaptics": { "description": "Settings entry: choose which actions vibrate" },
+  "settingsHapticsOff": "Off",
+  "@settingsHapticsOff": { "description": "Settings subtitle: no haptic category enabled" },
+  "settingsHapticsCount": "{count} on",
+  "@settingsHapticsCount": {
+    "description": "Settings subtitle: how many haptic categories are on",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "hapticsNav": "Switching tabs",
+  "@hapticsNav": { "description": "Haptic category: switching bottom tabs" },
+  "hapticsCheck": "Ticking parameters",
+  "@hapticsCheck": { "description": "Haptic category: tick / untick / select all parameters" },
+  "hapticsReorder": "Drag to reorder",
+  "@hapticsReorder": { "description": "Haptic category: long-press drag to reorder parameters" },
+  "hapticsFold": "Expanding cards",
+  "@hapticsFold": { "description": "Haptic category: expand / collapse parameter cards" },
+  "hapticsSubmit": "Running a task",
+  "@hapticsSubmit": { "description": "Haptic category: task submitted successfully" },
+  "hapticsAllOn": "Turn all on",
+  "@hapticsAllOn": { "description": "Haptic dialog: enable every category" },
+  "hapticsAllOff": "Turn all off",
+  "@hapticsAllOff": { "description": "Haptic dialog: disable every category" }
 }
