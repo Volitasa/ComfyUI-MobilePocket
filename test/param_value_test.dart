@@ -44,6 +44,29 @@ void main() {
       expect(v, 'my_prefix');
     });
 
+    test('text 形态下 `_widgetValues` 的旧值不得盖掉输入框里的新值', () {
+      // 真实事故：AI 把改写好的提示词写进输入框，但 `_widgetValues` 里
+      // 留着工作流原值；`widgetValue ?? text` 让**下发时用回了原提示词**，
+      // 界面却显示新词——上机跑图才发现图根本没变。
+      final v = resolveParamValue(
+        node: _node('text', ParamType.text, '一只猫'),
+        control: ParamControl.text,
+        text: '一只在雨里的橘猫，霓虹灯倒影',
+        widgetValue: '一只猫',
+      );
+      expect(v, '一只在雨里的橘猫，霓虹灯倒影');
+    });
+
+    test('输入框为空时才兜底 `_widgetValues`（不把值弄丢）', () {
+      final v = resolveParamValue(
+        node: _node('text', ParamType.text, '一只猫'),
+        control: ParamControl.text,
+        text: '',
+        widgetValue: '备用的旧值',
+      );
+      expect(v, '备用的旧值');
+    });
+
     test('整数解析不出来时退回工作流原值', () {
       final v = resolveParamValue(
         node: _node('steps', ParamType.intType, 20),

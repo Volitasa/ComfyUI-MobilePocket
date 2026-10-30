@@ -331,8 +331,12 @@ dynamic resolveParamValue({
       // 走到这儿说明没人重新选图，保留服务器上那个文件名。
       return widgetValue ?? text;
     case ParamControl.text:
-      // 有些 text 参数其实是服务器的 COMBO，选中值在 widgetValue 里
-      return widgetValue ?? text;
+      // 下拉/开关各自有自己的 case；走到这儿说明界面是一个**输入框**，
+      // 那它的值就该以输入框为准。
+      // ⚠️ 这里原来是 `widgetValue ?? text`：曾经有人（AI 写回）往 `_widgetValues`
+      // 里留了一份工作流原值，于是界面显示 AI 新写的提示词、下发的却是原样。
+      // 文本形态不再让 `_widgetValues` 反客为主，只有输入框为空时才兜底。
+      return text.isNotEmpty ? text : (widgetValue ?? text);
   }
 }
 

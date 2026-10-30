@@ -1162,7 +1162,10 @@ class _RunViewState extends ConsumerState<RunView> {
         _controllers[key] ??
         TextEditingController(text: node.value?.toString() ?? '');
     _controllers[key] = controller;
-    _widgetValues.putIfAbsent(key, () => node.value);
+    // ⚠️ 这里曾经多做一步 `_widgetValues.putIfAbsent(key, () => node.value)`，
+    // 结果把工作流**原值**塞进了优先级更高的槽位（`resolveParamValue` 的 text
+    // 分支是 `widgetValue ?? text`）：AI 只改控制器文本，界面显示新提示词，
+    // 下发时却还是工作流原样。控制器才是这类参数的真值来源，不要在这里补 _widgetValues。
     if (!_formConfig.any((n) => n.id == node.id && n.key == node.key) &&
         mounted) {
       setState(() {
