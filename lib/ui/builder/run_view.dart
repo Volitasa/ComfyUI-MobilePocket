@@ -760,12 +760,10 @@ class _RunViewState extends ConsumerState<RunView> {
           // 图片三种来源（见 `imageValueSource`）：
           // 本地新选 → 先上传；服务器目录选的 → 原样下发；没改过 → 不覆盖。
           final picked = _formData[paramKey];
-          switch (
-            imageValueSource(
-              hasLocalPick: picked != null,
-              serverValue: _widgetValues[paramKey] as String?,
-            )
-          ) {
+          switch (imageValueSource(
+            hasLocalPick: picked != null,
+            serverValue: _widgetValues[paramKey] as String?,
+          )) {
             case ImageValueSource.local:
               final uploadedName = await taskManager.uploadImage(
                 picked!['bytes'],
@@ -1107,13 +1105,19 @@ class _RunViewState extends ConsumerState<RunView> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
+      // 键盘处理：内边距留在抽屉**内部**，输入框获得焦点时由 AiSheet 把抽屉
+      // 拉到满高（`_onFocusChanged` 里 jumpTo(1)）。
+      // ⚠️ 试过把 Padding 套在 DraggableScrollableSheet 外面：模拟器上键盘一弹整屏变白，
+      // 不要那么写。
       builder: (_) => DraggableScrollableSheet(
         controller: sheetController,
         initialChildSize: 0.56,
         minChildSize: 0.35,
-        maxChildSize: 0.92,
+        maxChildSize: 1,
         expand: false,
-        builder: (sheetContext, scrollController) => Padding(
+        builder: (sheetContext, scrollController) => AnimatedPadding(
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
           padding: EdgeInsets.only(
             bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
           ),
@@ -1181,8 +1185,16 @@ class _RunViewState extends ConsumerState<RunView> {
           child: FilledButton(
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-              backgroundColor: Color.lerp(context.accent, context.containerFill, t),
-              foregroundColor: Color.lerp(context.onAccent, context.textSecondary, t),
+              backgroundColor: Color.lerp(
+                context.accent,
+                context.containerFill,
+                t,
+              ),
+              foregroundColor: Color.lerp(
+                context.onAccent,
+                context.textSecondary,
+                t,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

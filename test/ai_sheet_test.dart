@@ -222,6 +222,44 @@ void main() {
     expect(find.text('看图写词需要至少一张参考图'), findsOneWidget);
   });
 
+  testWidgets('长结果也不会把「写入」压到可视区外', (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+    final output = node(id: '5', title: '文本编码', value: 'old');
+    // 造一段很长的结果，卡片高度远超半屏
+    final longText = 'photo, detailed, ' * 30;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SizedBox(
+              height: 420,
+              child: AiSheet(
+                args: args(output: output, client: patchClient(longText)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('改写'));
+    await tester.pump();
+    await tester.tap(find.text('生成'));
+    await tester.pump();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pumpAndSettle();
+
+    final rect = tester.getRect(find.text('写入'));
+    expect(rect.top, greaterThanOrEqualTo(0));
+    // 抽屉高 420，按钮必须落在里面（修复前它被推到列表可视区之外）
+    expect(rect.bottom, lessThanOrEqualTo(420));
+  });
+
   testWidgets('撤销恢复旧值', (tester) async {
     final prefs = await SharedPreferences.getInstance();
     final output = node(id: '5', title: '文本编码', value: 'old prompt');

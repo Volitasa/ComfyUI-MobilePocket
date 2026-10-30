@@ -82,6 +82,10 @@ class _AiSheetState extends ConsumerState<AiSheet> {
   String? _outputId;
   AiTemplate? _template = AiTemplate.custom;
   final TextEditingController _instruction = TextEditingController();
+  final FocusNode _instructionFocus = FocusNode();
+
+  /// 结果卡的位置：出结果后把它滚进可视区，避免底部按钮被抽屉footer盖住。
+  final GlobalKey _resultKey = GlobalKey();
 
   bool _running = false;
   bool _written = false;
@@ -100,6 +104,7 @@ class _AiSheetState extends ConsumerState<AiSheet> {
 
   StreamSubscription<String>? _sub;
   OriginalImageFetcher? _fetcher;
+  DateTime _lastFollow = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   void initState() {
@@ -113,11 +118,44 @@ class _AiSheetState extends ConsumerState<AiSheet> {
       }
     }
     _instruction.text = _defaultInstruction(AiTemplate.custom);
+    _instructionFocus.addListener(_onFocusChanged);
+  }
+
+  /// 键盘弹起时把抽屉拉到最高（否则输入框在键盘上方只剩一条缝）；
+  /// 收起后再落回「有结果看结果、没结果看表单」的高度。
+  /// 从选择器回到表单：收起键盘并把抽屉落回常规高度。
+  /// 不这么做的话，选完输出目标抽屉会一直停在满高、把运行页整页盖住。
+  void _backToCompose() {
+    _instructionFocus.unfocus();
+    setState(() => _mode = _Mode.compose);
+    final controller = widget.args.sheetController;
+    if (controller == null || !controller.isAttached) return;
+    controller.animateTo(
+      (_result != null || _running) ? 0.92 : 0.56,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _onFocusChanged() {
+    final controller = widget.args.sheetController;
+    if (controller == null || !controller.isAttached) return;
+    if (_instructionFocus.hasFocus) {
+      // 键盘还没弹完就先占满：否则「0.56 高度 - 键盘」会把输入区压成一条缝
+      controller.jumpTo(1);
+      return;
+    }
+    controller.animateTo(
+      (_result != null || _running) ? 0.92 : 0.56,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    _instructionFocus.dispose();
     _instruction.dispose();
     super.dispose();
   }
@@ -212,7 +250,11 @@ class _AiSheetState extends ConsumerState<AiSheet> {
           const Spacer(),
           IconButton(
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.settings_outlined, size: 19, color: context.textSecondary),
+            icon: Icon(
+              Icons.settings_outlined,
+              size: 19,
+              color: context.textSecondary,
+            ),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AiServiceView()),
@@ -236,11 +278,11 @@ class _AiSheetState extends ConsumerState<AiSheet> {
         multi: true,
         summaryOf: _summaryOf,
         scrollController: widget.args.scrollController,
-        onBack: () => setState(() => _mode = _Mode.compose),
-        onConfirm: (ids) => setState(() {
+        onBack: _backToCompose,
+        onConfirm: (ids) {
           _inputIds = ids;
-          _mode = _Mode.compose;
-        }),
+          _backToCompose();
+        },
       );
     }
     if (_mode == _Mode.pickOutput) {
@@ -250,17 +292,19 @@ class _AiSheetState extends ConsumerState<AiSheet> {
         multi: false,
         summaryOf: _summaryOf,
         scrollController: widget.args.scrollController,
-        onBack: () => setState(() => _mode = _Mode.compose),
-        onConfirm: (ids) => setState(() {
+        onBack: _backToCompose,
+        onConfirm: (ids) {
           _outputId = ids.isEmpty ? null : ids.first;
-          _mode = _Mode.compose;
-        }),
+          _backToCompose();
+        },
       );
     }
     return ListView(
       controller: widget.args.scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+      // 拖动列表就收键盘：用户往上看结果时不该再被键盘占着半屏
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
       children: [
         if (!ready) _noProvider(l),
         if (_written) _writtenBanner(l),
@@ -272,15 +316,14 @@ class _AiSheetState extends ConsumerState<AiSheet> {
         const SizedBox(height: 10),
         TextField(
           controller: _instruction,
+          focusNode: _instructionFocus,
           minLines: 2,
           maxLines: 4,
           style: const TextStyle(fontSize: 13),
           decoration: InputDecoration(
             hintText: l.aiInstructionHint,
             isDense: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           ),
         ),
         if (_hint != null) ...[
@@ -310,17 +353,20 @@ class _AiSheetState extends ConsumerState<AiSheet> {
         ],
         if (_running || (_result != null && _result!.rawText.isNotEmpty)) ...[
           const SizedBox(height: 10),
-          AiResultCard(
-            text: _running ? _buffer : _displayText,
-            beforeLength: _outputNode == null
-                ? 0
-                : widget.args.textOf(_outputNode!).length,
-            structured: _result?.structured ?? false,
-            streaming: _running,
-            written: _written,
-            servedModel: _servedModel,
-            onWrite: _applyResult,
-            onCopy: _copyResult,
+          KeyedSubtree(
+            key: _resultKey,
+            child: AiResultCard(
+              text: _running ? _buffer : _displayText,
+              beforeLength: _outputNode == null
+                  ? 0
+                  : widget.args.textOf(_outputNode!).length,
+              structured: _result?.structured ?? false,
+              streaming: _running,
+              written: _written,
+              servedModel: _servedModel,
+              onWrite: _applyResult,
+              onCopy: _copyResult,
+            ),
           ),
         ],
         if (_canceled && !_running)
@@ -340,7 +386,10 @@ class _AiSheetState extends ConsumerState<AiSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: context.textSecondary)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: context.textSecondary),
+        ),
         const SizedBox(height: 6),
         child,
       ],
@@ -415,7 +464,9 @@ class _AiSheetState extends ConsumerState<AiSheet> {
       children: [
         for (final n in nodes)
           _chip(
-            icon: isImageInputNode(n) ? Icons.image_outlined : Icons.text_fields,
+            icon: isImageInputNode(n)
+                ? Icons.image_outlined
+                : Icons.text_fields,
             label: _chipLabel(n),
             onRemove: () => setState(() => _inputIds.remove(_idOf(n))),
           ),
@@ -436,7 +487,10 @@ class _AiSheetState extends ConsumerState<AiSheet> {
             onRemove: () => setState(() => _outputId = null),
           )
         else
-          _addChip(l.aiAddOutput, () => setState(() => _mode = _Mode.pickOutput)),
+          _addChip(
+            l.aiAddOutput,
+            () => setState(() => _mode = _Mode.pickOutput),
+          ),
       ],
     );
   }
@@ -533,7 +587,9 @@ class _AiSheetState extends ConsumerState<AiSheet> {
             label,
             style: TextStyle(
               fontSize: 12,
-              color: on ? Theme.of(context).colorScheme.onSurface : context.textSecondary,
+              color: on
+                  ? Theme.of(context).colorScheme.onSurface
+                  : context.textSecondary,
               fontWeight: on ? FontWeight.w500 : FontWeight.w400,
             ),
           ),
@@ -552,7 +608,10 @@ class _AiSheetState extends ConsumerState<AiSheet> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Text(
             l.aiTemplateMore,
-            style: TextStyle(fontSize: 12, color: context.textSecondary.withValues(alpha: 0.5)),
+            style: TextStyle(
+              fontSize: 12,
+              color: context.textSecondary.withValues(alpha: 0.5),
+            ),
           ),
         ),
       ],
@@ -592,11 +651,7 @@ class _AiSheetState extends ConsumerState<AiSheet> {
                 e.detail.length > 160
                     ? '${e.detail.substring(0, 160)}…'
                     : e.detail,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: context.textSecondary,
-
-                ),
+                style: TextStyle(fontSize: 10, color: context.textSecondary),
               ),
             ),
         ],
@@ -673,6 +728,9 @@ class _AiSheetState extends ConsumerState<AiSheet> {
 
     final inputs = <AiContextInput>[];
     final images = <Uint8List>[];
+    // 先收键盘。必须放在 `_running = true` 之后：`_onFocusChanged` 靠它判断
+    // 「有没有结果要看」，提前 unfocus 会把抽屉缩回 0.56，流式输出只露一条缝。
+    _instructionFocus.unfocus();
     try {
       final imageNodes = _imageNodes;
       for (var i = 0; i < imageNodes.length; i++) {
@@ -756,6 +814,7 @@ class _AiSheetState extends ConsumerState<AiSheet> {
                 _expand();
               }
               if (mounted) setState(() {});
+              _followResult();
             },
             onError: (Object e) {
               if (!mounted) return;
@@ -772,6 +831,7 @@ class _AiSheetState extends ConsumerState<AiSheet> {
                 _running = false;
                 _result = parseAiResult(_buffer);
               });
+              _revealResult();
             },
             cancelOnError: true,
           );
@@ -790,10 +850,35 @@ class _AiSheetState extends ConsumerState<AiSheet> {
     final controller = widget.args.sheetController;
     if (controller == null || !controller.isAttached) return;
     controller.animateTo(
-      0.72,
+      0.92,
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
     );
+  }
+
+  /// 结果出来后把它滚进可视区（底部对齐），保证「写入 / 复制」不是被压在页脚下面。
+  void _revealResult() => _followResult(throttle: false);
+
+  /// [throttle] 为 false 时无条件滚动（收尾动作）；否则限流，用于流式过程中跟着长。
+  /// 不这样做的话结果卡一路往下长，用户得不停往上划才能看到最新的字。
+  void _followResult({bool throttle = true}) {
+    final now = DateTime.now();
+    if (throttle) {
+      if (now.difference(_lastFollow) < const Duration(milliseconds: 400)) {
+        return;
+      }
+    }
+    _lastFollow = now;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _resultKey.currentContext;
+      if (ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOut,
+        alignment: 1,
+      );
+    });
   }
 
   void _stop() {
@@ -804,6 +889,7 @@ class _AiSheetState extends ConsumerState<AiSheet> {
       _canceled = true;
       _result = parseAiResult(_buffer);
     });
+    _revealResult();
   }
 
   Future<Uint8List> _bytesFor(WorkflowNode node) async {
