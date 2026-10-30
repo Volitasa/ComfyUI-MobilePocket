@@ -27,6 +27,10 @@ class _ConnectionStatusBadgeState extends ConsumerState<ConnectionStatusBadge>
   late final AnimationController _pulse = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
+    // ⚠️ 必须给 1：默认是 0，而 0 对应的 opacity 是 0.35，
+    // 于是「没在重连」的常态圆点会被压成三四成透明（实测像素 182,210,183，
+    // 正好是 #2E7D32 叠加 35% 后的值）。这一行就是「绿点变浅变暗」的根因。
+    value: 1,
   );
   bool _pulsing = false;
 
