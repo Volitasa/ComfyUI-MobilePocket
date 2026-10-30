@@ -1,758 +1,1415 @@
 {
   "@@locale": "zh",
-
   "cancel": "取消",
-  "@cancel": { "description": "通用：取消" },
+  "@cancel": {
+    "description": "通用：取消"
+  },
   "delete": "删除",
-  "@delete": { "description": "通用：删除" },
+  "@delete": {
+    "description": "通用：删除"
+  },
   "save": "保存",
-  "@save": { "description": "通用：保存" },
-
+  "@save": {
+    "description": "通用：保存"
+  },
   "navWorkflow": "工作流",
-  "@navWorkflow": { "description": "底部导航：工作流" },
+  "@navWorkflow": {
+    "description": "底部导航：工作流"
+  },
   "navHistory": "生成记录",
-  "@navHistory": { "description": "底部导航：生成记录" },
+  "@navHistory": {
+    "description": "底部导航：生成记录"
+  },
   "navGallery": "画廊",
-  "@navGallery": { "description": "底部导航：画廊" },
+  "@navGallery": {
+    "description": "底部导航：画廊"
+  },
   "navSettings": "设置",
-  "@navSettings": { "description": "底部导航：设置" },
-
+  "@navSettings": {
+    "description": "底部导航：设置"
+  },
   "taskStatusQueued": "排队中",
-  "@taskStatusQueued": { "description": "任务状态：排队中" },
+  "@taskStatusQueued": {
+    "description": "任务状态：排队中"
+  },
   "taskStatusRunning": "生成中",
-  "@taskStatusRunning": { "description": "任务状态：生成中" },
+  "@taskStatusRunning": {
+    "description": "任务状态：生成中"
+  },
   "taskStatusCompleted": "已完成",
-  "@taskStatusCompleted": { "description": "任务状态：已完成" },
+  "@taskStatusCompleted": {
+    "description": "任务状态：已完成"
+  },
   "taskStatusFailed": "已失败",
-  "@taskStatusFailed": { "description": "任务状态：已失败" },
+  "@taskStatusFailed": {
+    "description": "任务状态：已失败"
+  },
   "taskStatusInterrupted": "已中断",
-  "@taskStatusInterrupted": { "description": "任务状态：已中断" },
-
+  "@taskStatusInterrupted": {
+    "description": "任务状态：已中断"
+  },
   "taskPhaseWaiting": "等待执行",
-  "@taskPhaseWaiting": { "description": "任务阶段：等待服务端开始执行" },
+  "@taskPhaseWaiting": {
+    "description": "任务阶段：等待服务端开始执行"
+  },
   "taskPhaseStarted": "任务开始",
-  "@taskPhaseStarted": { "description": "任务阶段：开始执行" },
+  "@taskPhaseStarted": {
+    "description": "任务阶段：开始执行"
+  },
   "taskPhaseCached": "命中缓存",
-  "@taskPhaseCached": { "description": "任务阶段：命中节点缓存" },
+  "@taskPhaseCached": {
+    "description": "任务阶段：命中节点缓存"
+  },
   "taskPhaseRunning": "处理中",
-  "@taskPhaseRunning": { "description": "任务阶段：执行中（无进度、无节点名）" },
+  "@taskPhaseRunning": {
+    "description": "任务阶段：执行中（无进度、无节点名）"
+  },
   "taskPhaseRunningNode": "执行 {node}",
   "@taskPhaseRunningNode": {
     "description": "任务阶段：正在执行某节点",
-    "placeholders": { "node": { "type": "String" } }
+    "placeholders": {
+      "node": {
+        "type": "String"
+      }
+    }
   },
   "taskPhaseRunningPercent": "处理中 {percent}%",
   "@taskPhaseRunningPercent": {
     "description": "任务阶段：执行中（只有进度百分比）",
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "taskPhaseRunningNodePercent": "{node} · {percent}%",
   "@taskPhaseRunningNodePercent": {
     "description": "任务阶段：执行中（节点名 + 进度百分比）",
     "placeholders": {
-      "node": { "type": "String" },
-      "percent": { "type": "int" }
+      "node": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "taskPhaseDone": "生成成功",
-  "@taskPhaseDone": { "description": "任务阶段：正常结束" },
+  "@taskPhaseDone": {
+    "description": "任务阶段：正常结束"
+  },
   "taskPhaseError": "执行出错",
-  "@taskPhaseError": { "description": "任务阶段：执行出错（无详情）" },
+  "@taskPhaseError": {
+    "description": "任务阶段：执行出错（无详情）"
+  },
   "taskPhaseErrorDetail": "执行出错: {detail}",
   "@taskPhaseErrorDetail": {
     "description": "任务阶段：执行出错（带服务端错误详情）",
-    "placeholders": { "detail": { "type": "String" } }
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
   },
   "taskPhaseInterrupted": "任务已被中断",
-  "@taskPhaseInterrupted": { "description": "任务阶段：被中断" },
+  "@taskPhaseInterrupted": {
+    "description": "任务阶段：被中断"
+  },
   "taskPhaseLost": "未在服务端找到该任务",
-  "@taskPhaseLost": { "description": "任务阶段：服务端重启或任务丢失" },
+  "@taskPhaseLost": {
+    "description": "任务阶段：服务端重启或任务丢失"
+  },
   "taskPhaseParseFailed": "结果数据解析失败",
-  "@taskPhaseParseFailed": { "description": "任务阶段：本地解析服务端结果失败" },
-
+  "@taskPhaseParseFailed": {
+    "description": "任务阶段：本地解析服务端结果失败"
+  },
   "historyTitle": "生成记录",
-  "@historyTitle": { "description": "历史页标题" },
+  "@historyTitle": {
+    "description": "历史页标题"
+  },
   "historySyncTooltip": "同步任务状态",
-  "@historySyncTooltip": { "description": "历史页同步按钮提示" },
+  "@historySyncTooltip": {
+    "description": "历史页同步按钮提示"
+  },
   "historySynced": "已同步任务状态",
-  "@historySynced": { "description": "历史页同步后的提示" },
+  "@historySynced": {
+    "description": "历史页同步后的提示"
+  },
   "historyEmpty": "暂无生成记录",
-  "@historyEmpty": { "description": "历史页空态" },
+  "@historyEmpty": {
+    "description": "历史页空态"
+  },
   "historyRerun": "再次运行",
-  "@historyRerun": { "description": "历史记录操作：再次运行" },
+  "@historyRerun": {
+    "description": "历史记录操作：再次运行"
+  },
   "historyNoSnapshot": "这条记录没有工作流快照（旧版本生成），无法再次运行",
-  "@historyNoSnapshot": { "description": "无快照时无法再次运行" },
+  "@historyNoSnapshot": {
+    "description": "无快照时无法再次运行"
+  },
   "historySnapshotDeleted": "对应的工作流快照已被删除，无法再次运行",
-  "@historySnapshotDeleted": { "description": "快照已删除时无法再次运行" },
+  "@historySnapshotDeleted": {
+    "description": "快照已删除时无法再次运行"
+  },
   "historyServerMismatchTitle": "运行服务器不一致",
-  "@historyServerMismatchTitle": { "description": "跨服务器再次运行的确认标题" },
+  "@historyServerMismatchTitle": {
+    "description": "跨服务器再次运行的确认标题"
+  },
   "historyServerMismatchBody": "这条记录当时运行在「{old}」，当前连接的是「{current}」。\n\n两台服务器的模型、插件节点可能不同，继续运行可能出现「模型不存在／节点类型不存在」之类的报错。是否继续？",
   "@historyServerMismatchBody": {
     "description": "跨服务器再次运行的确认正文",
     "placeholders": {
-      "old": { "type": "String" },
-      "current": { "type": "String" }
+      "old": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
     }
   },
   "historyRunAnyway": "仍要运行",
-  "@historyRunAnyway": { "description": "跨服务器仍要运行" },
+  "@historyRunAnyway": {
+    "description": "跨服务器仍要运行"
+  },
   "historyUnknownServer": "未知服务器",
-  "@historyUnknownServer": { "description": "找不到对应连接时的占位名" },
+  "@historyUnknownServer": {
+    "description": "找不到对应连接时的占位名"
+  },
   "historyNoImage": "无图",
-  "@historyNoImage": { "description": "已完成任务没有输出图时的占位" },
+  "@historyNoImage": {
+    "description": "已完成任务没有输出图时的占位"
+  },
   "historyDeleteTitle": "删除记录",
-  "@historyDeleteTitle": { "description": "删除记录确认标题" },
+  "@historyDeleteTitle": {
+    "description": "删除记录确认标题"
+  },
   "historyDeleteConfirm": "确定删除「{title}」这条生成记录吗？",
   "@historyDeleteConfirm": {
     "description": "删除记录确认正文",
-    "placeholders": { "title": { "type": "String" } }
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   },
   "historyDeleteImagesNote": "选择“同时删除画廊图片”会一并移除该记录已保存到画廊的本地图片，此操作不可恢复；仅删除记录则保留画廊图片。",
-  "@historyDeleteImagesNote": { "description": "删除记录时关于画廊图片的说明" },
+  "@historyDeleteImagesNote": {
+    "description": "删除记录时关于画廊图片的说明"
+  },
   "historyDeleteRecordOnly": "仅删除记录",
-  "@historyDeleteRecordOnly": { "description": "只删记录保留图片" },
+  "@historyDeleteRecordOnly": {
+    "description": "只删记录保留图片"
+  },
   "historyDeleteWithImages": "同时删除画廊图片",
-  "@historyDeleteWithImages": { "description": "连带删除画廊图片" },
+  "@historyDeleteWithImages": {
+    "description": "连带删除画廊图片"
+  },
   "historySaveToLocal": "保存到本地",
-  "@historySaveToLocal": { "description": "媒体查看器保存按钮" },
+  "@historySaveToLocal": {
+    "description": "媒体查看器保存按钮"
+  },
   "historySaving": "保存中...",
-  "@historySaving": { "description": "媒体保存中" },
+  "@historySaving": {
+    "description": "媒体保存中"
+  },
   "historySavedToAlbum": "已保存到手机相册",
-  "@historySavedToAlbum": { "description": "保存成功提示" },
+  "@historySavedToAlbum": {
+    "description": "保存成功提示"
+  },
   "historySaveFailed": "保存失败",
-  "@historySaveFailed": { "description": "保存失败提示" },
+  "@historySaveFailed": {
+    "description": "保存失败提示"
+  },
   "historyVideoLoadFailed": "视频加载失败",
-  "@historyVideoLoadFailed": { "description": "视频加载失败" },
+  "@historyVideoLoadFailed": {
+    "description": "视频加载失败"
+  },
   "historyImageLoadFailed": "图片加载失败，请检查服务器连接",
-  "@historyImageLoadFailed": { "description": "大图加载失败时的占位提示" },
+  "@historyImageLoadFailed": {
+    "description": "大图加载失败时的占位提示"
+  },
   "historyRefGroupLabel": "输入",
-  "@historyRefGroupLabel": { "description": "看图页参考图分组的标题前缀，拼成「输入 1 / 2」" },
+  "@historyRefGroupLabel": {
+    "description": "看图页参考图分组的标题前缀，拼成「输入 1 / 2」"
+  },
   "historyRefPeekToInput": "输入 {index} / {total} · 松开回到出图",
   "@historyRefPeekToInput": {
     "description": "在出图页按住不放时的提示条",
-    "placeholders": { "index": { "type": "int" }, "total": { "type": "int" } }
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "historyRefPeekToOutput": "{index} / {total} · 松开回到参考图",
   "@historyRefPeekToOutput": {
     "description": "在参考图页按住不放时的提示条",
-    "placeholders": { "index": { "type": "int" }, "total": { "type": "int" } }
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "historyRefUnavailable": "参考图已不在服务器上",
-  "@historyRefUnavailable": { "description": "参考图 404 时的占位说明" },
+  "@historyRefUnavailable": {
+    "description": "参考图 404 时的占位说明"
+  },
   "historyRefServerRemoved": "原服务器已移除，无法查看参考图",
-  "@historyRefServerRemoved": { "description": "记录所属服务器被删除后的占位说明" },
+  "@historyRefServerRemoved": {
+    "description": "记录所属服务器被删除后的占位说明"
+  },
   "historyStopTooltip": "停止生成",
-  "@historyStopTooltip": { "description": "进行中记录的停止按钮" },
+  "@historyStopTooltip": {
+    "description": "进行中记录的停止按钮"
+  },
   "historyStopTitle": "停止这次生成？",
-  "@historyStopTitle": { "description": "停止生成确认标题" },
+  "@historyStopTitle": {
+    "description": "停止生成确认标题"
+  },
   "historyStopBody": "已经算出来的进度会丢失，服务器会停掉这个任务。",
-  "@historyStopBody": { "description": "停止生成确认正文" },
+  "@historyStopBody": {
+    "description": "停止生成确认正文"
+  },
   "historyStopConfirm": "停止",
-  "@historyStopConfirm": { "description": "停止生成确认按钮" },
+  "@historyStopConfirm": {
+    "description": "停止生成确认按钮"
+  },
   "historyStopped": "已停止生成",
-  "@historyStopped": { "description": "停止成功提示" },
+  "@historyStopped": {
+    "description": "停止成功提示"
+  },
   "historyStopNotRunning": "任务已结束",
-  "@historyStopNotRunning": { "description": "服务器上这条任务已经跑完/已丢失" },
+  "@historyStopNotRunning": {
+    "description": "服务器上这条任务已经跑完/已丢失"
+  },
   "historyStopFailed": "停止失败，请检查服务器连接",
-  "@historyStopFailed": { "description": "停止失败提示" },
+  "@historyStopFailed": {
+    "description": "停止失败提示"
+  },
   "historyStopActionDelete": "仍要删除",
   "@historyStopActionDelete": {
     "description": "停止失败时提示里的删除入口，避免记录卡在进行中"
   },
-
   "serverDefaultName": "服务器",
   "@serverDefaultName": {
     "description": "连接没有名称时的默认名（仅在展示层兜底，不落盘）"
   },
   "serverTitle": "服务器配置",
-  "@serverTitle": { "description": "服务器配置页标题" },
+  "@serverTitle": {
+    "description": "服务器配置页标题"
+  },
   "serverAdd": "新增连接",
-  "@serverAdd": { "description": "新增连接" },
+  "@serverAdd": {
+    "description": "新增连接"
+  },
   "serverEdit": "编辑连接",
-  "@serverEdit": { "description": "编辑连接" },
+  "@serverEdit": {
+    "description": "编辑连接"
+  },
   "serverEmpty": "还没有保存的服务器连接",
-  "@serverEmpty": { "description": "服务器页空态" },
+  "@serverEmpty": {
+    "description": "服务器页空态"
+  },
   "serverHint": "提示：点击卡片启用对应连接（同时只能启用一个）。每个连接可配置主/备两个地址，连接时先尝试主地址，不通则自动尝试备用地址。",
-  "@serverHint": { "description": "服务器页底部说明" },
+  "@serverHint": {
+    "description": "服务器页底部说明"
+  },
   "serverConnected": "已连接",
-  "@serverConnected": { "description": "连接状态：已连通" },
+  "@serverConnected": {
+    "description": "连接状态：已连通"
+  },
   "serverActivated": "已启用",
-  "@serverActivated": { "description": "连接状态：已启用但未连通" },
+  "@serverActivated": {
+    "description": "连接状态：已启用但未连通"
+  },
   "serverPrimaryPrefix": "主: {url}",
   "@serverPrimaryPrefix": {
     "description": "卡片里的主地址行",
-    "placeholders": { "url": { "type": "String" } }
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
   },
   "serverBackupPrefix": "备: {url}",
   "@serverBackupPrefix": {
     "description": "卡片里的备用地址行",
-    "placeholders": { "url": { "type": "String" } }
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
   },
   "serverEditTooltip": "编辑",
-  "@serverEditTooltip": { "description": "编辑按钮提示" },
+  "@serverEditTooltip": {
+    "description": "编辑按钮提示"
+  },
   "serverDeleteTitle": "删除连接",
-  "@serverDeleteTitle": { "description": "删除连接确认标题" },
+  "@serverDeleteTitle": {
+    "description": "删除连接确认标题"
+  },
   "serverDeleteConfirm": "确定删除「{name}」吗？",
   "@serverDeleteConfirm": {
     "description": "删除连接确认正文",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "serverFormName": "名称",
-  "@serverFormName": { "description": "连接表单：名称" },
+  "@serverFormName": {
+    "description": "连接表单：名称"
+  },
   "serverFormNameHint": "例如: 家里内网 / 公司外网",
-  "@serverFormNameHint": { "description": "连接表单：名称示例" },
+  "@serverFormNameHint": {
+    "description": "连接表单：名称示例"
+  },
   "serverFormPrimary": "主地址（优先尝试）",
-  "@serverFormPrimary": { "description": "连接表单：主地址" },
+  "@serverFormPrimary": {
+    "description": "连接表单：主地址"
+  },
   "serverFormPrimaryHint": "例如: http://192.168.1.100:8188",
-  "@serverFormPrimaryHint": { "description": "连接表单：主地址示例" },
+  "@serverFormPrimaryHint": {
+    "description": "连接表单：主地址示例"
+  },
   "serverFormBackup": "备用地址（可选）",
-  "@serverFormBackup": { "description": "连接表单：备用地址" },
+  "@serverFormBackup": {
+    "description": "连接表单：备用地址"
+  },
   "serverFormBackupHint": "主地址不通时使用，如外网地址",
-  "@serverFormBackupHint": { "description": "连接表单：备用地址说明" },
+  "@serverFormBackupHint": {
+    "description": "连接表单：备用地址说明"
+  },
   "serverTest": "测试连接",
-  "@serverTest": { "description": "测试连接按钮" },
+  "@serverTest": {
+    "description": "测试连接按钮"
+  },
   "serverTestEmptyPrimary": "请先填写主地址",
-  "@serverTestEmptyPrimary": { "description": "未填主地址就点测试" },
+  "@serverTestEmptyPrimary": {
+    "description": "未填主地址就点测试"
+  },
   "serverTestPrimaryOk": "主地址可用",
-  "@serverTestPrimaryOk": { "description": "探测结果：主地址可用" },
+  "@serverTestPrimaryOk": {
+    "description": "探测结果：主地址可用"
+  },
   "serverTestBackupOk": "备用地址可用",
-  "@serverTestBackupOk": { "description": "探测结果：备用地址可用" },
+  "@serverTestBackupOk": {
+    "description": "探测结果：备用地址可用"
+  },
   "serverTestAllFailed": "主/备地址均无法连通",
-  "@serverTestAllFailed": { "description": "探测结果：都不可用" },
+  "@serverTestAllFailed": {
+    "description": "探测结果：都不可用"
+  },
   "serverActivateFailed": "「{name}」连接失败：主/备地址均无法连通",
   "@serverActivateFailed": {
     "description": "启用连接失败",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "serverActivatedPrimary": "已连接「{name}」（主地址）",
   "@serverActivatedPrimary": {
     "description": "启用成功且走主地址",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "serverActivatedBackup": "已连接「{name}」（备用地址）",
   "@serverActivatedBackup": {
     "description": "启用成功且走备用地址",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
-
   "settingsTitle": "设置",
-  "@settingsTitle": { "description": "设置页标题" },
+  "@settingsTitle": {
+    "description": "设置页标题"
+  },
   "settingsSectionGeneral": "通用",
-  "@settingsSectionGeneral": { "description": "设置页分组：通用" },
+  "@settingsSectionGeneral": {
+    "description": "设置页分组：通用"
+  },
   "settingsSectionConnection": "连接",
-  "@settingsSectionConnection": { "description": "设置页分组：连接" },
+  "@settingsSectionConnection": {
+    "description": "设置页分组：连接"
+  },
   "settingsSectionData": "数据",
-  "@settingsSectionData": { "description": "设置页分组：数据" },
+  "@settingsSectionData": {
+    "description": "设置页分组：数据"
+  },
   "settingsLanguage": "界面语言",
-  "@settingsLanguage": { "description": "设置项：界面语言" },
+  "@settingsLanguage": {
+    "description": "设置项：界面语言"
+  },
   "settingsLanguageFollow": "跟随系统",
-  "@settingsLanguageFollow": { "description": "语言选项：跟随系统" },
+  "@settingsLanguageFollow": {
+    "description": "语言选项：跟随系统"
+  },
   "settingsLanguageZh": "简体中文",
-  "@settingsLanguageZh": { "description": "语言选项：简体中文" },
+  "@settingsLanguageZh": {
+    "description": "语言选项：简体中文"
+  },
   "settingsLanguageEn": "English",
-  "@settingsLanguageEn": { "description": "语言选项：英文" },
+  "@settingsLanguageEn": {
+    "description": "语言选项：英文"
+  },
   "settingsLanguageTitle": "选择界面语言",
-  "@settingsLanguageTitle": { "description": "语言选择对话框标题" },
+  "@settingsLanguageTitle": {
+    "description": "语言选择对话框标题"
+  },
   "settingsAppearance": "外观",
-  "@settingsAppearance": { "description": "设置项：界面外观（浅色 / 深色）" },
+  "@settingsAppearance": {
+    "description": "设置项：界面外观（浅色 / 深色）"
+  },
   "settingsAppearanceTitle": "选择外观",
-  "@settingsAppearanceTitle": { "description": "外观选择对话框标题" },
+  "@settingsAppearanceTitle": {
+    "description": "外观选择对话框标题"
+  },
   "settingsAppearanceLight": "浅色",
-  "@settingsAppearanceLight": { "description": "外观选项：始终浅色" },
+  "@settingsAppearanceLight": {
+    "description": "外观选项：始终浅色"
+  },
   "settingsAppearanceDark": "深色",
-  "@settingsAppearanceDark": { "description": "外观选项：始终深色" },
+  "@settingsAppearanceDark": {
+    "description": "外观选项：始终深色"
+  },
   "settingsServerEntry": "服务器连接",
-  "@settingsServerEntry": { "description": "设置项：服务器连接" },
+  "@settingsServerEntry": {
+    "description": "设置项：服务器连接"
+  },
   "settingsServerNone": "尚未配置任何服务器",
-  "@settingsServerNone": { "description": "服务器连接：未配置" },
+  "@settingsServerNone": {
+    "description": "服务器连接：未配置"
+  },
   "settingsServerCount": "已配置 {count} 个服务器",
   "@settingsServerCount": {
     "description": "服务器连接：已配置数量",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "settingsStorage": "工作流存储",
-  "@settingsStorage": { "description": "设置项：工作流存储" },
+  "@settingsStorage": {
+    "description": "设置项：工作流存储"
+  },
   "settingsStorageNone": "导入或另存工作流后显示",
-  "@settingsStorageNone": { "description": "工作流存储：空态" },
+  "@settingsStorageNone": {
+    "description": "工作流存储：空态"
+  },
   "settingsStorageCount": "已保存 {count} 个工作流",
   "@settingsStorageCount": {
     "description": "工作流存储：已保存数量",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "settingsSnapshot": "工作流快照",
-  "@settingsSnapshot": { "description": "设置项：工作流快照" },
+  "@settingsSnapshot": {
+    "description": "设置项：工作流快照"
+  },
   "settingsSnapshotNone": "运行工作流后自动生成",
-  "@settingsSnapshotNone": { "description": "工作流快照：空态" },
+  "@settingsSnapshotNone": {
+    "description": "工作流快照：空态"
+  },
   "settingsSnapshotCount": "已固化 {count} 份快照",
   "@settingsSnapshotCount": {
     "description": "工作流快照：数量",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "settingsToken": "GitHub 访问令牌",
-  "@settingsToken": { "description": "设置项：GitHub 令牌" },
+  "@settingsToken": {
+    "description": "设置项：GitHub 令牌"
+  },
   "settingsTokenSet": "已配置",
-  "@settingsTokenSet": { "description": "GitHub 令牌：已配置" },
+  "@settingsTokenSet": {
+    "description": "GitHub 令牌：已配置"
+  },
   "settingsTokenUnset": "未配置",
-  "@settingsTokenUnset": { "description": "GitHub 令牌：未配置" },
+  "@settingsTokenUnset": {
+    "description": "GitHub 令牌：未配置"
+  },
   "settingsAbout": "关于",
-  "@settingsAbout": { "description": "设置项：关于" },
+  "@settingsAbout": {
+    "description": "设置项：关于"
+  },
   "settingsAboutSubtitle": "版本信息与检查更新",
-  "@settingsAboutSubtitle": { "description": "设置项：关于的副标题" },
-
+  "@settingsAboutSubtitle": {
+    "description": "设置项：关于的副标题"
+  },
   "workflowLocalImport": "本地导入",
-  "@workflowLocalImport": { "description": "本地导入工作流的展示名" },
-
+  "@workflowLocalImport": {
+    "description": "本地导入工作流的展示名"
+  },
   "workflowSnapshotDeleted": "工作流快照已被删除",
-  "@workflowSnapshotDeleted": { "description": "配置页：快照已不存在" },
+  "@workflowSnapshotDeleted": {
+    "description": "配置页：快照已不存在"
+  },
   "workflowLocalMissing": "本地工作流已不存在，可能已被删除",
-  "@workflowLocalMissing": { "description": "配置页：本地工作流已删除" },
+  "@workflowLocalMissing": {
+    "description": "配置页：本地工作流已删除"
+  },
   "workflowParsedCleared": "解析结果已被清除，请重新解析",
-  "@workflowParsedCleared": { "description": "配置页：解析缓存已清除" },
+  "@workflowParsedCleared": {
+    "description": "配置页：解析缓存已清除"
+  },
   "workflowFetchFailed": "拉取线上工作流内容失败，请检查服务器连接",
-  "@workflowFetchFailed": { "description": "配置页：首次拉取线上工作流失败" },
+  "@workflowFetchFailed": {
+    "description": "配置页：首次拉取线上工作流失败"
+  },
   "workflowRefetchFailed": "重新拉取工作流失败，请检查服务器连接",
-  "@workflowRefetchFailed": { "description": "配置页：重新拉取线上工作流失败" },
+  "@workflowRefetchFailed": {
+    "description": "配置页：重新拉取线上工作流失败"
+  },
   "workflowReparsed": "已重新解析，请确认参数后保存",
-  "@workflowReparsed": { "description": "配置页：重新解析完成" },
+  "@workflowReparsed": {
+    "description": "配置页：重新解析完成"
+  },
   "configSaved": "配置已保存",
-  "@configSaved": { "description": "配置页：保存成功提示" },
+  "@configSaved": {
+    "description": "配置页：保存成功提示"
+  },
   "configParsingTitle": "解析中...",
-  "@configParsingTitle": { "description": "配置页：解析中的页面标题" },
+  "@configParsingTitle": {
+    "description": "配置页：解析中的页面标题"
+  },
   "configPanelTitle": "配置面板: {name}",
   "@configPanelTitle": {
     "description": "配置页标题",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "configReparseTooltip": "重新解析参数",
-  "@configReparseTooltip": { "description": "配置页：重新解析按钮提示" },
+  "@configReparseTooltip": {
+    "description": "配置页：重新解析按钮提示"
+  },
   "configPanelHint": "请勾选需要暴露到手机 App 表单的参数，并为它们起一个易懂的名字。",
-  "@configPanelHint": { "description": "配置页顶部说明" },
+  "@configPanelHint": {
+    "description": "配置页顶部说明"
+  },
   "configNoParams": "此工作流没有找到可动态修改的参数。",
-  "@configNoParams": { "description": "配置页：无可配置参数" },
+  "@configNoParams": {
+    "description": "配置页：无可配置参数"
+  },
   "configSelectedCount": "{count}/{total} 项已选",
   "@configSelectedCount": {
     "description": "配置页：分组头部已选数量",
     "placeholders": {
-      "count": { "type": "int" },
-      "total": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "configParamCount": "{total} 项参数",
   "@configParamCount": {
     "description": "配置页：分组头部参数总数",
-    "placeholders": { "total": { "type": "int" } }
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "configSaveButton": "保存表单配置",
-  "@configSaveButton": { "description": "配置页底部保存按钮" },
+  "@configSaveButton": {
+    "description": "配置页底部保存按钮"
+  },
   "configSpecsFetching": "正在获取节点信息...",
-  "@configSpecsFetching": { "description": "配置页：正在向服务器取节点说明书" },
+  "@configSpecsFetching": {
+    "description": "配置页：正在向服务器取节点说明书"
+  },
   "configSpecsDegraded": "未获取到服务器节点信息，已按参数名推断控件",
-  "@configSpecsDegraded": { "description": "配置页：取说明书失败或超时后的降级提示" },
+  "@configSpecsDegraded": {
+    "description": "配置页：取说明书失败或超时后的降级提示"
+  },
   "configNodeMissingOnServer": "服务器缺少节点：{classType}",
   "@configNodeMissingOnServer": {
     "description": "配置页：该节点在服务器上不存在",
-    "placeholders": { "classType": { "type": "String" } }
+    "placeholders": {
+      "classType": {
+        "type": "String"
+      }
+    }
   },
   "configParamMissingOnServer": "服务器上没有这个参数",
-  "@configParamMissingOnServer": { "description": "配置页：说明书里找不到该参数" },
+  "@configParamMissingOnServer": {
+    "description": "配置页：说明书里找不到该参数"
+  },
   "paramAliasHint": "例如: 画面主体描述",
-  "@paramAliasHint": { "description": "配置页：别名输入框占位提示" },
+  "@paramAliasHint": {
+    "description": "配置页：别名输入框占位提示"
+  },
   "paramTypeText": "文本",
-  "@paramTypeText": { "description": "参数类型：文本" },
+  "@paramTypeText": {
+    "description": "参数类型：文本"
+  },
   "paramTypeSeed": "种子",
-  "@paramTypeSeed": { "description": "参数类型：种子" },
+  "@paramTypeSeed": {
+    "description": "参数类型：种子"
+  },
   "paramTypeImage": "图片",
-  "@paramTypeImage": { "description": "参数类型：图片" },
+  "@paramTypeImage": {
+    "description": "参数类型：图片"
+  },
   "paramTypeInt": "整数",
-  "@paramTypeInt": { "description": "参数类型：整数" },
+  "@paramTypeInt": {
+    "description": "参数类型：整数"
+  },
   "paramTypeFloat": "小数",
-  "@paramTypeFloat": { "description": "参数类型：小数" },
+  "@paramTypeFloat": {
+    "description": "参数类型：小数"
+  },
   "paramTypeBool": "开关",
-  "@paramTypeBool": { "description": "参数类型：开关" },
+  "@paramTypeBool": {
+    "description": "参数类型：开关"
+  },
   "paramTypeEnum": "选项",
-  "@paramTypeEnum": { "description": "参数类型：选项" },
+  "@paramTypeEnum": {
+    "description": "参数类型：选项"
+  },
   "paramTypeDefault": "参数",
-  "@paramTypeDefault": { "description": "参数类型：未知类型兜底" },
+  "@paramTypeDefault": {
+    "description": "参数类型：未知类型兜底"
+  },
   "paramSummaryType": "类型: {type}",
   "@paramSummaryType": {
     "description": "参数摘要：只有类型",
-    "placeholders": { "type": { "type": "String" } }
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
   },
   "paramSummaryTypeValue": "类型: {type} · 当前值: {value}",
   "@paramSummaryTypeValue": {
     "description": "参数摘要：类型 + 当前值",
     "placeholders": {
-      "type": { "type": "String" },
-      "value": { "type": "String" }
+      "type": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
     }
   },
   "paramSummaryNodeValue": "{node} · {value}",
   "@paramSummaryNodeValue": {
     "description": "参数摘要：属于哪个节点 + 当前值（主视图用）",
     "placeholders": {
-      "node": { "type": "String" },
-      "value": { "type": "String" }
+      "node": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
     }
   },
   "aliasSeed": "随机种子",
-  "@aliasSeed": { "description": "默认别名：种子" },
+  "@aliasSeed": {
+    "description": "默认别名：种子"
+  },
   "aliasImage": "参考图片",
-  "@aliasImage": { "description": "默认别名：参考图" },
+  "@aliasImage": {
+    "description": "默认别名：参考图"
+  },
   "aliasSteps": "采样步数",
-  "@aliasSteps": { "description": "默认别名：steps" },
+  "@aliasSteps": {
+    "description": "默认别名：steps"
+  },
   "aliasCfg": "CFG 强度",
-  "@aliasCfg": { "description": "默认别名：cfg" },
+  "@aliasCfg": {
+    "description": "默认别名：cfg"
+  },
   "aliasSampler": "采样器",
-  "@aliasSampler": { "description": "默认别名：sampler_name" },
+  "@aliasSampler": {
+    "description": "默认别名：sampler_name"
+  },
   "aliasScheduler": "调度器",
-  "@aliasScheduler": { "description": "默认别名：scheduler" },
+  "@aliasScheduler": {
+    "description": "默认别名：scheduler"
+  },
   "aliasDenoise": "重绘幅度",
-  "@aliasDenoise": { "description": "默认别名：denoise" },
+  "@aliasDenoise": {
+    "description": "默认别名：denoise"
+  },
   "aliasWidth": "宽度",
-  "@aliasWidth": { "description": "默认别名：width" },
+  "@aliasWidth": {
+    "description": "默认别名：width"
+  },
   "aliasHeight": "高度",
-  "@aliasHeight": { "description": "默认别名：height" },
+  "@aliasHeight": {
+    "description": "默认别名：height"
+  },
   "aliasBatchSize": "生成数量",
-  "@aliasBatchSize": { "description": "默认别名：batch_size" },
+  "@aliasBatchSize": {
+    "description": "默认别名：batch_size"
+  },
   "aliasPositive": "正向提示词",
-  "@aliasPositive": { "description": "默认别名：positive" },
+  "@aliasPositive": {
+    "description": "默认别名：positive"
+  },
   "aliasNegative": "负向提示词",
-  "@aliasNegative": { "description": "默认别名：negative" },
+  "@aliasNegative": {
+    "description": "默认别名：negative"
+  },
   "aliasCkpt": "Checkpoint 模型",
-  "@aliasCkpt": { "description": "默认别名：ckpt_name" },
+  "@aliasCkpt": {
+    "description": "默认别名：ckpt_name"
+  },
   "aliasUnet": "UNet 模型",
-  "@aliasUnet": { "description": "默认别名：unet_name" },
+  "@aliasUnet": {
+    "description": "默认别名：unet_name"
+  },
   "aliasClip": "CLIP 模型",
-  "@aliasClip": { "description": "默认别名：clip_name" },
+  "@aliasClip": {
+    "description": "默认别名：clip_name"
+  },
   "aliasVae": "VAE 模型",
-  "@aliasVae": { "description": "默认别名：vae_name" },
+  "@aliasVae": {
+    "description": "默认别名：vae_name"
+  },
   "aliasLora": "LoRA 模型",
-  "@aliasLora": { "description": "默认别名：lora_name" },
+  "@aliasLora": {
+    "description": "默认别名：lora_name"
+  },
   "aliasControlNet": "ControlNet",
-  "@aliasControlNet": { "description": "默认别名：control_net_name" },
+  "@aliasControlNet": {
+    "description": "默认别名：control_net_name"
+  },
   "aliasUpscaleModel": "放大模型",
-  "@aliasUpscaleModel": { "description": "默认别名：upscale_model" },
-
+  "@aliasUpscaleModel": {
+    "description": "默认别名：upscale_model"
+  },
   "runSnapshotDeleted": "对应的工作流快照已被删除，无法再次运行",
-  "@runSnapshotDeleted": { "description": "运行页：快照已删除" },
+  "@runSnapshotDeleted": {
+    "description": "运行页：快照已删除"
+  },
   "runNoFormConfig": "未找到有效的表单配置",
-  "@runNoFormConfig": { "description": "运行页：无表单配置" },
+  "@runNoFormConfig": {
+    "description": "运行页：无表单配置"
+  },
   "runParamsRestored": "已套用当时的参数（{count} 项因配置变更未能套用）",
   "@runParamsRestored": {
     "description": "运行页：再次运行时部分参数未能套用",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "runParamsRestoredAll": "已套用当时的参数",
-  "@runParamsRestoredAll": { "description": "运行页：再次运行时参数全部套用" },
+  "@runParamsRestoredAll": {
+    "description": "运行页：再次运行时参数全部套用"
+  },
   "runDataNotReady": "工作流数据未就绪，请返回重试",
-  "@runDataNotReady": { "description": "运行页：数据未就绪" },
+  "@runDataNotReady": {
+    "description": "运行页：数据未就绪"
+  },
   "runImageUploadFailed": "图片上传失败",
-  "@runImageUploadFailed": { "description": "运行页：上传图片失败" },
+  "@runImageUploadFailed": {
+    "description": "运行页：上传图片失败"
+  },
   "runSubmitFailed": "提交失败：无法连接服务器或请求超时",
-  "@runSubmitFailed": { "description": "运行页：提交失败（无响应）" },
+  "@runSubmitFailed": {
+    "description": "运行页：提交失败（无响应）"
+  },
   "runTaskSubmitted": "任务下发成功！",
-  "@runTaskSubmitted": { "description": "运行页：任务下发成功" },
+  "@runTaskSubmitted": {
+    "description": "运行页：任务下发成功"
+  },
   "runErrorNodes": "，错误节点: {nodes}",
   "@runErrorNodes": {
     "description": "运行页：服务端返回的错误节点",
-    "placeholders": { "nodes": { "type": "String" } }
+    "placeholders": {
+      "nodes": {
+        "type": "String"
+      }
+    }
   },
   "runSubmitFailedHttp": "提交失败 (HTTP {code}){detail}，请检查 ComfyUI 日志",
   "@runSubmitFailedHttp": {
     "description": "运行页：提交失败（HTTP 错误码）",
     "placeholders": {
-      "code": { "type": "String" },
-      "detail": { "type": "String" }
+      "code": {
+        "type": "String"
+      },
+      "detail": {
+        "type": "String"
+      }
     }
   },
   "runTitle": "运行: {name}",
   "@runTitle": {
     "description": "运行页标题",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "runNodeConfigTooltip": "节点配置",
-  "@runNodeConfigTooltip": { "description": "运行页：前往配置页按钮提示" },
+  "@runNodeConfigTooltip": {
+    "description": "运行页：前往配置页按钮提示"
+  },
   "runSubmitting": "下发任务中...",
-  "@runSubmitting": { "description": "运行页：提交中的按钮文案" },
+  "@runSubmitting": {
+    "description": "运行页：提交中的按钮文案"
+  },
   "runGenerateNow": "立即生成",
-  "@runGenerateNow": { "description": "运行页：生成按钮文案" },
+  "@runGenerateNow": {
+    "description": "运行页：生成按钮文案"
+  },
   "runTextHint": "请输入描述...",
-  "@runTextHint": { "description": "运行页：文本输入占位提示" },
+  "@runTextHint": {
+    "description": "运行页：文本输入占位提示"
+  },
   "runRandom": "随机",
-  "@runRandom": { "description": "运行页：随机种子按钮" },
+  "@runRandom": {
+    "description": "运行页：随机种子按钮"
+  },
   "runIntHint": "整数",
-  "@runIntHint": { "description": "运行页：整数输入占位提示" },
+  "@runIntHint": {
+    "description": "运行页：整数输入占位提示"
+  },
   "runFloatHint": "数值（可小数）",
-  "@runFloatHint": { "description": "运行页：小数输入占位提示" },
+  "@runFloatHint": {
+    "description": "运行页：小数输入占位提示"
+  },
   "runNumberInvalid": "请输入数字",
-  "@runNumberInvalid": { "description": "运行页：数值输入不是数字" },
+  "@runNumberInvalid": {
+    "description": "运行页：数值输入不是数字"
+  },
   "runNumberRange": "范围 {min} – {max}",
   "@runNumberRange": {
     "description": "运行页：数值超出服务器给定的范围",
     "placeholders": {
-      "min": { "type": "String" },
-      "max": { "type": "String" }
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
     }
   },
   "runSizeRatio": "画面比例",
-  "@runSizeRatio": { "description": "运行页尺寸卡：比例预设标题" },
+  "@runSizeRatio": {
+    "description": "运行页尺寸卡：比例预设标题"
+  },
   "runSizeLongEdge": "长边",
-  "@runSizeLongEdge": { "description": "运行页尺寸卡：长边档位标题" },
+  "@runSizeLongEdge": {
+    "description": "运行页尺寸卡：长边档位标题"
+  },
   "runSizeCustom": "自定义宽高",
-  "@runSizeCustom": { "description": "运行页尺寸卡：自定义宽高入口" },
+  "@runSizeCustom": {
+    "description": "运行页尺寸卡：自定义宽高入口"
+  },
   "runUseServerImage": "用原图",
-  "@runUseServerImage": { "description": "运行页：放弃本地改图，恢复工作流自带的服务器图片" },
+  "@runUseServerImage": {
+    "description": "运行页：放弃本地改图，恢复工作流自带的服务器图片"
+  },
   "runBoolOn": "开启",
-  "@runBoolOn": { "description": "运行页：开关打开" },
+  "@runBoolOn": {
+    "description": "运行页：开关打开"
+  },
   "runBoolOff": "关闭",
-  "@runBoolOff": { "description": "运行页：开关关闭" },
+  "@runBoolOff": {
+    "description": "运行页：开关关闭"
+  },
   "runUsingServerImage": "已用图: {name}",
   "@runUsingServerImage": {
     "description": "运行页：沿用服务器上的原图",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "runChangeImage": "更换图片",
-  "@runChangeImage": { "description": "运行页：更换图片按钮" },
+  "@runChangeImage": {
+    "description": "运行页：更换图片按钮"
+  },
   "runPickImage": "选择图片",
-  "@runPickImage": { "description": "运行页：选择图片按钮" },
+  "@runPickImage": {
+    "description": "运行页：选择图片按钮"
+  },
   "runImageEmpty": "未选择图片",
-  "@runImageEmpty": { "description": "运行页：图片参数还没选图时的占位文案" },
+  "@runImageEmpty": {
+    "description": "运行页：图片参数还没选图时的占位文案"
+  },
   "runImageSourceLocal": "本地 · 待上传",
   "@runImageSourceLocal": {
     "description": "运行页：图片来源标签，本地选的图会在生成时才上传"
   },
   "runImageSourceServer": "服务器 · 已有",
-  "@runImageSourceServer": { "description": "运行页：图片来源标签，服务器 input 目录已有" },
+  "@runImageSourceServer": {
+    "description": "运行页：图片来源标签，服务器 input 目录已有"
+  },
   "runImageSourceOutput": "服务器 · 输出目录",
-  "@runImageSourceOutput": { "description": "运行页：图片来源标签，图来自服务器 output 目录" },
+  "@runImageSourceOutput": {
+    "description": "运行页：图片来源标签，图来自服务器 output 目录"
+  },
   "runImageSourceInput": "服务器 · 输入目录",
-  "@runImageSourceInput": { "description": "运行页：图片来源标签，图来自服务器 input 目录" },
+  "@runImageSourceInput": {
+    "description": "运行页：图片来源标签，图来自服务器 input 目录"
+  },
   "runPickServerImage": "从服务器选",
-  "@runPickServerImage": { "description": "运行页：图片参数的第二颗按钮，进服务器目录选图" },
+  "@runPickServerImage": {
+    "description": "运行页：图片参数的第二颗按钮，进服务器目录选图"
+  },
   "runNeedServer": "先连接服务器",
-  "@runNeedServer": { "description": "运行页：没连服务器时点「从服务器选」的提示" },
+  "@runNeedServer": {
+    "description": "运行页：没连服务器时点「从服务器选」的提示"
+  },
   "serverImageTitle": "选择服务器图片",
-  "@serverImageTitle": { "description": "选图页：标题" },
+  "@serverImageTitle": {
+    "description": "选图页：标题"
+  },
   "serverImageTabOutput": "输出目录",
-  "@serverImageTabOutput": { "description": "选图页：输出目录 Tab" },
+  "@serverImageTabOutput": {
+    "description": "选图页：输出目录 Tab"
+  },
   "serverImageTabInput": "输入目录",
-  "@serverImageTabInput": { "description": "选图页：输入目录 Tab" },
+  "@serverImageTabInput": {
+    "description": "选图页：输入目录 Tab"
+  },
   "serverImageEmpty": "这个目录里还没有图片",
-  "@serverImageEmpty": { "description": "选图页：目录为空" },
+  "@serverImageEmpty": {
+    "description": "选图页：目录为空"
+  },
   "serverImageFailed": "读不到服务器的图片列表",
-  "@serverImageFailed": { "description": "选图页：internal 与 history 都失败" },
+  "@serverImageFailed": {
+    "description": "选图页：internal 与 history 都失败"
+  },
   "serverImageRetry": "重试",
-  "@serverImageRetry": { "description": "选图页：重新读取" },
+  "@serverImageRetry": {
+    "description": "选图页：重新读取"
+  },
   "serverImageDegraded": "这台服务器只能列出生成过的图片",
-  "@serverImageDegraded": { "description": "选图页：internal 接口不可用，降级用 history" },
+  "@serverImageDegraded": {
+    "description": "选图页：internal 接口不可用，降级用 history"
+  },
   "imageViewerLoadFailed": "图片加载失败",
-  "@imageViewerLoadFailed": { "description": "全屏查看器：大图没加载出来" },
+  "@imageViewerLoadFailed": {
+    "description": "全屏查看器：大图没加载出来"
+  },
   "runFoldMenu": "展开与折叠",
-  "@runFoldMenu": { "description": "运行页：节点卡片展开/折叠菜单" },
+  "@runFoldMenu": {
+    "description": "运行页：节点卡片展开/折叠菜单"
+  },
   "runExpandAll": "展开全部",
-  "@runExpandAll": { "description": "运行页：展开全部节点卡片" },
+  "@runExpandAll": {
+    "description": "运行页：展开全部节点卡片"
+  },
   "runCollapseAll": "折叠全部",
-  "@runCollapseAll": { "description": "运行页：折叠全部节点卡片" },
-
+  "@runCollapseAll": {
+    "description": "运行页：折叠全部节点卡片"
+  },
   "parseStatusConnecting": "正在连接服务器…",
-  "@parseStatusConnecting": { "description": "解析页：初始状态" },
+  "@parseStatusConnecting": {
+    "description": "解析页：初始状态"
+  },
   "parseLoadTimeout": "加载 ComfyUI 前端超时，请检查服务器连接",
-  "@parseLoadTimeout": { "description": "解析页：加载前端超时" },
+  "@parseLoadTimeout": {
+    "description": "解析页：加载前端超时"
+  },
   "parseStatusLoadingFrontend": "正在加载 ComfyUI 前端…",
-  "@parseStatusLoadingFrontend": { "description": "解析页：加载前端中" },
+  "@parseStatusLoadingFrontend": {
+    "description": "解析页：加载前端中"
+  },
   "parseStatusWaitingReady": "正在等待前端就绪…",
-  "@parseStatusWaitingReady": { "description": "解析页：等待前端就绪" },
+  "@parseStatusWaitingReady": {
+    "description": "解析页：等待前端就绪"
+  },
   "parseStatusConverting": "正在转换工作流…",
-  "@parseStatusConverting": { "description": "解析页：转换中" },
+  "@parseStatusConverting": {
+    "description": "解析页：转换中"
+  },
   "parseConvertTimeout": "转换超时，工作流可能包含不支持的节点",
-  "@parseConvertTimeout": { "description": "解析页：转换超时" },
+  "@parseConvertTimeout": {
+    "description": "解析页：转换超时"
+  },
   "parseConvertFailed": "调用前端转换失败：{error}",
   "@parseConvertFailed": {
     "description": "解析页：转换异常",
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "parseTitle": "解析: {name}",
   "@parseTitle": {
     "description": "解析页标题",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
-
   "homeGroupApi": "API 工作流 · 可直接运行",
-  "@homeGroupApi": { "description": "首页分组：API 工作流" },
+  "@homeGroupApi": {
+    "description": "首页分组：API 工作流"
+  },
   "homeGroupUi": "UI 工作流 · 需解析",
-  "@homeGroupUi": { "description": "首页分组：UI 工作流" },
+  "@homeGroupUi": {
+    "description": "首页分组：UI 工作流"
+  },
   "homeWorkflowSourceNote": "提示：工作流来自 ComfyUI 的 userdata/workflows 目录。UI 格式是 ComfyUI 界面保存的原始结构，需转换为 API 结构后才能运行。可在应用内直接解析转换，无需安装插件；也可在 ComfyUI 安装 ComfyUI-AutoSaveAPI 插件自动生成 API JSON（https://github.com/Volitasa/ComfyUI-AutoSaveAPI.git）。",
-  "@homeWorkflowSourceNote": { "description": "首页：工作流来源说明" },
+  "@homeWorkflowSourceNote": {
+    "description": "首页：工作流来源说明"
+  },
   "uiStatusNotParsed": "尚未解析 · 点击解析",
-  "@uiStatusNotParsed": { "description": "UI 工作流状态：未解析" },
+  "@uiStatusNotParsed": {
+    "description": "UI 工作流状态：未解析"
+  },
   "uiStatusStale": "服务器有更新，可重新解析",
-  "@uiStatusStale": { "description": "UI 工作流状态：服务器有更新" },
+  "@uiStatusStale": {
+    "description": "UI 工作流状态：服务器有更新"
+  },
   "uiStatusParsed": "已解析",
-  "@uiStatusParsed": { "description": "UI 工作流状态：已解析" },
+  "@uiStatusParsed": {
+    "description": "UI 工作流状态：已解析"
+  },
   "uiStatusParsedWithCount": "已解析 · {count} 项参数",
   "@uiStatusParsedWithCount": {
     "description": "UI 工作流状态：已解析（带参数数）",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "statusChecking": "检查中…",
-  "@statusChecking": { "description": "通用：检查中" },
+  "@statusChecking": {
+    "description": "通用：检查中"
+  },
   "menuMore": "更多操作",
-  "@menuMore": { "description": "通用：更多操作菜单" },
+  "@menuMore": {
+    "description": "通用：更多操作菜单"
+  },
   "uiMenuParse": "解析",
-  "@uiMenuParse": { "description": "UI 工作流菜单：解析" },
+  "@uiMenuParse": {
+    "description": "UI 工作流菜单：解析"
+  },
   "uiMenuReparse": "重新解析",
-  "@uiMenuReparse": { "description": "UI 工作流菜单：重新解析" },
+  "@uiMenuReparse": {
+    "description": "UI 工作流菜单：重新解析"
+  },
   "uiMenuClearParse": "清除解析缓存",
-  "@uiMenuClearParse": { "description": "UI 工作流菜单：清除解析缓存" },
+  "@uiMenuClearParse": {
+    "description": "UI 工作流菜单：清除解析缓存"
+  },
   "homeFetchFailed": "拉取工作流失败，请检查服务器连接",
-  "@homeFetchFailed": { "description": "首页：拉取工作流失败" },
+  "@homeFetchFailed": {
+    "description": "首页：拉取工作流失败"
+  },
   "homeInvalidJson": "工作流文件不是有效的 JSON",
-  "@homeInvalidJson": { "description": "首页：工作流文件不是合法 JSON" },
+  "@homeInvalidJson": {
+    "description": "首页：工作流文件不是合法 JSON"
+  },
   "homeParseFailed": "解析失败",
-  "@homeParseFailed": { "description": "首页：解析失败" },
+  "@homeParseFailed": {
+    "description": "首页：解析失败"
+  },
   "clearParseBody": "清除后会回到未解析状态，可随时从服务器重新解析。\n\n已保存的节点配置不受影响。",
-  "@clearParseBody": { "description": "清除解析缓存对话框正文" },
+  "@clearParseBody": {
+    "description": "清除解析缓存对话框正文"
+  },
   "clearParseDone": "已清除解析结果",
-  "@clearParseDone": { "description": "首页：已清除解析结果" },
+  "@clearParseDone": {
+    "description": "首页：已清除解析结果"
+  },
   "homeDisconnectedTitle": "尚未连接到服务器",
-  "@homeDisconnectedTitle": { "description": "首页空态：未连接服务器" },
+  "@homeDisconnectedTitle": {
+    "description": "首页空态：未连接服务器"
+  },
   "homeDisconnectedBody": "请先配置并启用一个服务器连接",
-  "@homeDisconnectedBody": { "description": "首页空态：未连接服务器说明" },
+  "@homeDisconnectedBody": {
+    "description": "首页空态：未连接服务器说明"
+  },
   "homeGoToConfig": "前往配置",
-  "@homeGoToConfig": { "description": "首页空态：前往配置按钮" },
+  "@homeGoToConfig": {
+    "description": "首页空态：前往配置按钮"
+  },
   "homeEmptyTitle": "未找到工作流",
-  "@homeEmptyTitle": { "description": "首页空态：无工作流" },
+  "@homeEmptyTitle": {
+    "description": "首页空态：无工作流"
+  },
   "homeEmptyBody": "服务器上没有找到工作流 JSON 文件",
-  "@homeEmptyBody": { "description": "首页空态：服务器上无工作流" },
+  "@homeEmptyBody": {
+    "description": "首页空态：服务器上无工作流"
+  },
   "wfStatusUnconfigured": "未配置",
-  "@wfStatusUnconfigured": { "description": "工作流状态：未配置" },
+  "@wfStatusUnconfigured": {
+    "description": "工作流状态：未配置"
+  },
   "wfStatusStale": "内容已更新，需重新确认配置",
-  "@wfStatusStale": { "description": "工作流状态：内容有更新" },
+  "@wfStatusStale": {
+    "description": "工作流状态：内容有更新"
+  },
   "wfStatusConfigured": "{count} 项参数已配置",
   "@wfStatusConfigured": {
     "description": "工作流状态：已配置参数数",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "wfMenuSaveLocal": "存入本地库",
-  "@wfMenuSaveLocal": { "description": "工作流菜单：存入本地库" },
+  "@wfMenuSaveLocal": {
+    "description": "工作流菜单：存入本地库"
+  },
   "wfMenuReconfig": "重新配置节点",
-  "@wfMenuReconfig": { "description": "工作流菜单：重新配置节点" },
+  "@wfMenuReconfig": {
+    "description": "工作流菜单：重新配置节点"
+  },
   "wfMenuRefresh": "刷新内容",
-  "@wfMenuRefresh": { "description": "工作流菜单：刷新内容" },
+  "@wfMenuRefresh": {
+    "description": "工作流菜单：刷新内容"
+  },
   "homeRechecked": "已重新检查",
-  "@homeRechecked": { "description": "首页：重新检查完成" },
+  "@homeRechecked": {
+    "description": "首页：重新检查完成"
+  },
   "homeFetchContentFailed": "拉取工作流内容失败，请检查服务器连接",
-  "@homeFetchContentFailed": { "description": "首页：拉取工作流内容失败" },
+  "@homeFetchContentFailed": {
+    "description": "首页：拉取工作流内容失败"
+  },
   "homeSavedToLocal": "已存入本地库",
-  "@homeSavedToLocal": { "description": "首页：已存入本地库" },
+  "@homeSavedToLocal": {
+    "description": "首页：已存入本地库"
+  },
   "nameLabel": "名称",
-  "@nameLabel": { "description": "通用：名称输入框标签" },
+  "@nameLabel": {
+    "description": "通用：名称输入框标签"
+  },
   "clear": "清除",
-  "@clear": { "description": "通用：清除" },
-
+  "@clear": {
+    "description": "通用：清除"
+  },
   "localEmpty": "本地库为空",
-  "@localEmpty": { "description": "本地库：空态标题" },
+  "@localEmpty": {
+    "description": "本地库：空态标题"
+  },
   "localSummary": "本地库 {count} 项 · {size}",
   "@localSummary": {
     "description": "本地库：条目数与体积",
     "placeholders": {
-      "count": { "type": "int" },
-      "size": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
     }
   },
   "localImportButton": "导入工作流 JSON",
-  "@localImportButton": { "description": "本地库：导入按钮" },
+  "@localImportButton": {
+    "description": "本地库：导入按钮"
+  },
   "localImportNote": "提示：这里导入的是 ComfyUI 的 API 格式 JSON（_api.json），即以节点 ID 为键、含 class_type 与 inputs 的结构；普通 UI 界面保存的 workflow JSON 不适用。",
-  "@localImportNote": { "description": "本地库：导入格式说明" },
+  "@localImportNote": {
+    "description": "本地库：导入格式说明"
+  },
   "localNoWorkflows": "还没有本地工作流",
-  "@localNoWorkflows": { "description": "本地库：空态" },
+  "@localNoWorkflows": {
+    "description": "本地库：空态"
+  },
   "localNoWorkflowsHint": "导入或另存的工作流会保存在这里",
-  "@localNoWorkflowsHint": { "description": "本地库：空态说明" },
+  "@localNoWorkflowsHint": {
+    "description": "本地库：空态说明"
+  },
   "localFooterNote": "来自你自己的文件，与服务器无关，可重命名或删除。删除后无法恢复。",
-  "@localFooterNote": { "description": "本地库：底部说明" },
+  "@localFooterNote": {
+    "description": "本地库：底部说明"
+  },
   "menuRename": "重命名",
-  "@menuRename": { "description": "通用：重命名" },
+  "@menuRename": {
+    "description": "通用：重命名"
+  },
   "localDeleteTitle": "删除本地工作流",
-  "@localDeleteTitle": { "description": "本地库：删除确认标题" },
+  "@localDeleteTitle": {
+    "description": "本地库：删除确认标题"
+  },
   "localDeleteBody": "确定删除「{name}」吗？\n\n它的节点配置会一并清除，删除后无法恢复。已生成的记录不受影响。",
   "@localDeleteBody": {
     "description": "本地库：删除确认正文",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "localDeleted": "已删除",
-  "@localDeleted": { "description": "本地库：删除完成" },
+  "@localDeleted": {
+    "description": "本地库：删除完成"
+  },
   "localJsonParseFailed": "JSON 文件解析失败",
-  "@localJsonParseFailed": { "description": "本地库：JSON 解析失败" },
-
+  "@localJsonParseFailed": {
+    "description": "本地库：JSON 解析失败"
+  },
   "homeRefreshTooltip": "刷新工作流列表",
-  "@homeRefreshTooltip": { "description": "首页：刷新按钮提示" },
+  "@homeRefreshTooltip": {
+    "description": "首页：刷新按钮提示"
+  },
   "homeTabServer": "服务器",
-  "@homeTabServer": { "description": "首页页签：服务器" },
+  "@homeTabServer": {
+    "description": "首页页签：服务器"
+  },
   "homeTabLocal": "本地",
-  "@homeTabLocal": { "description": "首页页签：本地" },
+  "@homeTabLocal": {
+    "description": "首页页签：本地"
+  },
   "notConnected": "未连接",
-  "@notConnected": { "description": "连接状态：未连接" },
-
+  "@notConnected": {
+    "description": "连接状态：未连接"
+  },
   "galleryRefreshTooltip": "刷新",
-  "@galleryRefreshTooltip": { "description": "画廊：刷新按钮提示" },
+  "@galleryRefreshTooltip": {
+    "description": "画廊：刷新按钮提示"
+  },
   "galleryEmptyTitle": "还没有生成图片",
-  "@galleryEmptyTitle": { "description": "画廊空态标题" },
+  "@galleryEmptyTitle": {
+    "description": "画廊空态标题"
+  },
   "galleryEmptyHint": "生成成功后图片会自动保存到这里",
-  "@galleryEmptyHint": { "description": "画廊空态说明" },
+  "@galleryEmptyHint": {
+    "description": "画廊空态说明"
+  },
   "galleryImageMissing": "图片已不存在，请刷新画廊",
-  "@galleryImageMissing": { "description": "画廊：图片已不存在" },
+  "@galleryImageMissing": {
+    "description": "画廊：图片已不存在"
+  },
   "gallerySaved": "✅ 已保存到手机相册",
-  "@gallerySaved": { "description": "画廊：保存成功" },
+  "@gallerySaved": {
+    "description": "画廊：保存成功"
+  },
   "gallerySaveFailed": "保存失败",
-  "@gallerySaveFailed": { "description": "画廊：保存失败" },
+  "@gallerySaveFailed": {
+    "description": "画廊：保存失败"
+  },
   "galleryDeleteTitle": "删除图片",
-  "@galleryDeleteTitle": { "description": "画廊：删除确认标题" },
+  "@galleryDeleteTitle": {
+    "description": "画廊：删除确认标题"
+  },
   "galleryDeleteBody": "确定从画廊删除这张图片吗？",
-  "@galleryDeleteBody": { "description": "画廊：删除确认正文" },
+  "@galleryDeleteBody": {
+    "description": "画廊：删除确认正文"
+  },
   "galleryShareTooltip": "分享",
-  "@galleryShareTooltip": { "description": "画廊：分享按钮提示" },
+  "@galleryShareTooltip": {
+    "description": "画廊：分享按钮提示"
+  },
   "galleryRerunNotice": "会用当时的工作流重新生成，不保证与这张完全一致",
-  "@galleryRerunNotice": { "description": "画廊里再次运行前的一次性说明" },
+  "@galleryRerunNotice": {
+    "description": "画廊里再次运行前的一次性说明"
+  },
   "gallerySaving": "保存中...",
-  "@gallerySaving": { "description": "画廊：保存中" },
+  "@gallerySaving": {
+    "description": "画廊：保存中"
+  },
   "gallerySaveToAlbum": "保存到相册",
-  "@gallerySaveToAlbum": { "description": "画廊：保存到相册按钮" },
+  "@gallerySaveToAlbum": {
+    "description": "画廊：保存到相册按钮"
+  },
   "galleryShareSoon": "分享功能即将上线",
-  "@galleryShareSoon": { "description": "画廊：分享功能提示" },
-
+  "@galleryShareSoon": {
+    "description": "画廊：分享功能提示"
+  },
   "storageTitle": "工作流存储",
   "storageEmpty": "本机还没有保存任何工作流",
   "storageSummary": "共 {total} 项 · 合计 {size}",
   "@storageSummary": {
     "placeholders": {
-      "total": { "type": "int" },
-      "size": { "type": "String" }
+      "total": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
     }
   },
   "storageGroupLocal": "本地资产 · {count} 项",
-  "@storageGroupLocal": { "placeholders": { "count": { "type": "int" } } },
+  "@storageGroupLocal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "storageGroupParsed": "解析缓存 · {count} 项",
-  "@storageGroupParsed": { "placeholders": { "count": { "type": "int" } } },
+  "@storageGroupParsed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "storageParsedNote": "解析缓存由服务器上的 UI 工作流转换而来，清除后回到未解析状态，可随时重新解析。",
   "storageOrigin": "来源 {name}",
-  "@storageOrigin": { "placeholders": { "name": { "type": "String" } } },
+  "@storageOrigin": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "storageParsedAt": "UI 工作流解析 · {time} · {size}",
   "@storageParsedAt": {
     "placeholders": {
-      "time": { "type": "String" },
-      "size": { "type": "String" }
+      "time": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
     }
   },
   "unknownConnection": "未知连接",
   "storageClearCacheBody": "确定清除「{name}」的解析结果吗？\n\n清除后回到未解析状态，在服务器列表里可以重新解析。已保存的节点配置不受影响。",
-  "@storageClearCacheBody": { "placeholders": { "name": { "type": "String" } } },
-
+  "@storageClearCacheBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "snapshotDeleteTitle": "删除快照",
   "snapshotDeleteBody": "确定删除「{name}」吗？\n\n删除后，引用它的 {count} 条生成记录将无法再次运行。",
   "@snapshotDeleteBody": {
     "placeholders": {
-      "name": { "type": "String" },
-      "count": { "type": "int" }
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "snapshotDeleted": "快照已删除",
@@ -762,75 +1419,138 @@
   "snapshotFrozenAt": "固化时间 {time} · {size}",
   "@snapshotFrozenAt": {
     "placeholders": {
-      "time": { "type": "String" },
-      "size": { "type": "String" }
+      "time": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
     }
   },
   "snapshotSourceServer": "来源服务器 {name}",
-  "@snapshotSourceServer": { "placeholders": { "name": { "type": "String" } } },
+  "@snapshotSourceServer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "snapshotRefCount": "被 {count} 条生成记录引用",
-  "@snapshotRefCount": { "placeholders": { "count": { "type": "int" } } },
+  "@snapshotRefCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "snapshotNoRef": "未被任何生成记录引用",
-
   "tokenTitle": "GitHub 访问令牌",
   "tokenSaved": "令牌已保存",
   "tokenCleared": "令牌已清除",
   "tokenConfigured": "已配置",
   "tokenClearButton": "清除令牌",
   "tokenLocalOnlyNote": "令牌仅保存在本机，不会上传。",
-
   "updateCheckButton": "检查更新",
   "updateSourceNote": "更新来源：GitHub Releases",
   "aboutVersionBuild": "版本 {version}（构建 {build}）",
   "@aboutVersionBuild": {
     "placeholders": {
-      "version": { "type": "String" },
-      "build": { "type": "String" }
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
     }
   },
   "updateChecking": "正在检查更新…",
   "updateUpToDate": "当前已是最新版本 {version}",
-  "@updateUpToDate": { "placeholders": { "version": { "type": "String" } } },
+  "@updateUpToDate": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "updateCheckFailed": "检查更新失败",
   "retry": "重试",
   "configureToken": "配置令牌",
   "updateAvailableTitle": "发现新版本 {version}",
-  "@updateAvailableTitle": { "placeholders": { "version": { "type": "String" } } },
+  "@updateAvailableTitle": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "updateAvailableOtherPlatform": "发现新版本 {version}，当前平台不支持应用内安装，请到 Release 页面手动下载",
-  "@updateAvailableOtherPlatform": { "placeholders": { "version": { "type": "String" } } },
+  "@updateAvailableOtherPlatform": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "releaseNotesTitle": "更新说明",
   "changelogTitle": "完整变更记录",
   "updateDownloadingPercent": "下载中 {percent}%",
-  "@updateDownloadingPercent": { "placeholders": { "percent": { "type": "String" } } },
+  "@updateDownloadingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
   "updateDownloading": "正在下载…",
   "updateDownloadInstall": "下载并安装",
   "installLaunchFailed": "无法唤起安装界面：{message}",
-  "@installLaunchFailed": { "placeholders": { "message": { "type": "String" } } },
-
+  "@installLaunchFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "saveAlbumPermission": "需要相册权限",
   "saveAlbumTitle": "保存到相册",
   "saveAlbumBody": "这张 PNG 内嵌了工作流信息。选择保存方式：",
   "saveAlbumPlain": "普通图片（剔除信息）",
   "saveAlbumWithWorkflow": "带工作流原图",
-
   "parseBadPayload": "前端返回了无法识别的数据",
   "parseNoWorkflow": "前端未返回工作流结构",
   "parseUnreadable": "解析结果无法读取",
   "convertEmpty": "转换结果为空（工作流可能没有可运行的节点）",
   "convertUiNotApi": "前端返回了 UI 结构而非 API 结构",
   "convertBadNode": "转换结果第 {index} 项不是有效的 API 节点",
-  "@convertBadNode": { "placeholders": { "index": { "type": "String" } } },
-
+  "@convertBadNode": {
+    "placeholders": {
+      "index": {
+        "type": "String"
+      }
+    }
+  },
   "updateRepoForbiddenWithToken": "仓库不可访问：请确认令牌对该仓库有 Contents 读取权限，且未过期",
   "updateRepoForbidden": "仓库不可访问。若该仓库是私有的，请在「设置 → GitHub 访问令牌」中填入只读令牌后重试",
   "updateTokenInvalid": "令牌无效或已过期，请到「设置 → GitHub 访问令牌」更新或清除",
   "updateRateLimitedWithToken": "GitHub 拒绝了请求（令牌权限不足或触发限流），请稍后再试",
   "updateRateLimited": "GitHub 接口访问受限（匿名请求每小时 60 次），配置访问令牌可放宽限额",
   "updateHttpFailed": "查询更新失败（HTTP {code}）",
-  "@updateHttpFailed": { "placeholders": { "code": { "type": "String" } } },
+  "@updateHttpFailed": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "updateNoRelease": "该仓库还没有发布带安装包的版本（仅有 git tag 不会被识别）",
   "updateBadTag": "发布版本号无法识别（{tag}）",
-  "@updateBadTag": { "placeholders": { "tag": { "type": "String" } } },
+  "@updateBadTag": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
   "updateTimeout": "连接 GitHub 超时，请检查网络后重试",
   "updateUnreachable": "无法连接 GitHub，请检查网络后重试",
   "updateQueryFailed": "查询更新失败，请检查网络后重试",
@@ -843,148 +1563,630 @@
   "updateDownload404Token": "安装包下载失败（404），请确认令牌仍有该仓库的读取权限",
   "updateDownload404": "安装包下载失败（404）",
   "updateDownloadHttp": "下载失败（HTTP {code}）",
-  "@updateDownloadHttp": { "placeholders": { "code": { "type": "String" } } },
+  "@updateDownloadHttp": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "updateDownloadAborted": "下载中断，请重试",
   "updateWriteFailed": "安装包写入失败",
   "updateCheckFailedRetry": "检查更新失败，请稍后重试",
   "updateNoPending": "没有待下载的版本",
   "updateDownloadFailedRetry": "下载失败，请稍后重试",
-
   "localSourceImport": "导入",
-  "@localSourceImport": { "description": "本地工作流来源：导入" },
+  "@localSourceImport": {
+    "description": "本地工作流来源：导入"
+  },
   "localSourceSaved": "另存",
-  "@localSourceSaved": { "description": "本地工作流来源：从服务器另存" },
+  "@localSourceSaved": {
+    "description": "本地工作流来源：从服务器另存"
+  },
   "unknownSize": "未知大小",
-  "@unknownSize": { "description": "通用：大小未知" },
-
+  "@unknownSize": {
+    "description": "通用：大小未知"
+  },
   "configExpandAll": "一键展开",
-  "@configExpandAll": { "description": "配置页：展开全部节点分组" },
+  "@configExpandAll": {
+    "description": "配置页：展开全部节点分组"
+  },
   "configCollapseAll": "一键折叠",
-  "@configCollapseAll": { "description": "配置页：折叠全部节点分组" },
+  "@configCollapseAll": {
+    "description": "配置页：折叠全部节点分组"
+  },
   "configSearchHint": "搜索参数或节点",
-  "@configSearchHint": { "description": "配置页：搜索框提示" },
+  "@configSearchHint": {
+    "description": "配置页：搜索框提示"
+  },
   "configSearchEmpty": "没有匹配的参数",
-  "@configSearchEmpty": { "description": "配置页：搜索无结果" },
+  "@configSearchEmpty": {
+    "description": "配置页：搜索无结果"
+  },
   "configNodeSelectAll": "全选本节点",
-  "@configNodeSelectAll": { "description": "配置页：勾选该节点下全部参数" },
+  "@configNodeSelectAll": {
+    "description": "配置页：勾选该节点下全部参数"
+  },
   "configNodeClearAll": "取消本节点",
-  "@configNodeClearAll": { "description": "配置页：取消该节点下全部参数" },
+  "@configNodeClearAll": {
+    "description": "配置页：取消该节点下全部参数"
+  },
   "configFormCount": "已放进表单 {count} 项（共 {total} 项）",
   "@configFormCount": {
     "description": "配置页：主视图统计，表单里几项、工作流一共几项",
     "placeholders": {
-      "count": { "type": "int" },
-      "total": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "configFormHint": "长按可拖动排序，改名或移出只影响手机上的表单",
-  "@configFormHint": { "description": "配置页：主视图副标题" },
+  "@configFormHint": {
+    "description": "配置页：主视图副标题"
+  },
   "configFormEmpty": "还没有参数放进表单",
-  "@configFormEmpty": { "description": "配置页：主视图空态" },
+  "@configFormEmpty": {
+    "description": "配置页：主视图空态"
+  },
   "configAddParams": "添加参数",
-  "@configAddParams": { "description": "配置页：进入全量参数列表的入口" },
+  "@configAddParams": {
+    "description": "配置页：进入全量参数列表的入口"
+  },
   "configAddParamsCount": "添加参数（还有 {count} 项）",
   "@configAddParamsCount": {
     "description": "配置页：添加入口，附带还剩多少项可加",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "configRemoveParam": "移出表单",
-  "@configRemoveParam": { "description": "配置页：把该参数移出手机表单" },
+  "@configRemoveParam": {
+    "description": "配置页：把该参数移出手机表单"
+  },
   "configPickerTitle": "添加参数",
-  "@configPickerTitle": { "description": "添加参数页：标题" },
+  "@configPickerTitle": {
+    "description": "添加参数页：标题"
+  },
   "configPickerDone": "完成",
-  "@configPickerDone": { "description": "添加参数页：完成按钮" },
+  "@configPickerDone": {
+    "description": "添加参数页：完成按钮"
+  },
   "categoryPrompt": "提示词",
-  "@categoryPrompt": { "description": "添加参数页：用途分段-提示词" },
+  "@categoryPrompt": {
+    "description": "添加参数页：用途分段-提示词"
+  },
   "categorySampling": "采样",
-  "@categorySampling": { "description": "添加参数页：用途分段-采样" },
+  "@categorySampling": {
+    "description": "添加参数页：用途分段-采样"
+  },
   "categorySize": "画面尺寸",
-  "@categorySize": { "description": "添加参数页：用途分段-画面尺寸" },
+  "@categorySize": {
+    "description": "添加参数页：用途分段-画面尺寸"
+  },
   "categoryModel": "模型与权重",
-  "@categoryModel": { "description": "添加参数页：用途分段-模型与权重" },
+  "@categoryModel": {
+    "description": "添加参数页：用途分段-模型与权重"
+  },
   "categoryControl": "精细控制",
-  "@categoryControl": { "description": "添加参数页：用途分段-精细控制" },
+  "@categoryControl": {
+    "description": "添加参数页：用途分段-精细控制"
+  },
   "categoryOther": "其余节点",
-  "@categoryOther": { "description": "添加参数页：用途分段-其余" },
+  "@categoryOther": {
+    "description": "添加参数页：用途分段-其余"
+  },
   "roleLinksTo": "连到 {node} · {slot}",
   "@roleLinksTo": {
     "description": "节点位置说明：这个节点的输出接到了哪个节点的哪个输入（两个名字都是官方名，不翻译）",
     "placeholders": {
-      "node": { "type": "String" },
-      "slot": { "type": "String" }
+      "node": {
+        "type": "String"
+      },
+      "slot": {
+        "type": "String"
+      }
     }
   },
   "roleLinksToMany": "连到 {node} · {slot} 等 {count} 处",
   "@roleLinksToMany": {
     "description": "节点位置说明：下游不止一处，只报第一处 + 总处数",
     "placeholders": {
-      "node": { "type": "String" },
-      "slot": { "type": "String" },
-      "count": { "type": "int" }
+      "node": {
+        "type": "String"
+      },
+      "slot": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "historySearchHint": "搜索工作流或提示词",
-  "@historySearchHint": { "description": "生成记录页：搜索框提示" },
+  "@historySearchHint": {
+    "description": "生成记录页：搜索框提示"
+  },
   "historySearchEmpty": "没有匹配的记录",
-  "@historySearchEmpty": { "description": "生成记录页：搜索无结果" },
+  "@historySearchEmpty": {
+    "description": "生成记录页：搜索无结果"
+  },
   "historyFilterAll": "全部",
-  "@historyFilterAll": { "description": "生成记录页：状态筛选-全部" },
+  "@historyFilterAll": {
+    "description": "生成记录页：状态筛选-全部"
+  },
   "historyFilterPending": "进行中",
-  "@historyFilterPending": { "description": "生成记录页：状态筛选-进行中（排队+生成）" },
-
+  "@historyFilterPending": {
+    "description": "生成记录页：状态筛选-进行中（排队+生成）"
+  },
   "runSelectPlaceholder": "请选择",
-  "@runSelectPlaceholder": { "description": "运行页：下拉未选中时的占位提示" },
+  "@runSelectPlaceholder": {
+    "description": "运行页：下拉未选中时的占位提示"
+  },
   "runModelMissing": "服务器没有此模型",
-  "@runModelMissing": { "description": "运行页：工作流里的模型在服务器上找不到" },
+  "@runModelMissing": {
+    "description": "运行页：工作流里的模型在服务器上找不到"
+  },
   "runNodeMissingOnServer": "服务器缺少节点：{classType}",
   "@runNodeMissingOnServer": {
     "description": "运行页：提交时服务器不认识该节点（取数成功但返回空）",
-    "placeholders": { "classType": { "type": "String" } }
+    "placeholders": {
+      "classType": {
+        "type": "String"
+      }
+    }
   },
   "runOptionMissingOnServer": "「{name}」的当前值服务器上没有，请重新选择",
   "@runOptionMissingOnServer": {
     "description": "运行页：提交时下拉当前值不在服务器选项里",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "runRefreshModels": "刷新模型列表",
-  "@runRefreshModels": { "description": "运行页：手动重新拉取服务器模型列表" },
+  "@runRefreshModels": {
+    "description": "运行页：手动重新拉取服务器模型列表"
+  },
   "runOptionsRefreshed": "已刷新",
-  "@runOptionsRefreshed": { "description": "运行页：刷新成功提示" },
+  "@runOptionsRefreshed": {
+    "description": "运行页：刷新成功提示"
+  },
   "runOptionsRefreshFailed": "刷新失败，请检查连接",
-  "@runOptionsRefreshFailed": { "description": "运行页：刷新失败提示" },
-
+  "@runOptionsRefreshFailed": {
+    "description": "运行页：刷新失败提示"
+  },
   "wfLastRun": "上次运行 {time}",
   "@wfLastRun": {
     "description": "工作流列表：该工作流上次运行的时间",
-    "placeholders": { "time": { "type": "String" } }
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   },
   "wfNeverRun": "尚未运行",
-  "@wfNeverRun": { "description": "工作流列表：一次都没跑过" },
-
+  "@wfNeverRun": {
+    "description": "工作流列表：一次都没跑过"
+  },
   "badgeReconnecting": "重连中",
-  "@badgeReconnecting": { "description": "顶部连接徽标：已连过但此刻断开、正在自动重连" },
-
+  "@badgeReconnecting": {
+    "description": "顶部连接徽标：已连过但此刻断开、正在自动重连"
+  },
   "settingsHaptics": "震动反馈",
-  "@settingsHaptics": { "description": "设置项：点开选择哪些操作会震动" },
+  "@settingsHaptics": {
+    "description": "设置项：点开选择哪些操作会震动"
+  },
   "settingsHapticsOff": "已关闭",
-  "@settingsHapticsOff": { "description": "设置项副标题：一类震动都没开" },
+  "@settingsHapticsOff": {
+    "description": "设置项副标题：一类震动都没开"
+  },
   "settingsHapticsCount": "已开启 {count} 项",
   "@settingsHapticsCount": {
     "description": "设置项副标题：当前开启的震动词条数",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "hapticsNav": "切换标签页",
-  "@hapticsNav": { "description": "震动分类：切换底部标签" },
+  "@hapticsNav": {
+    "description": "震动分类：切换底部标签"
+  },
   "hapticsCheck": "勾选参数",
-  "@hapticsCheck": { "description": "震动分类：勾选 / 取消勾选 / 节点内全选参数" },
+  "@hapticsCheck": {
+    "description": "震动分类：勾选 / 取消勾选 / 节点内全选参数"
+  },
   "hapticsReorder": "拖动排序",
-  "@hapticsReorder": { "description": "震动分类：长按拖动参数排序" },
+  "@hapticsReorder": {
+    "description": "震动分类：长按拖动参数排序"
+  },
   "hapticsFold": "折叠卡片",
-  "@hapticsFold": { "description": "震动分类：展开 / 折叠参数卡" },
+  "@hapticsFold": {
+    "description": "震动分类：展开 / 折叠参数卡"
+  },
   "hapticsSubmit": "提交成功",
-  "@hapticsSubmit": { "description": "震动分类：任务下发成功" },
+  "@hapticsSubmit": {
+    "description": "震动分类：任务下发成功"
+  },
   "hapticsAllOn": "全部开启",
-  "@hapticsAllOn": { "description": "震动选择弹窗：一次打开所有分类" },
+  "@hapticsAllOn": {
+    "description": "震动选择弹窗：一次打开所有分类"
+  },
   "hapticsAllOff": "全部关闭",
-  "@hapticsAllOff": { "description": "震动选择弹窗：一次关掉所有分类" }
+  "@hapticsAllOff": {
+    "description": "震动选择弹窗：一次关掉所有分类"
+  },
+  "settingsAiService": "AI 服务",
+  "@settingsAiService": {
+    "description": "设置项：AI 供应商配置入口"
+  },
+  "settingsAiServiceNone": "未配置",
+  "@settingsAiServiceNone": {
+    "description": "设置项副标题：没有可用供应商"
+  },
+  "aiServiceTitle": "AI 服务",
+  "@aiServiceTitle": {
+    "description": "AI 供应商配置页标题"
+  },
+  "aiServiceEmpty": "还没有配置 AI 服务",
+  "@aiServiceEmpty": {
+    "description": "供应商列表空态"
+  },
+  "aiSelectedCount": "已选 {count}",
+  "@aiSelectedCount": {
+    "description": "选择器：已选数量",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiConfirmCount": "确定 · {count} 项",
+  "@aiConfirmCount": {
+    "description": "选择器：确定按钮",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiCharsChange": "{after} 字 · 原 {before} 字",
+  "@aiCharsChange": {
+    "description": "结果卡：字数变化",
+    "placeholders": {
+      "after": {
+        "type": "int"
+      },
+      "before": {
+        "type": "int"
+      }
+    }
+  },
+  "aiWrittenBanner": "已写入「{target}」",
+  "@aiWrittenBanner": {
+    "description": "写入成功横幅",
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "aiReadingImages": "正在读取原图 {done}/{total}",
+  "@aiReadingImages": {
+    "description": "读取原图进度",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "aiImagesSent": "已发送 {count} 张原图 · {size}",
+  "@aiImagesSent": {
+    "description": "发送前提示：图片数量与体积",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiCannotWrite": "无法写入：{reason}",
+  "@aiCannotWrite": {
+    "description": "写入校验失败",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "aiServiceTestFail": "连接失败：{msg}",
+  "@aiServiceTestFail": {
+    "description": "测试连接失败",
+    "placeholders": {
+      "msg": {
+        "type": "String"
+      }
+    }
+  },
+  "aiServiceName": "名称",
+  "aiServiceUse": "使用",
+  "aiServiceAdd": "添加 AI 服务",
+  "@aiServiceAdd": {
+    "description": "AI 服务配置"
+  },
+  "aiServiceEdit": "编辑 AI 服务",
+  "@aiServiceEdit": {
+    "description": "AI 服务配置"
+  },
+  "aiServiceDeleteTitle": "删除 AI 服务",
+  "@aiServiceDeleteTitle": {
+    "description": "AI 服务配置"
+  },
+  "aiServicePresetDeepSeek": "DeepSeek 预设",
+  "@aiServicePresetDeepSeek": {
+    "description": "AI 服务配置"
+  },
+  "aiServicePresetCustom": "自定义",
+  "@aiServicePresetCustom": {
+    "description": "AI 服务配置"
+  },
+  "aiServiceDeleteConfirm": "确定删除「{name}」？",
+  "@aiServiceDeleteConfirm": {
+    "description": "删除确认",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiAddInput": "添加参考节点",
+  "@aiAddInput": {
+    "description": "AI 助手"
+  },
+  "aiAddOutput": "选择要填充的参数",
+  "@aiAddOutput": {
+    "description": "AI 助手"
+  },
+  "aiCanceled": "已取消",
+  "@aiCanceled": {
+    "description": "AI 助手"
+  },
+  "aiCopied": "已复制",
+  "@aiCopied": {
+    "description": "AI 助手"
+  },
+  "aiCopy": "复制",
+  "@aiCopy": {
+    "description": "AI 助手"
+  },
+  "aiEmptyValue": "（空）",
+  "@aiEmptyValue": {
+    "description": "AI 助手"
+  },
+  "aiEntry": "AI",
+  "@aiEntry": {
+    "description": "AI 助手"
+  },
+  "aiErrorBadRequest": "请求被拒绝",
+  "@aiErrorBadRequest": {
+    "description": "AI 助手"
+  },
+  "aiErrorNetwork": "连不上服务",
+  "@aiErrorNetwork": {
+    "description": "AI 助手"
+  },
+  "aiErrorNotFound": "地址或模型名不对",
+  "@aiErrorNotFound": {
+    "description": "AI 助手"
+  },
+  "aiErrorRateLimited": "请求太频繁，稍等再试",
+  "@aiErrorRateLimited": {
+    "description": "AI 助手"
+  },
+  "aiErrorServer": "服务暂时不可用",
+  "@aiErrorServer": {
+    "description": "AI 助手"
+  },
+  "aiErrorTimeout": "等太久了，已停止",
+  "@aiErrorTimeout": {
+    "description": "AI 助手"
+  },
+  "aiErrorUnauthorized": "密钥无效或无权限",
+  "@aiErrorUnauthorized": {
+    "description": "AI 助手"
+  },
+  "aiGenerate": "生成",
+  "@aiGenerate": {
+    "description": "AI 助手"
+  },
+  "aiGenerating": "正在生成",
+  "@aiGenerating": {
+    "description": "AI 助手"
+  },
+  "aiImageMissing": "原图已不在服务器",
+  "@aiImageMissing": {
+    "description": "AI 助手"
+  },
+  "aiInputLabel": "输入 · 可多选",
+  "@aiInputLabel": {
+    "description": "AI 助手"
+  },
+  "aiInstructionHint": "描述你要做什么…",
+  "@aiInstructionHint": {
+    "description": "AI 助手"
+  },
+  "aiNeedImage": "看图写词需要至少一张参考图",
+  "@aiNeedImage": {
+    "description": "AI 助手"
+  },
+  "aiNeedInstruction": "写一句要求，或选一个模板",
+  "@aiNeedInstruction": {
+    "description": "AI 助手"
+  },
+  "aiNeedOutput": "先选要填充的参数",
+  "@aiNeedOutput": {
+    "description": "AI 助手"
+  },
+  "aiNoProvider": "先配置 AI 服务",
+  "@aiNoProvider": {
+    "description": "AI 助手"
+  },
+  "aiNotStructured": "未按格式返回",
+  "@aiNotStructured": {
+    "description": "AI 助手"
+  },
+  "aiOpenSettings": "去设置",
+  "@aiOpenSettings": {
+    "description": "AI 助手"
+  },
+  "aiOutputLabel": "输出 · 单选",
+  "@aiOutputLabel": {
+    "description": "AI 助手"
+  },
+  "aiPickNodes": "选择节点",
+  "@aiPickNodes": {
+    "description": "AI 助手"
+  },
+  "aiRemove": "移除",
+  "@aiRemove": {
+    "description": "AI 助手"
+  },
+  "aiResultTitle": "建议",
+  "@aiResultTitle": {
+    "description": "AI 助手"
+  },
+  "aiRetry": "重试",
+  "@aiRetry": {
+    "description": "AI 助手"
+  },
+  "aiSearchNodes": "搜索节点或参数",
+  "@aiSearchNodes": {
+    "description": "AI 助手"
+  },
+  "aiServiceActiveTag": "当前",
+  "@aiServiceActiveTag": {
+    "description": "AI 助手"
+  },
+  "aiServiceApiKey": "API Key",
+  "@aiServiceApiKey": {
+    "description": "AI 助手"
+  },
+  "aiServiceBaseUrl": "接口地址",
+  "@aiServiceBaseUrl": {
+    "description": "AI 助手"
+  },
+  "aiServiceDelete": "删除此服务",
+  "@aiServiceDelete": {
+    "description": "AI 助手"
+  },
+  "aiServiceKeyNote": "密钥保存在本机应用私有存储，只会随请求发往上面填写的地址。",
+  "@aiServiceKeyNote": {
+    "description": "AI 助手"
+  },
+  "aiServiceModel": "模型",
+  "@aiServiceModel": {
+    "description": "AI 助手"
+  },
+  "aiServiceTest": "测试连接",
+  "@aiServiceTest": {
+    "description": "AI 助手"
+  },
+  "aiServiceTestOk": "连接成功",
+  "@aiServiceTestOk": {
+    "description": "AI 助手"
+  },
+  "aiSheetTitle": "AI 助手",
+  "@aiSheetTitle": {
+    "description": "AI 助手"
+  },
+  "aiStop": "停止",
+  "@aiStop": {
+    "description": "AI 助手"
+  },
+  "aiTabAll": "全部",
+  "@aiTabAll": {
+    "description": "AI 助手"
+  },
+  "aiTabImage": "图片",
+  "@aiTabImage": {
+    "description": "AI 助手"
+  },
+  "aiTabText": "文本",
+  "@aiTabText": {
+    "description": "AI 助手"
+  },
+  "aiTemplateImage": "看图写词",
+  "@aiTemplateImage": {
+    "description": "AI 助手"
+  },
+  "aiTemplateMore": "更多…",
+  "@aiTemplateMore": {
+    "description": "AI 助手"
+  },
+  "aiTemplateRewrite": "改写",
+  "@aiTemplateRewrite": {
+    "description": "AI 助手"
+  },
+  "aiUndo": "撤销",
+  "@aiUndo": {
+    "description": "AI 助手"
+  },
+  "aiWrite": "写入",
+  "@aiWrite": {
+    "description": "AI 助手"
+  },
+  "aiWriteNodeMissing": "目标已变化",
+  "@aiWriteNodeMissing": {
+    "description": "AI 助手"
+  },
+  "aiWriteNotAllowed": "不在本次目标里",
+  "@aiWriteNotAllowed": {
+    "description": "AI 助手"
+  },
+  "aiWriteNotText": "目标不是文本框",
+  "@aiWriteNotText": {
+    "description": "AI 助手"
+  },
+  "aiWriteTooLong": "文本过长",
+  "@aiWriteTooLong": {
+    "description": "AI 助手"
+  },
+  "aiWritten": "已写入",
+  "@aiWritten": {
+    "description": "AI 助手"
+  },
+  "settingsAiServiceActive": "当前：{name}",
+  "@settingsAiServiceActive": {
+    "description": "设置项副标题：当前供应商名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTemplateCustom": "自定义",
+  "@aiTemplateCustom": {
+    "description": "AI 助手"
+  },
+  "aiServedModel": "模型：{model}",
+  "@aiServedModel": {
+    "description": "结果卡：供应商实际返回的模型名",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  }
 }

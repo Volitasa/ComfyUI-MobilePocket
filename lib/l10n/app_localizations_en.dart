@@ -1424,4 +1424,258 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hapticsAllOff => 'Turn all off';
+
+  @override
+  String get settingsAiService => 'AI service';
+
+  @override
+  String get settingsAiServiceNone => 'Not configured';
+
+  @override
+  String get aiServiceTitle => 'AI service';
+
+  @override
+  String get aiServiceEmpty => 'No AI service yet';
+
+  @override
+  String aiSelectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String aiConfirmCount(int count) {
+    return 'Done · $count';
+  }
+
+  @override
+  String aiCharsChange(int after, int before) {
+    return '$after chars · was $before';
+  }
+
+  @override
+  String aiWrittenBanner(String target) {
+    return 'Written to “$target”';
+  }
+
+  @override
+  String aiReadingImages(int done, int total) {
+    return 'Reading images $done/$total';
+  }
+
+  @override
+  String aiImagesSent(int count, String size) {
+    return '$count full-size images sent · $size';
+  }
+
+  @override
+  String aiCannotWrite(String reason) {
+    return 'Cannot write: $reason';
+  }
+
+  @override
+  String aiServiceTestFail(String msg) {
+    return 'Connection failed: $msg';
+  }
+
+  @override
+  String get aiServiceName => 'Name';
+
+  @override
+  String get aiServiceUse => 'Use';
+
+  @override
+  String get aiServiceAdd => 'Add AI service';
+
+  @override
+  String get aiServiceEdit => 'Edit AI service';
+
+  @override
+  String get aiServiceDeleteTitle => 'Delete AI service';
+
+  @override
+  String get aiServicePresetDeepSeek => 'DeepSeek preset';
+
+  @override
+  String get aiServicePresetCustom => 'Custom';
+
+  @override
+  String aiServiceDeleteConfirm(String name) {
+    return 'Delete “$name”?';
+  }
+
+  @override
+  String get aiAddInput => 'Add a reference node';
+
+  @override
+  String get aiAddOutput => 'Choose the field to fill';
+
+  @override
+  String get aiCanceled => 'Cancelled';
+
+  @override
+  String get aiCopied => 'Copied';
+
+  @override
+  String get aiCopy => 'Copy';
+
+  @override
+  String get aiEmptyValue => '(empty)';
+
+  @override
+  String get aiEntry => 'AI';
+
+  @override
+  String get aiErrorBadRequest => 'Request rejected';
+
+  @override
+  String get aiErrorNetwork => 'Cannot reach the service';
+
+  @override
+  String get aiErrorNotFound => 'Wrong URL or model name';
+
+  @override
+  String get aiErrorRateLimited => 'Too many requests, try later';
+
+  @override
+  String get aiErrorServer => 'Service unavailable';
+
+  @override
+  String get aiErrorTimeout => 'Took too long, stopped';
+
+  @override
+  String get aiErrorUnauthorized => 'Invalid key or no permission';
+
+  @override
+  String get aiGenerate => 'Generate';
+
+  @override
+  String get aiGenerating => 'Generating';
+
+  @override
+  String get aiImageMissing => 'Original image is gone from the server';
+
+  @override
+  String get aiInputLabel => 'Input · multiple';
+
+  @override
+  String get aiInstructionHint => 'What should it do?';
+
+  @override
+  String get aiNeedImage => 'Prompt-from-images needs at least one image';
+
+  @override
+  String get aiNeedInstruction => 'Write a request, or pick a template';
+
+  @override
+  String get aiNeedOutput => 'Choose a field to fill first';
+
+  @override
+  String get aiNoProvider => 'Set up an AI service first';
+
+  @override
+  String get aiNotStructured => 'Not in the expected format';
+
+  @override
+  String get aiOpenSettings => 'Open settings';
+
+  @override
+  String get aiOutputLabel => 'Output · one';
+
+  @override
+  String get aiPickNodes => 'Choose nodes';
+
+  @override
+  String get aiRemove => 'Remove';
+
+  @override
+  String get aiResultTitle => 'Suggestion';
+
+  @override
+  String get aiRetry => 'Retry';
+
+  @override
+  String get aiSearchNodes => 'Search nodes or fields';
+
+  @override
+  String get aiServiceActiveTag => 'Active';
+
+  @override
+  String get aiServiceApiKey => 'API key';
+
+  @override
+  String get aiServiceBaseUrl => 'Base URL';
+
+  @override
+  String get aiServiceDelete => 'Delete this service';
+
+  @override
+  String get aiServiceKeyNote =>
+      'The key is stored in this app\'s private storage and is only sent to the address above.';
+
+  @override
+  String get aiServiceModel => 'Model';
+
+  @override
+  String get aiServiceTest => 'Test connection';
+
+  @override
+  String get aiServiceTestOk => 'Connected';
+
+  @override
+  String get aiSheetTitle => 'AI assistant';
+
+  @override
+  String get aiStop => 'Stop';
+
+  @override
+  String get aiTabAll => 'All';
+
+  @override
+  String get aiTabImage => 'Images';
+
+  @override
+  String get aiTabText => 'Text';
+
+  @override
+  String get aiTemplateImage => 'Prompt from images';
+
+  @override
+  String get aiTemplateMore => 'More…';
+
+  @override
+  String get aiTemplateRewrite => 'Rewrite';
+
+  @override
+  String get aiUndo => 'Undo';
+
+  @override
+  String get aiWrite => 'Write';
+
+  @override
+  String get aiWriteNodeMissing => 'Target no longer exists';
+
+  @override
+  String get aiWriteNotAllowed => 'Not in the chosen targets';
+
+  @override
+  String get aiWriteNotText => 'Target is not a text field';
+
+  @override
+  String get aiWriteTooLong => 'Text is too long';
+
+  @override
+  String get aiWritten => 'Written';
+
+  @override
+  String settingsAiServiceActive(String name) {
+    return 'Current: $name';
+  }
+
+  @override
+  String get aiTemplateCustom => 'Custom';
+
+  @override
+  String aiServedModel(String model) {
+    return 'Model: $model';
+  }
 }

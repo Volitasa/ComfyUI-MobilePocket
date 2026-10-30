@@ -29,6 +29,8 @@ import '../widgets/image_viewer.dart';
 import '../widgets/param_field.dart';
 import 'param_widgets/param_card_registry.dart';
 import 'param_widgets/latent_size_card.dart';
+import 'ai/ai_entry_button.dart';
+import 'ai/ai_sheet.dart';
 import 'server_image_picker_view.dart';
 import 'workflow_view.dart';
 
@@ -1061,94 +1063,179 @@ class _RunViewState extends ConsumerState<RunView> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-              child: SizedBox(
-                width: double.infinity,
-                // 按钮本身是满宽的，会「跳」的是里面那一组图标 + 文字：
-                // 文案一换，整组在按钮里横向挪位，同时火箭变成转圈。
-                // 这里把「换」改成一次 180ms 的淡入淡出，底色另走 240ms 过渡。
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(end: _isExecuting ? 1 : 0),
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOut,
-                  builder: (context, t, _) {
-                    final l = AppLocalizations.of(context);
-                    return FilledButton(
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 16,
-                        ),
-                        backgroundColor: Color.lerp(
-                          context.accent,
-                          context.containerFill,
-                          t,
-                        ),
-                        foregroundColor: Color.lerp(
-                          context.onAccent,
-                          context.textSecondary,
-                          t,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: _isExecuting ? null : _handleExecute,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 180),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        transitionBuilder: (child, anim) => FadeTransition(
-                          opacity: anim,
-                          child: ScaleTransition(
-                            scale: Tween<double>(
-                              begin: 0.94,
-                              end: 1,
-                            ).animate(anim),
-                            child: child,
-                          ),
-                        ),
-                        child: Row(
-                          // 键随状态变：不换键的话 AnimatedSwitcher 认为还是同一个
-                          // child，只更新文字，动画不会触发
-                          key: ValueKey<bool>(_isExecuting),
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // 固定 24 见方：转圈只有 20，尺寸一换按钮高度就会抽一下
-                            SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: Center(
-                                child: _isExecuting
-                                    ? SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: context.textSecondary,
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(Icons.rocket_launch),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _isExecuting ? l.runSubmitting : l.runGenerateNow,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+              // 主按钮必须由 Expanded 撑满剩余宽度；AI 按钮高度用 stretch 跟随，
+              // 不写死数字（主按钮高度由内边距与字号决定，写死会错位）。
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: _buildExecuteButton()),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 64,
+                      child: AiEntryButton(onPressed: _openAiSheet),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// 打开 AI 抽屉。
+  ///
+  /// [initialOutput] 由「长按别名行」带入；从底部按钮进入时为 null。
+  /// 节点目录用**整份工作流重新解析**的结果，而不是运行页当前的表单：
+  /// 提示词参数常常默认不勾选（例如 Qwen 的 `prompt`），只列表单会选不到它。
+  Future<void> _openAiSheet({WorkflowNode? initialParam}) async {
+    final l = AppLocalizations.of(context);
+    final config = ref.read(connectionProvider);
+    final wf = ref.read(workflowProvider);
+    final data = wf.hasDataFor(_dataOwnerId) ? wf.currentWorkflowData : null;
+    final parsed = data == null
+        ? const <WorkflowNode>[]
+        : WorkflowNodeParser.parse(normalizeWorkflowJson(data), l: l);
+    final nodes = parsed.isEmpty ? _formConfig : parsed;
+
+    final sheetController = DraggableScrollableController();
+    hapticFeedback(ref, HapticCategory.fold, strength: HapticStrength.light);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        controller: sheetController,
+        initialChildSize: 0.56,
+        minChildSize: 0.35,
+        maxChildSize: 0.92,
+        expand: false,
+        builder: (sheetContext, scrollController) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+          ),
+          child: AiSheet(
+            args: AiSheetArgs(
+              workflowKey: mappingKeyFor(
+                widget.workflowId,
+                config.activeServerId,
+              ),
+              serverId: config.activeServerId,
+              baseUrl: config.comfyUrl,
+              nodes: nodes,
+              textOf: (n) =>
+                  _controllers[nodeParamKey(n.id, n.key)]?.text ??
+                  _widgetValues[nodeParamKey(n.id, n.key)]?.toString() ??
+                  n.value?.toString() ??
+                  '',
+              imageValueOf: (n) =>
+                  _widgetValues[nodeParamKey(n.id, n.key)] as String? ??
+                  n.value?.toString(),
+              localBytesOf: (n) =>
+                  _formData[nodeParamKey(n.id, n.key)]?['bytes'] as Uint8List?,
+              controllerOf: _controllerForAi,
+              scrollController: scrollController,
+              sheetController: sheetController,
+              initialParam: initialParam,
+            ),
+          ),
+        ),
+      ),
+    );
+    sheetController.dispose();
+  }
+
+  /// 给 AI 写回准备控制器。
+  ///
+  /// 目标参数可能默认没勾选进表单（提示词经常如此），这时必须：
+  /// ① 建控制器；② 把它补进 `_formConfig`，否则提交时不会带上，等于白写。
+  TextEditingController _controllerForAi(WorkflowNode node) {
+    final key = nodeParamKey(node.id, node.key);
+    final controller =
+        _controllers[key] ??
+        TextEditingController(text: node.value?.toString() ?? '');
+    _controllers[key] = controller;
+    _widgetValues.putIfAbsent(key, () => node.value);
+    if (!_formConfig.any((n) => n.id == node.id && n.key == node.key) &&
+        mounted) {
+      setState(() {
+        _formConfig = [..._formConfig, node.copyWith(exposed: true)];
+      });
+    }
+    return controller;
+  }
+
+  /// 「立即生成」主按钮（满宽）。抽出来是为了和 AI 按钮排在同一行。
+  Widget _buildExecuteButton() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: _isExecuting ? 1 : 0),
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOut,
+      builder: (context, t, _) {
+        final l = AppLocalizations.of(context);
+        return SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              backgroundColor: Color.lerp(context.accent, context.containerFill, t),
+              foregroundColor: Color.lerp(context.onAccent, context.textSecondary, t),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: _isExecuting ? null : _handleExecute,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, anim) => FadeTransition(
+                opacity: anim,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.94, end: 1).animate(anim),
+                  child: child,
+                ),
+              ),
+              child: Row(
+                // 键随状态变：不换键的话 AnimatedSwitcher 认为还是同一个
+                // child，只更新文字，动画不会触发
+                key: ValueKey<bool>(_isExecuting),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 固定 24 见方：转圈只有 20，尺寸一换按钮高度就会抽一下
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Center(
+                      child: _isExecuting
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: context.textSecondary,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.rocket_launch),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isExecuting ? l.runSubmitting : l.runGenerateNow,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1261,11 +1348,17 @@ class _RunViewState extends ConsumerState<RunView> {
         Row(
           children: [
             Expanded(
-              child: Text(
-                node.alias,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
+              // 长按别名行打开 AI 抽屉：文本参数预填为输出，其它参数预填为输入引用。
+              // ⚠️ 不能挂在 TextField 上：那里长按被选词菜单占用。
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onLongPress: () => _openAiSheet(initialParam: node),
+                child: Text(
+                  node.alias,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),

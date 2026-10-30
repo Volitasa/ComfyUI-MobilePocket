@@ -9,12 +9,14 @@ import '../../providers/theme_mode_provider.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/local_workflow_provider.dart';
 import '../../providers/github_token_provider.dart';
+import '../../providers/ai_settings_provider.dart';
 import '../widgets/section_title.dart';
 import 'server_config_view.dart';
 import 'about_view.dart';
 import 'snapshot_list_view.dart';
 import 'workflow_storage_view.dart';
 import 'github_token_view.dart';
+import 'ai_service_view.dart';
 
 import '../../theme.dart';
 
@@ -40,6 +42,7 @@ class SettingsView extends ConsumerWidget {
     final preferred = ref.watch(localeProvider);
     final themeChoice = ref.watch(themeModeProvider);
     final haptics = ref.watch(hapticsProvider);
+    final aiSettings = ref.watch(aiSettingsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -63,6 +66,17 @@ class SettingsView extends ConsumerWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ServerConfigView()),
+            ),
+          ),
+          _EntryTile(
+            icon: Icons.smart_toy_outlined,
+            title: l.settingsAiService,
+            subtitle: aiSettings.active == null
+                ? l.settingsAiServiceNone
+                : l.settingsAiServiceActive(aiSettings.active!.name),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AiServiceView()),
             ),
           ),
           const Divider(height: 24),

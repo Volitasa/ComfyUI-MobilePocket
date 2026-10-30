@@ -1,21 +1,17 @@
 {
   "@@locale": "en",
-
   "cancel": "Cancel",
   "delete": "Delete",
   "save": "Save",
-
   "navWorkflow": "Workflows",
   "navHistory": "History",
   "navGallery": "Gallery",
   "navSettings": "Settings",
-
   "taskStatusQueued": "Queued",
   "taskStatusRunning": "Running",
   "taskStatusCompleted": "Completed",
   "taskStatusFailed": "Failed",
   "taskStatusInterrupted": "Interrupted",
-
   "taskPhaseWaiting": "Waiting to run",
   "taskPhaseStarted": "Task started",
   "taskPhaseCached": "Using cached nodes",
@@ -29,7 +25,6 @@
   "taskPhaseInterrupted": "Task interrupted",
   "taskPhaseLost": "Task not found on the server",
   "taskPhaseParseFailed": "Could not read the result data",
-
   "historyTitle": "History",
   "historySyncTooltip": "Sync task status",
   "historySynced": "Task status synced",
@@ -56,11 +51,25 @@
   "historyRefGroupLabel": "Input",
   "historyRefPeekToInput": "Input {index} / {total} · release to go back",
   "@historyRefPeekToInput": {
-    "placeholders": { "index": { "type": "int" }, "total": { "type": "int" } }
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "historyRefPeekToOutput": "{index} / {total} · release to go back",
   "@historyRefPeekToOutput": {
-    "placeholders": { "index": { "type": "int" }, "total": { "type": "int" } }
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "historyRefUnavailable": "Reference image is no longer on the server",
   "historyRefServerRemoved": "The original server was removed, so the reference image is unavailable",
@@ -72,7 +81,6 @@
   "historyStopNotRunning": "This task has already finished",
   "historyStopFailed": "Failed to stop. Check the server connection.",
   "historyStopActionDelete": "Delete anyway",
-
   "serverDefaultName": "Server",
   "serverTitle": "Server config",
   "serverAdd": "Add server",
@@ -100,7 +108,6 @@
   "serverActivateFailed": "Could not connect to \"{name}\": neither address is reachable",
   "serverActivatedPrimary": "Connected to \"{name}\" (primary)",
   "serverActivatedBackup": "Connected to \"{name}\" (backup)",
-
   "settingsTitle": "Settings",
   "settingsSectionGeneral": "General",
   "settingsSectionConnection": "Connection",
@@ -128,9 +135,7 @@
   "settingsTokenUnset": "Not set",
   "settingsAbout": "About",
   "settingsAboutSubtitle": "Version info and updates",
-
   "workflowLocalImport": "Local import",
-
   "workflowSnapshotDeleted": "This workflow snapshot was deleted",
   "workflowLocalMissing": "This local workflow no longer exists (it may have been deleted)",
   "workflowParsedCleared": "The parsed result was cleared. Please parse it again",
@@ -147,16 +152,26 @@
   "configParamCount": "{total} parameters",
   "configSaveButton": "Save form configuration",
   "configSpecsFetching": "Fetching node info...",
-  "@configSpecsFetching": { "description": "Config: fetching node specs from server" },
+  "@configSpecsFetching": {
+    "description": "Config: fetching node specs from server"
+  },
   "configSpecsDegraded": "Node info unavailable; controls inferred from parameter names",
-  "@configSpecsDegraded": { "description": "Config: degraded after spec fetch failure/timeout" },
+  "@configSpecsDegraded": {
+    "description": "Config: degraded after spec fetch failure/timeout"
+  },
   "configNodeMissingOnServer": "Missing node on server: {classType}",
   "@configNodeMissingOnServer": {
     "description": "Config: node class not found on server",
-    "placeholders": { "classType": { "type": "String" } }
+    "placeholders": {
+      "classType": {
+        "type": "String"
+      }
+    }
   },
   "configParamMissingOnServer": "Parameter not found on server",
-  "@configParamMissingOnServer": { "description": "Config: param missing from node spec" },
+  "@configParamMissingOnServer": {
+    "description": "Config: param missing from node spec"
+  },
   "paramAliasHint": "e.g. description of the subject",
   "paramTypeText": "Text",
   "paramTypeSeed": "Seed",
@@ -188,7 +203,6 @@
   "aliasLora": "LoRA model",
   "aliasControlNet": "ControlNet",
   "aliasUpscaleModel": "Upscale model",
-
   "runSnapshotDeleted": "The matching workflow snapshot was deleted, so it cannot be run again",
   "runNoFormConfig": "No valid form configuration found",
   "runParamsRestored": "Parameters from that run were applied ({count} could not be applied because the configuration changed)",
@@ -208,23 +222,37 @@
   "runIntHint": "Integer",
   "runFloatHint": "Number (decimals allowed)",
   "runNumberInvalid": "Enter a number",
-  "@runNumberInvalid": { "description": "Run page: non-numeric input" },
+  "@runNumberInvalid": {
+    "description": "Run page: non-numeric input"
+  },
   "runNumberRange": "Range {min} – {max}",
   "@runNumberRange": {
     "description": "Run page: value outside the server range",
     "placeholders": {
-      "min": { "type": "String" },
-      "max": { "type": "String" }
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
     }
   },
   "runSizeRatio": "Aspect ratio",
-  "@runSizeRatio": { "description": "Run page size card: ratio presets" },
+  "@runSizeRatio": {
+    "description": "Run page size card: ratio presets"
+  },
   "runSizeLongEdge": "Long edge",
-  "@runSizeLongEdge": { "description": "Run page size card: long edge presets" },
+  "@runSizeLongEdge": {
+    "description": "Run page size card: long edge presets"
+  },
   "runSizeCustom": "Custom size",
-  "@runSizeCustom": { "description": "Run page size card: custom width/height" },
+  "@runSizeCustom": {
+    "description": "Run page size card: custom width/height"
+  },
   "runUseServerImage": "Use original",
-  "@runUseServerImage": { "description": "Run page: drop the picked image and use the workflow one" },
+  "@runUseServerImage": {
+    "description": "Run page: drop the picked image and use the workflow one"
+  },
   "runBoolOn": "On",
   "runBoolOff": "Off",
   "runUsingServerImage": "Using image: {name}",
@@ -248,7 +276,6 @@
   "runFoldMenu": "Expand / collapse",
   "runExpandAll": "Expand all",
   "runCollapseAll": "Collapse all",
-
   "parseStatusConnecting": "Connecting to the server...",
   "parseLoadTimeout": "Timed out loading the ComfyUI frontend. Check the server connection",
   "parseStatusLoadingFrontend": "Loading the ComfyUI frontend...",
@@ -257,7 +284,6 @@
   "parseConvertTimeout": "Conversion timed out. The workflow may contain unsupported nodes",
   "parseConvertFailed": "Frontend conversion failed: {error}",
   "parseTitle": "Parse: {name}",
-
   "homeGroupApi": "API workflows · ready to run",
   "homeGroupUi": "UI workflows · need parsing",
   "homeWorkflowSourceNote": "Tip: workflows come from ComfyUI's userdata/workflows directory. The UI format is the raw structure saved by the ComfyUI interface; it must be converted to the API structure before it can run. Parse it right in the app — no plugin needed — or install the ComfyUI-AutoSaveAPI plugin on the server to generate API JSON automatically (https://github.com/Volitasa/ComfyUI-AutoSaveAPI.git).",
@@ -291,7 +317,6 @@
   "homeSavedToLocal": "Saved to the local library",
   "nameLabel": "Name",
   "clear": "Clear",
-
   "localEmpty": "Local library is empty",
   "localSummary": "Local library: {count} items · {size}",
   "localImportButton": "Import workflow JSON",
@@ -304,12 +329,10 @@
   "localDeleteBody": "Delete \"{name}\"?\n\nIts node configuration will be removed as well. This cannot be undone. Existing generation records are not affected.",
   "localDeleted": "Deleted",
   "localJsonParseFailed": "Failed to parse the JSON file",
-
   "homeRefreshTooltip": "Refresh workflow list",
   "homeTabServer": "Server",
   "homeTabLocal": "Local",
   "notConnected": "Not connected",
-
   "galleryRefreshTooltip": "Refresh",
   "galleryEmptyTitle": "No generated images yet",
   "galleryEmptyHint": "Images are saved here automatically after generation",
@@ -323,7 +346,6 @@
   "gallerySaving": "Saving...",
   "gallerySaveToAlbum": "Save to album",
   "galleryShareSoon": "Sharing is coming soon",
-
   "storageTitle": "Workflow storage",
   "storageEmpty": "No workflows saved on this device",
   "storageSummary": "{total} items · {size} in total",
@@ -334,7 +356,6 @@
   "storageParsedAt": "Parsed from UI workflow · {time} · {size}",
   "unknownConnection": "Unknown connection",
   "storageClearCacheBody": "Clear the parsed result of \"{name}\"?\n\nIt returns to the unparsed state and can be parsed again from the server list. Saved node configuration is not affected.",
-
   "snapshotDeleteTitle": "Delete snapshot",
   "snapshotDeleteBody": "Delete \"{name}\"?\n\nAfter deletion, the {count} generation records referencing it cannot be run again.",
   "snapshotDeleted": "Snapshot deleted",
@@ -345,14 +366,12 @@
   "snapshotSourceServer": "Source server: {name}",
   "snapshotRefCount": "Referenced by {count} generation records",
   "snapshotNoRef": "Not referenced by any generation record",
-
   "tokenTitle": "GitHub access token",
   "tokenSaved": "Token saved",
   "tokenCleared": "Token cleared",
   "tokenConfigured": "Configured",
   "tokenClearButton": "Clear token",
   "tokenLocalOnlyNote": "The token is stored on this device only and is never uploaded.",
-
   "updateCheckButton": "Check for updates",
   "updateSourceNote": "Update source: GitHub Releases",
   "aboutVersionBuild": "Version {version} (build {build})",
@@ -369,20 +388,17 @@
   "updateDownloading": "Downloading...",
   "updateDownloadInstall": "Download and install",
   "installLaunchFailed": "Could not open the installer: {message}",
-
   "saveAlbumPermission": "Gallery permission required",
   "saveAlbumTitle": "Save to album",
   "saveAlbumBody": "This PNG embeds workflow information. Choose how to save it:",
   "saveAlbumPlain": "Plain image (info removed)",
   "saveAlbumWithWorkflow": "Original image with workflow",
-
   "parseBadPayload": "The frontend returned unrecognized data",
   "parseNoWorkflow": "The frontend did not return a workflow structure",
   "parseUnreadable": "The parse result could not be read",
   "convertEmpty": "The conversion result is empty (the workflow may have no runnable nodes)",
   "convertUiNotApi": "The frontend returned a UI structure instead of an API structure",
   "convertBadNode": "Item {index} of the conversion result is not a valid API node",
-
   "updateRepoForbiddenWithToken": "Repository not accessible: make sure the token has Contents read permission for this repository and has not expired",
   "updateRepoForbidden": "Repository not accessible. If it is private, enter a read-only token in \"Settings → GitHub access token\" and try again",
   "updateTokenInvalid": "Token invalid or expired. Update or clear it in \"Settings → GitHub access token\"",
@@ -408,139 +424,320 @@
   "updateCheckFailedRetry": "Update check failed. Please try again later",
   "updateNoPending": "No version pending download",
   "updateDownloadFailedRetry": "Download failed. Please try again later",
-
   "localSourceImport": "Imported",
   "localSourceSaved": "Saved from server",
   "unknownSize": "Unknown size",
-
   "configExpandAll": "Expand all",
-  "@configExpandAll": { "description": "Config page: expand all node groups" },
+  "@configExpandAll": {
+    "description": "Config page: expand all node groups"
+  },
   "configCollapseAll": "Collapse all",
-  "@configCollapseAll": { "description": "Config page: collapse all node groups" },
+  "@configCollapseAll": {
+    "description": "Config page: collapse all node groups"
+  },
   "configSearchHint": "Search params or nodes",
-  "@configSearchHint": { "description": "Config page: search field hint" },
+  "@configSearchHint": {
+    "description": "Config page: search field hint"
+  },
   "configSearchEmpty": "No matching params",
-  "@configSearchEmpty": { "description": "Config page: search empty state" },
+  "@configSearchEmpty": {
+    "description": "Config page: search empty state"
+  },
   "configNodeSelectAll": "Select all in this node",
-  "@configNodeSelectAll": { "description": "Config page: select all params of a node" },
+  "@configNodeSelectAll": {
+    "description": "Config page: select all params of a node"
+  },
   "configNodeClearAll": "Clear this node",
-  "@configNodeClearAll": { "description": "Config page: unselect all params of a node" },
+  "@configNodeClearAll": {
+    "description": "Config page: unselect all params of a node"
+  },
   "configFormCount": "{count} of {total} in your form",
   "@configFormCount": {
     "description": "Config page: main view count, how many are in the form out of the total",
     "placeholders": {
-      "count": { "type": "int" },
-      "total": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "configFormHint": "Long-press to reorder; renaming or removing only changes the phone form",
-  "@configFormHint": { "description": "Config page: main view subtitle" },
+  "@configFormHint": {
+    "description": "Config page: main view subtitle"
+  },
   "configFormEmpty": "Nothing in your form yet",
-  "@configFormEmpty": { "description": "Config page: main view empty state" },
+  "@configFormEmpty": {
+    "description": "Config page: main view empty state"
+  },
   "configAddParams": "Add parameters",
-  "@configAddParams": { "description": "Config page: entry to the full parameter list" },
+  "@configAddParams": {
+    "description": "Config page: entry to the full parameter list"
+  },
   "configAddParamsCount": "Add parameters ({count} more)",
   "@configAddParamsCount": {
     "description": "Config page: add entry, with how many are left to add",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "configRemoveParam": "Remove from form",
-  "@configRemoveParam": { "description": "Config page: remove this param from the phone form" },
+  "@configRemoveParam": {
+    "description": "Config page: remove this param from the phone form"
+  },
   "configPickerTitle": "Add parameters",
-  "@configPickerTitle": { "description": "Param picker page: title" },
+  "@configPickerTitle": {
+    "description": "Param picker page: title"
+  },
   "configPickerDone": "Done",
-  "@configPickerDone": { "description": "Param picker page: done button" },
+  "@configPickerDone": {
+    "description": "Param picker page: done button"
+  },
   "categoryPrompt": "Prompt",
-  "@categoryPrompt": { "description": "Param picker page: category - prompt" },
+  "@categoryPrompt": {
+    "description": "Param picker page: category - prompt"
+  },
   "categorySampling": "Sampling",
-  "@categorySampling": { "description": "Param picker page: category - sampling" },
+  "@categorySampling": {
+    "description": "Param picker page: category - sampling"
+  },
   "categorySize": "Size",
-  "@categorySize": { "description": "Param picker page: category - canvas size" },
+  "@categorySize": {
+    "description": "Param picker page: category - canvas size"
+  },
   "categoryModel": "Model and weights",
-  "@categoryModel": { "description": "Param picker page: category - model and weights" },
+  "@categoryModel": {
+    "description": "Param picker page: category - model and weights"
+  },
   "categoryControl": "Fine control",
-  "@categoryControl": { "description": "Param picker page: category - fine control" },
+  "@categoryControl": {
+    "description": "Param picker page: category - fine control"
+  },
   "categoryOther": "Other nodes",
-  "@categoryOther": { "description": "Param picker page: category - other" },
+  "@categoryOther": {
+    "description": "Param picker page: category - other"
+  },
   "roleLinksTo": "Feeds {node} · {slot}",
   "@roleLinksTo": {
     "description": "Node role: which node and which input this node feeds (both names are official, never translated)",
     "placeholders": {
-      "node": { "type": "String" },
-      "slot": { "type": "String" }
+      "node": {
+        "type": "String"
+      },
+      "slot": {
+        "type": "String"
+      }
     }
   },
   "roleLinksToMany": "Feeds {node} · {slot} — {count} targets in total",
   "@roleLinksToMany": {
     "description": "Node role: several downstream targets; show the first one plus the total count",
     "placeholders": {
-      "node": { "type": "String" },
-      "slot": { "type": "String" },
-      "count": { "type": "int" }
+      "node": {
+        "type": "String"
+      },
+      "slot": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "historySearchHint": "Search workflow or prompt",
-  "@historySearchHint": { "description": "History page: search field hint" },
+  "@historySearchHint": {
+    "description": "History page: search field hint"
+  },
   "historySearchEmpty": "No matching records",
-  "@historySearchEmpty": { "description": "History page: search empty state" },
+  "@historySearchEmpty": {
+    "description": "History page: search empty state"
+  },
   "historyFilterAll": "All",
-  "@historyFilterAll": { "description": "History page: status filter - all" },
+  "@historyFilterAll": {
+    "description": "History page: status filter - all"
+  },
   "historyFilterPending": "Running",
-  "@historyFilterPending": { "description": "History page: status filter - pending (queued + running)" },
-
+  "@historyFilterPending": {
+    "description": "History page: status filter - pending (queued + running)"
+  },
   "runSelectPlaceholder": "Select one",
-  "@runSelectPlaceholder": { "description": "Run page: placeholder when no dropdown value is selected" },
+  "@runSelectPlaceholder": {
+    "description": "Run page: placeholder when no dropdown value is selected"
+  },
   "runModelMissing": "This model is not on the server",
-  "@runModelMissing": { "description": "Run page: the model in the workflow is missing on the server" },
+  "@runModelMissing": {
+    "description": "Run page: the model in the workflow is missing on the server"
+  },
   "runNodeMissingOnServer": "Missing node on server: {classType}",
   "@runNodeMissingOnServer": {
     "description": "Run page: server does not know this node (fetched OK but empty)",
-    "placeholders": { "classType": { "type": "String" } }
+    "placeholders": {
+      "classType": {
+        "type": "String"
+      }
+    }
   },
   "runOptionMissingOnServer": "{name} is not on the server. Please choose another value.",
   "@runOptionMissingOnServer": {
     "description": "Run page: dropdown value is not among server options",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "runRefreshModels": "Refresh model list",
-  "@runRefreshModels": { "description": "Run page: manually refetch server model list" },
+  "@runRefreshModels": {
+    "description": "Run page: manually refetch server model list"
+  },
   "runOptionsRefreshed": "Refreshed",
-  "@runOptionsRefreshed": { "description": "Run page: refresh succeeded" },
+  "@runOptionsRefreshed": {
+    "description": "Run page: refresh succeeded"
+  },
   "runOptionsRefreshFailed": "Refresh failed — check the connection",
-  "@runOptionsRefreshFailed": { "description": "Run page: refresh failed" },
-
+  "@runOptionsRefreshFailed": {
+    "description": "Run page: refresh failed"
+  },
   "wfLastRun": "Last run {time}",
   "@wfLastRun": {
     "description": "Workflow list: when this workflow was last run",
-    "placeholders": { "time": { "type": "String" } }
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   },
   "wfNeverRun": "Never run",
-  "@wfNeverRun": { "description": "Workflow list: never run before" },
-
+  "@wfNeverRun": {
+    "description": "Workflow list: never run before"
+  },
   "badgeReconnecting": "Reconnecting",
-  "@badgeReconnecting": { "description": "Connection badge: was connected, currently dropped, auto-reconnecting" },
-
+  "@badgeReconnecting": {
+    "description": "Connection badge: was connected, currently dropped, auto-reconnecting"
+  },
   "settingsHaptics": "Haptic feedback",
-  "@settingsHaptics": { "description": "Settings entry: choose which actions vibrate" },
+  "@settingsHaptics": {
+    "description": "Settings entry: choose which actions vibrate"
+  },
   "settingsHapticsOff": "Off",
-  "@settingsHapticsOff": { "description": "Settings subtitle: no haptic category enabled" },
+  "@settingsHapticsOff": {
+    "description": "Settings subtitle: no haptic category enabled"
+  },
   "settingsHapticsCount": "{count} on",
   "@settingsHapticsCount": {
     "description": "Settings subtitle: how many haptic categories are on",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "hapticsNav": "Switching tabs",
-  "@hapticsNav": { "description": "Haptic category: switching bottom tabs" },
+  "@hapticsNav": {
+    "description": "Haptic category: switching bottom tabs"
+  },
   "hapticsCheck": "Ticking parameters",
-  "@hapticsCheck": { "description": "Haptic category: tick / untick / select all parameters" },
+  "@hapticsCheck": {
+    "description": "Haptic category: tick / untick / select all parameters"
+  },
   "hapticsReorder": "Drag to reorder",
-  "@hapticsReorder": { "description": "Haptic category: long-press drag to reorder parameters" },
+  "@hapticsReorder": {
+    "description": "Haptic category: long-press drag to reorder parameters"
+  },
   "hapticsFold": "Expanding cards",
-  "@hapticsFold": { "description": "Haptic category: expand / collapse parameter cards" },
+  "@hapticsFold": {
+    "description": "Haptic category: expand / collapse parameter cards"
+  },
   "hapticsSubmit": "Running a task",
-  "@hapticsSubmit": { "description": "Haptic category: task submitted successfully" },
+  "@hapticsSubmit": {
+    "description": "Haptic category: task submitted successfully"
+  },
   "hapticsAllOn": "Turn all on",
-  "@hapticsAllOn": { "description": "Haptic dialog: enable every category" },
+  "@hapticsAllOn": {
+    "description": "Haptic dialog: enable every category"
+  },
   "hapticsAllOff": "Turn all off",
-  "@hapticsAllOff": { "description": "Haptic dialog: disable every category" }
+  "@hapticsAllOff": {
+    "description": "Haptic dialog: disable every category"
+  },
+  "settingsAiService": "AI service",
+  "settingsAiServiceNone": "Not configured",
+  "settingsAiServiceActive": "Current: {name}",
+  "aiServiceTitle": "AI service",
+  "aiServiceEmpty": "No AI service yet",
+  "aiServiceModel": "Model",
+  "aiServiceBaseUrl": "Base URL",
+  "aiServiceApiKey": "API key",
+  "aiServiceKeyNote": "The key is stored in this app's private storage and is only sent to the address above.",
+  "aiServiceTest": "Test connection",
+  "aiServiceTestOk": "Connected",
+  "aiServiceTestFail": "Connection failed: {msg}",
+  "aiServiceDelete": "Delete this service",
+  "aiServiceActiveTag": "Active",
+  "aiEntry": "AI",
+  "aiSheetTitle": "AI assistant",
+  "aiInputLabel": "Input · multiple",
+  "aiOutputLabel": "Output · one",
+  "aiAddInput": "Add a reference node",
+  "aiAddOutput": "Choose the field to fill",
+  "aiPickNodes": "Choose nodes",
+  "aiSelectedCount": "{count} selected",
+  "aiConfirmCount": "Done · {count}",
+  "aiSearchNodes": "Search nodes or fields",
+  "aiTabImage": "Images",
+  "aiTabText": "Text",
+  "aiTabAll": "All",
+  "aiEmptyValue": "(empty)",
+  "aiTemplateImage": "Prompt from images",
+  "aiTemplateRewrite": "Rewrite",
+  "aiTemplateMore": "More…",
+  "aiInstructionHint": "What should it do?",
+  "aiGenerate": "Generate",
+  "aiStop": "Stop",
+  "aiGenerating": "Generating",
+  "aiResultTitle": "Suggestion",
+  "aiCharsChange": "{after} chars · was {before}",
+  "aiWrite": "Write",
+  "aiWritten": "Written",
+  "aiWrittenBanner": "Written to “{target}”",
+  "aiCopy": "Copy",
+  "aiCopied": "Copied",
+  "aiUndo": "Undo",
+  "aiReadingImages": "Reading images {done}/{total}",
+  "aiImagesSent": "{count} full-size images sent · {size}",
+  "aiNoProvider": "Set up an AI service first",
+  "aiNeedOutput": "Choose a field to fill first",
+  "aiNeedImage": "Prompt-from-images needs at least one image",
+  "aiNeedInstruction": "Write a request, or pick a template",
+  "aiCanceled": "Cancelled",
+  "aiNotStructured": "Not in the expected format",
+  "aiWriteNodeMissing": "Target no longer exists",
+  "aiWriteNotText": "Target is not a text field",
+  "aiWriteNotAllowed": "Not in the chosen targets",
+  "aiWriteTooLong": "Text is too long",
+  "aiErrorUnauthorized": "Invalid key or no permission",
+  "aiErrorNotFound": "Wrong URL or model name",
+  "aiErrorRateLimited": "Too many requests, try later",
+  "aiErrorServer": "Service unavailable",
+  "aiErrorNetwork": "Cannot reach the service",
+  "aiErrorTimeout": "Took too long, stopped",
+  "aiErrorBadRequest": "Request rejected",
+  "aiRetry": "Retry",
+  "aiOpenSettings": "Open settings",
+  "aiImageMissing": "Original image is gone from the server",
+  "aiRemove": "Remove",
+  "aiCannotWrite": "Cannot write: {reason}",
+  "aiServiceName": "Name",
+  "aiServiceUse": "Use",
+  "aiServiceAdd": "Add AI service",
+  "aiServiceEdit": "Edit AI service",
+  "aiServiceDeleteTitle": "Delete AI service",
+  "aiServicePresetDeepSeek": "DeepSeek preset",
+  "aiServicePresetCustom": "Custom",
+  "aiServiceDeleteConfirm": "Delete “{name}”?",
+  "aiTemplateCustom": "Custom",
+  "aiServedModel": "Model: {model}"
 }

@@ -2557,6 +2557,468 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'全部关闭'**
   String get hapticsAllOff;
+
+  /// 设置项：AI 供应商配置入口
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 服务'**
+  String get settingsAiService;
+
+  /// 设置项副标题：没有可用供应商
+  ///
+  /// In zh, this message translates to:
+  /// **'未配置'**
+  String get settingsAiServiceNone;
+
+  /// AI 供应商配置页标题
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 服务'**
+  String get aiServiceTitle;
+
+  /// 供应商列表空态
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有配置 AI 服务'**
+  String get aiServiceEmpty;
+
+  /// 选择器：已选数量
+  ///
+  /// In zh, this message translates to:
+  /// **'已选 {count}'**
+  String aiSelectedCount(int count);
+
+  /// 选择器：确定按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'确定 · {count} 项'**
+  String aiConfirmCount(int count);
+
+  /// 结果卡：字数变化
+  ///
+  /// In zh, this message translates to:
+  /// **'{after} 字 · 原 {before} 字'**
+  String aiCharsChange(int after, int before);
+
+  /// 写入成功横幅
+  ///
+  /// In zh, this message translates to:
+  /// **'已写入「{target}」'**
+  String aiWrittenBanner(String target);
+
+  /// 读取原图进度
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取原图 {done}/{total}'**
+  String aiReadingImages(int done, int total);
+
+  /// 发送前提示：图片数量与体积
+  ///
+  /// In zh, this message translates to:
+  /// **'已发送 {count} 张原图 · {size}'**
+  String aiImagesSent(int count, String size);
+
+  /// 写入校验失败
+  ///
+  /// In zh, this message translates to:
+  /// **'无法写入：{reason}'**
+  String aiCannotWrite(String reason);
+
+  /// 测试连接失败
+  ///
+  /// In zh, this message translates to:
+  /// **'连接失败：{msg}'**
+  String aiServiceTestFail(String msg);
+
+  /// No description provided for @aiServiceName.
+  ///
+  /// In zh, this message translates to:
+  /// **'名称'**
+  String get aiServiceName;
+
+  /// No description provided for @aiServiceUse.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用'**
+  String get aiServiceUse;
+
+  /// AI 服务配置
+  ///
+  /// In zh, this message translates to:
+  /// **'添加 AI 服务'**
+  String get aiServiceAdd;
+
+  /// AI 服务配置
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑 AI 服务'**
+  String get aiServiceEdit;
+
+  /// AI 服务配置
+  ///
+  /// In zh, this message translates to:
+  /// **'删除 AI 服务'**
+  String get aiServiceDeleteTitle;
+
+  /// AI 服务配置
+  ///
+  /// In zh, this message translates to:
+  /// **'DeepSeek 预设'**
+  String get aiServicePresetDeepSeek;
+
+  /// AI 服务配置
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义'**
+  String get aiServicePresetCustom;
+
+  /// 删除确认
+  ///
+  /// In zh, this message translates to:
+  /// **'确定删除「{name}」？'**
+  String aiServiceDeleteConfirm(String name);
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'添加参考节点'**
+  String get aiAddInput;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'选择要填充的参数'**
+  String get aiAddOutput;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消'**
+  String get aiCanceled;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制'**
+  String get aiCopied;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'复制'**
+  String get aiCopy;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'（空）'**
+  String get aiEmptyValue;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'AI'**
+  String get aiEntry;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'请求被拒绝'**
+  String get aiErrorBadRequest;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'连不上服务'**
+  String get aiErrorNetwork;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'地址或模型名不对'**
+  String get aiErrorNotFound;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'请求太频繁，稍等再试'**
+  String get aiErrorRateLimited;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'服务暂时不可用'**
+  String get aiErrorServer;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'等太久了，已停止'**
+  String get aiErrorTimeout;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'密钥无效或无权限'**
+  String get aiErrorUnauthorized;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'生成'**
+  String get aiGenerate;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'正在生成'**
+  String get aiGenerating;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'原图已不在服务器'**
+  String get aiImageMissing;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'输入 · 可多选'**
+  String get aiInputLabel;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'描述你要做什么…'**
+  String get aiInstructionHint;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'看图写词需要至少一张参考图'**
+  String get aiNeedImage;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'写一句要求，或选一个模板'**
+  String get aiNeedInstruction;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'先选要填充的参数'**
+  String get aiNeedOutput;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'先配置 AI 服务'**
+  String get aiNoProvider;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'未按格式返回'**
+  String get aiNotStructured;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'去设置'**
+  String get aiOpenSettings;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'输出 · 单选'**
+  String get aiOutputLabel;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'选择节点'**
+  String get aiPickNodes;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'移除'**
+  String get aiRemove;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'建议'**
+  String get aiResultTitle;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get aiRetry;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索节点或参数'**
+  String get aiSearchNodes;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'当前'**
+  String get aiServiceActiveTag;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'API Key'**
+  String get aiServiceApiKey;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'接口地址'**
+  String get aiServiceBaseUrl;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'删除此服务'**
+  String get aiServiceDelete;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'密钥保存在本机应用私有存储，只会随请求发往上面填写的地址。'**
+  String get aiServiceKeyNote;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'模型'**
+  String get aiServiceModel;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'测试连接'**
+  String get aiServiceTest;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'连接成功'**
+  String get aiServiceTestOk;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 助手'**
+  String get aiSheetTitle;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'停止'**
+  String get aiStop;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get aiTabAll;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'图片'**
+  String get aiTabImage;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'文本'**
+  String get aiTabText;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'看图写词'**
+  String get aiTemplateImage;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'更多…'**
+  String get aiTemplateMore;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'改写'**
+  String get aiTemplateRewrite;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销'**
+  String get aiUndo;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'写入'**
+  String get aiWrite;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'目标已变化'**
+  String get aiWriteNodeMissing;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'不在本次目标里'**
+  String get aiWriteNotAllowed;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'目标不是文本框'**
+  String get aiWriteNotText;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'文本过长'**
+  String get aiWriteTooLong;
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'已写入'**
+  String get aiWritten;
+
+  /// 设置项副标题：当前供应商名
+  ///
+  /// In zh, this message translates to:
+  /// **'当前：{name}'**
+  String settingsAiServiceActive(String name);
+
+  /// AI 助手
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义'**
+  String get aiTemplateCustom;
+
+  /// 结果卡：供应商实际返回的模型名
+  ///
+  /// In zh, this message translates to:
+  /// **'模型：{model}'**
+  String aiServedModel(String model);
 }
 
 class _AppLocalizationsDelegate

@@ -1372,4 +1372,257 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get hapticsAllOff => '全部关闭';
+
+  @override
+  String get settingsAiService => 'AI 服务';
+
+  @override
+  String get settingsAiServiceNone => '未配置';
+
+  @override
+  String get aiServiceTitle => 'AI 服务';
+
+  @override
+  String get aiServiceEmpty => '还没有配置 AI 服务';
+
+  @override
+  String aiSelectedCount(int count) {
+    return '已选 $count';
+  }
+
+  @override
+  String aiConfirmCount(int count) {
+    return '确定 · $count 项';
+  }
+
+  @override
+  String aiCharsChange(int after, int before) {
+    return '$after 字 · 原 $before 字';
+  }
+
+  @override
+  String aiWrittenBanner(String target) {
+    return '已写入「$target」';
+  }
+
+  @override
+  String aiReadingImages(int done, int total) {
+    return '正在读取原图 $done/$total';
+  }
+
+  @override
+  String aiImagesSent(int count, String size) {
+    return '已发送 $count 张原图 · $size';
+  }
+
+  @override
+  String aiCannotWrite(String reason) {
+    return '无法写入：$reason';
+  }
+
+  @override
+  String aiServiceTestFail(String msg) {
+    return '连接失败：$msg';
+  }
+
+  @override
+  String get aiServiceName => '名称';
+
+  @override
+  String get aiServiceUse => '使用';
+
+  @override
+  String get aiServiceAdd => '添加 AI 服务';
+
+  @override
+  String get aiServiceEdit => '编辑 AI 服务';
+
+  @override
+  String get aiServiceDeleteTitle => '删除 AI 服务';
+
+  @override
+  String get aiServicePresetDeepSeek => 'DeepSeek 预设';
+
+  @override
+  String get aiServicePresetCustom => '自定义';
+
+  @override
+  String aiServiceDeleteConfirm(String name) {
+    return '确定删除「$name」？';
+  }
+
+  @override
+  String get aiAddInput => '添加参考节点';
+
+  @override
+  String get aiAddOutput => '选择要填充的参数';
+
+  @override
+  String get aiCanceled => '已取消';
+
+  @override
+  String get aiCopied => '已复制';
+
+  @override
+  String get aiCopy => '复制';
+
+  @override
+  String get aiEmptyValue => '（空）';
+
+  @override
+  String get aiEntry => 'AI';
+
+  @override
+  String get aiErrorBadRequest => '请求被拒绝';
+
+  @override
+  String get aiErrorNetwork => '连不上服务';
+
+  @override
+  String get aiErrorNotFound => '地址或模型名不对';
+
+  @override
+  String get aiErrorRateLimited => '请求太频繁，稍等再试';
+
+  @override
+  String get aiErrorServer => '服务暂时不可用';
+
+  @override
+  String get aiErrorTimeout => '等太久了，已停止';
+
+  @override
+  String get aiErrorUnauthorized => '密钥无效或无权限';
+
+  @override
+  String get aiGenerate => '生成';
+
+  @override
+  String get aiGenerating => '正在生成';
+
+  @override
+  String get aiImageMissing => '原图已不在服务器';
+
+  @override
+  String get aiInputLabel => '输入 · 可多选';
+
+  @override
+  String get aiInstructionHint => '描述你要做什么…';
+
+  @override
+  String get aiNeedImage => '看图写词需要至少一张参考图';
+
+  @override
+  String get aiNeedInstruction => '写一句要求，或选一个模板';
+
+  @override
+  String get aiNeedOutput => '先选要填充的参数';
+
+  @override
+  String get aiNoProvider => '先配置 AI 服务';
+
+  @override
+  String get aiNotStructured => '未按格式返回';
+
+  @override
+  String get aiOpenSettings => '去设置';
+
+  @override
+  String get aiOutputLabel => '输出 · 单选';
+
+  @override
+  String get aiPickNodes => '选择节点';
+
+  @override
+  String get aiRemove => '移除';
+
+  @override
+  String get aiResultTitle => '建议';
+
+  @override
+  String get aiRetry => '重试';
+
+  @override
+  String get aiSearchNodes => '搜索节点或参数';
+
+  @override
+  String get aiServiceActiveTag => '当前';
+
+  @override
+  String get aiServiceApiKey => 'API Key';
+
+  @override
+  String get aiServiceBaseUrl => '接口地址';
+
+  @override
+  String get aiServiceDelete => '删除此服务';
+
+  @override
+  String get aiServiceKeyNote => '密钥保存在本机应用私有存储，只会随请求发往上面填写的地址。';
+
+  @override
+  String get aiServiceModel => '模型';
+
+  @override
+  String get aiServiceTest => '测试连接';
+
+  @override
+  String get aiServiceTestOk => '连接成功';
+
+  @override
+  String get aiSheetTitle => 'AI 助手';
+
+  @override
+  String get aiStop => '停止';
+
+  @override
+  String get aiTabAll => '全部';
+
+  @override
+  String get aiTabImage => '图片';
+
+  @override
+  String get aiTabText => '文本';
+
+  @override
+  String get aiTemplateImage => '看图写词';
+
+  @override
+  String get aiTemplateMore => '更多…';
+
+  @override
+  String get aiTemplateRewrite => '改写';
+
+  @override
+  String get aiUndo => '撤销';
+
+  @override
+  String get aiWrite => '写入';
+
+  @override
+  String get aiWriteNodeMissing => '目标已变化';
+
+  @override
+  String get aiWriteNotAllowed => '不在本次目标里';
+
+  @override
+  String get aiWriteNotText => '目标不是文本框';
+
+  @override
+  String get aiWriteTooLong => '文本过长';
+
+  @override
+  String get aiWritten => '已写入';
+
+  @override
+  String settingsAiServiceActive(String name) {
+    return '当前：$name';
+  }
+
+  @override
+  String get aiTemplateCustom => '自定义';
+
+  @override
+  String aiServedModel(String model) {
+    return '模型：$model';
+  }
 }
