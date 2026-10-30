@@ -110,6 +110,18 @@ void main() {
     expect(find.text('1 / 4'), findsOneWidget);
   });
 
+  testWidgets('rail 悬浮不占布局：有参考图与没参考图时，主图区尺寸完全一致', (tester) async {
+    await _pumpViewer(tester, outputs: ['a.png']);
+    final without = tester.getSize(find.byType(PageView));
+
+    await _pumpViewer(tester, outputs: ['a.png'], refs: [_ref('face.png')]);
+    final withRefs = tester.getSize(find.byType(PageView));
+
+    // 这条是 2026-10-30 那条"图位置跳一下"的回归闸：rail 一旦回到布局流里，
+    // 有参考图的页主图区就被压短，出图与参考图的居中位置会对不上。
+    expect(withRefs, without);
+  });
+
   testWidgets('点 rail 里的参考图：跳到那一页，标题变「输入 1 / 2」并显示节点名', (tester) async {
     await _pumpViewer(
       tester,

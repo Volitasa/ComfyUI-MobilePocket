@@ -24,6 +24,13 @@ late Directory _galleryDir;
 /// 画廊里那张图的真实路径（分隔符跟 `dir.list()` 保持一致）
 String get _outPath => '${_galleryDir.path}${Platform.pathSeparator}out.png';
 
+/// rail 里的可点项。必须限定在 ReferenceRail 内 ——
+/// 底部 FilledButton 内部也是 InkResponse，全局查会混进来。
+Finder _railItems() => find.descendant(
+  of: find.byType(ReferenceRail),
+  matching: find.byType(InkResponse),
+);
+
 /// 一条"有快照、带一张图、喂过一张参考图"的记录。
 Map<String, dynamic> _historyJson(String localPath) => {
   'promptId': 'p1',
@@ -137,6 +144,36 @@ void main() {
     );
 
     expect(find.byTooltip('再次运行'), findsNothing);
+  });
+
+  testWidgets('点参考图：盖在本页上看，不 push 新页面、主图区几何不变', (tester) async {
+    await _openFirstImage(tester, [_historyJson(_outPath)]);
+
+    final pageBefore = tester.getSize(find.byType(PageView));
+
+    await tester.tap(_railItems().first);
+    await tester.pumpAndSettle();
+
+    // 标题变成参考图组 = 确实切过去了
+    expect(find.text('输入 1 / 1'), findsOneWidget);
+    // 底部按钮还在 = 还是画廊查看器这一页，没被换成另一个查看器
+    // （2026-10-30 之前是 push 单图页，没有这两个按钮，图位置会跳）
+    expect(find.text('保存到相册'), findsOneWidget);
+    // 主图区尺寸不变 = 图不会位移
+    expect(tester.getSize(find.byType(PageView)), pageBefore);
+  });
+
+  testWidgets('看完参考图：点画面任意处关掉，回到出图页码', (tester) async {
+    await _openFirstImage(tester, [_historyJson(_outPath)]);
+
+    await tester.tap(_railItems().first);
+    await tester.pumpAndSettle();
+    expect(find.text('输入 1 / 1'), findsOneWidget);
+
+    await tester.tapAt(const Offset(200, 200));
+    await tester.pumpAndSettle();
+    expect(find.text('输入 1 / 1'), findsNothing);
+    expect(find.text('1 / 1'), findsOneWidget);
   });
 
   test('taskByLocalPath：命中返回记录，未命中返回 null', () async {

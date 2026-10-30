@@ -30,9 +30,12 @@ class RailItem {
 
 /// 看图页底部的缩略图条：**入口 + 状态**，不是第二个看图区。
 ///
-/// 高度 48，只在"这条记录有参考图"时才出现 —— 没有参考图时整条不建，
-/// 查看器与加这个功能之前完全一致。
+/// 悬浮在主图区底部（由调用方用 `Positioned` 摆），**不参与布局**——
+/// 不挤压主图空间，也不会让"有参考图的页"和"没参考图的页"几何不一致。
+/// 只在这条记录有参考图时才出现。
 ///
+/// 为什么是半透明 + 边框：纯黑底上一块实底色会变成"贴上去的黑块"，
+/// 看不出和主图的关系；半透明能透出主图边缘，一眼知道它是浮在图上的。
 /// 为什么缩略图只有 34：48 高的条里塞 44 的方块会顶出边；点击热区靠
 /// `InkResponse` 撑到 40。为什么选中描边用白色而不是主题强调色：
 /// 看图页是纯黑底，浅色主题下 `accent` 是深绿，压上去只有约 2:1，
@@ -82,11 +85,13 @@ class ReferenceRail extends StatelessWidget {
         onPointerUp: (_) => onPeekEnd?.call(),
         onPointerCancel: (_) => onPeekEnd?.call(),
         child: Container(
-          margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(8),
+            // 半透明：透出下面的主图，读起来是"浮在图上的一条"
+            color: Colors.black.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
           ),
           child: ListView(
             scrollDirection: Axis.horizontal,

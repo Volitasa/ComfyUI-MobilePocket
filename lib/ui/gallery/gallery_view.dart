@@ -14,7 +14,6 @@ import '../../services/image_ref.dart';
 import '../../services/reference_image.dart';
 import '../../utils/task_references.dart';
 import '../../utils/task_run.dart';
-import '../widgets/image_viewer.dart';
 import '../widgets/media_route.dart';
 import '../widgets/reference_rail.dart';
 import '../widgets/zoomable_image.dart';
@@ -198,8 +197,18 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
   /// 那次生成喂进去的参考图。
   List<ReferenceImage> _refs = const [];
 
-  /// 拼参考图地址用的服务器；null = 原服务器已移除。
+  /// 原服务器已移除。null = 还在。
   String? _refBaseUrl;
+
+  /// 正在盖在页面上看的参考图下标。null = 没在看。
+  ///
+  /// 注意这里是**覆盖层**而不是 push 新页面：新页面的 AppBar / 底部按钮
+  /// 与本页不同，主图区高度会变，切过去时图会整体跳一下位置（2026-10-30 修）。
+  /// 覆盖层复用本页自己的框架，主图区几何不变，图纹丝不动。
+  int? _refIndex;
+
+  /// 这一层是"按住临时看"（松手就关）还是"点开停住看"（再点才关）。
+  bool _refPeek = false;
 
   @override
   void initState() {
@@ -308,97 +317,138 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final refIndex = _refIndex;
+    final onRef = refIndex != null;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text('${_currentIndex + 1} / ${widget.images.length}'),
-        centerTitle: true,
-        actions: [
-          // 只有"这张图能反查到生成记录、且快照还在"时才出现——
-          // 查不到就整个不建（不置灰），免得用户反复点、猜原因
-          if (_canRunAgain)
-            IconButton(
-              icon: Icon(Icons.replay, color: context.stateSuccess),
-              tooltip: AppLocalizations.of(context).historyRerun,
-              onPressed: _runAgain,
+        leading: BackButton(onPressed: _backOrCloseRef),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              onRef
+                  ? '${l.historyRefGroupLabel} ${refIndex + 1} / ${_refs.length}'
+                  : '${_currentIndex + 1} / ${widget.images.length}',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
             ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            tooltip: AppLocalizations.of(context).galleryShareTooltip,
-            onPressed: _share,
+            if (onRef)
+              // 节点官方名：不翻译、不改写（同名节点也不加后缀，靠画面区分）
+              Text(
+                _refs[refIndex].label,
+                style: const TextStyle(fontSize: 12, color: Colors.white70),
+              ),
+          ],
+        ),
+        centerTitle: true,
+        // 看参考图时这些按钮作用于"别的图"，先藏掉，免得误删误存
+        actions: onRef
+            ? null
+            : [
+                // 只有"这张图能反查到生成记录、且快照还在"时才出现——
+                // 查不到就整个不建（不置灰），免得用户反复点、猜原因
+                if (_canRunAgain)
+                  IconButton(
+                    icon: Icon(Icons.replay, color: context.stateSuccess),
+                    tooltip: l.historyRerun,
+                    onPressed: _runAgain,
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.share),
+                  tooltip: l.galleryShareTooltip,
+                  onPressed: _share,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  tooltip: l.delete,
+                  onPressed: _delete,
+                ),
+              ],
+      ),
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            // 放大态下禁止翻页：横拖应该平移图片，而不是滑走
+            physics: _zoomed ? const NeverScrollableScrollPhysics() : null,
+            onPageChanged: (idx) => setState(() {
+              _currentIndex = idx;
+              // 换页时清掉放大标记：新一页是新的缩放状态
+              _zoomed = false;
+              // 下一张可能来自另一条记录：重新反查，rail 与「再次运行」跟着变
+              _syncTaskContext();
+              // 换页了，正在看的参考图不再属于这一张
+              _refIndex = null;
+              _refPeek = false;
+            }),
+            itemCount: widget.images.length,
+            itemBuilder: (context, index) {
+              final image = Center(
+                child: Image.file(widget.images[index], fit: BoxFit.contain),
+              );
+              return ZoomableImage(
+                onZoomChanged: _handleZoomChanged,
+                // 只给首帧挂 Hero：翻到第二张时不能有两个同标签的共享元素
+                child: index == widget.initialIndex && widget.heroTag != null
+                    ? Hero(tag: widget.heroTag!, child: image)
+                    : image,
+              );
+            },
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            tooltip: AppLocalizations.of(context).delete,
-            onPressed: _delete,
+          // 参考图盖在本页上：框架不变，主图位置不动
+          if (onRef)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: _closeRef,
+                child: _refLayer(l, _refs[refIndex]),
+              ),
+            ),
+          // 悬浮在主图区底部：不占布局，看参考图前后主图区几何一致
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _buildRail(context),
           ),
         ],
       ),
-      body: PageView.builder(
-        controller: _pageController,
-        // 放大态下禁止翻页：横拖应该平移图片，而不是滑走
-        physics: _zoomed ? const NeverScrollableScrollPhysics() : null,
-        onPageChanged: (idx) => setState(() {
-          _currentIndex = idx;
-          // 换页时清掉放大标记：新一页是新的缩放状态
-          _zoomed = false;
-          // 下一张可能来自另一条记录：重新反查，rail 与「再次运行」跟着变
-          _syncTaskContext();
-        }),
-        itemCount: widget.images.length,
-        itemBuilder: (context, index) {
-          final image = Center(
-            child: Image.file(widget.images[index], fit: BoxFit.contain),
-          );
-          return ZoomableImage(
-            onZoomChanged: _handleZoomChanged,
-            // 只给首帧挂 Hero：翻到第二张时不能有两个同标签的共享元素
-            child: index == widget.initialIndex && widget.heroTag != null
-                ? Hero(tag: widget.heroTag!, child: image)
-                : image,
-          );
-        },
-      ),
       bottomNavigationBar: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildRail(context),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: context.accent,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: context.accent,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
                 ),
-                onPressed: _saving ? null : _saveToGallery,
-                icon: _saving
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          color: context.onAccent,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(Icons.save_alt),
-                label: Text(
-                  _saving
-                      ? AppLocalizations.of(context).gallerySaving
-                      : AppLocalizations.of(context).gallerySaveToAlbum,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+              ),
+              onPressed: _saving ? null : _saveToGallery,
+              icon: _saving
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: context.onAccent,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.save_alt),
+              label: Text(
+                _saving ? l.gallerySaving : l.gallerySaveToAlbum,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -431,13 +481,108 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
     if (_refs.isEmpty) return const SizedBox.shrink();
 
     final items = <RailItem>[
-      for (final ref in _refs)
+      for (var i = 0; i < _refs.length; i++)
         RailItem(
-          thumb: _refThumb(ref),
-          onTap: () => _openRef(ref),
+          thumb: _refThumb(_refs[i]),
+          selected: _refIndex == i,
+          onTap: () => _openRef(i),
+          onLongPressStart: () => _startRefPeek(i),
         ),
     ];
-    return ReferenceRail(items: items);
+    return ReferenceRail(items: items, onPeekEnd: _endRefPeek);
+  }
+
+  /// 点一下 = 打开停住看；再点画面任意处关掉。
+  void _openRef(int i) {
+    if (_refBaseUrl == null) {
+      _warnServerRemoved();
+      return;
+    }
+    setState(() {
+      _refIndex = i;
+      _refPeek = false;
+    });
+  }
+
+  /// 按住 = 临时看一眼，松手就回到当前这张出图。
+  void _startRefPeek(int i) {
+    if (_refBaseUrl == null) {
+      _warnServerRemoved();
+      return;
+    }
+    setState(() {
+      _refIndex = i;
+      _refPeek = true;
+    });
+  }
+
+  void _endRefPeek() {
+    // 只有"按住看"才跟着松手关；点开的要再点一次才关
+    if (!_refPeek) return;
+    setState(() {
+      _refIndex = null;
+      _refPeek = false;
+    });
+  }
+
+  void _closeRef() => setState(() {
+    _refIndex = null;
+    _refPeek = false;
+  });
+
+  /// 返回键：先看参考图就先关它，否则才退出查看器。
+  void _backOrCloseRef() {
+    if (_refIndex != null) {
+      _closeRef();
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
+  void _warnServerRemoved() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).historyRefServerRemoved),
+      ),
+    );
+  }
+
+  /// 参考图那一层：黑底 + 居中大图，与出图页同一套放大手势。
+  Widget _refLayer(AppLocalizations l, ReferenceImage ref) {
+    final base = _refBaseUrl;
+    if (base == null) {
+      return Center(child: Text(l.historyRefServerRemoved, style: const TextStyle(color: Colors.white70)));
+    }
+    return ColoredBox(
+      color: Colors.black,
+      child: ZoomableImage(
+        onZoomChanged: _handleZoomChanged,
+        child: Center(
+          child: Image.network(
+            imageViewUrl(base, ref.ref),
+            fit: BoxFit.contain,
+            loadingBuilder: (_, child, progress) {
+              if (progress == null) return child;
+              return const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  color: Colors.white54,
+                  strokeWidth: 2,
+                ),
+              );
+            },
+            errorBuilder: (_, _, _) => Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                l.historyRefUnavailable,
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _refThumb(ReferenceImage ref) {
@@ -457,23 +602,6 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
       child: Icon(Icons.broken_image, size: 16, color: Colors.white38),
     ),
   );
-
-  void _openRef(ReferenceImage ref) {
-    final base = _refBaseUrl;
-    if (base == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).historyRefServerRemoved),
-        ),
-      );
-      return;
-    }
-    openImageViewer(
-      context,
-      url: imageViewUrl(base, ref.ref),
-      title: ref.label,
-    );
-  }
 
   Future<void> _share() async {
     // 分享功能：Flutter 无内置，留待接入 share_plus 插件。

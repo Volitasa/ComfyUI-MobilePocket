@@ -1226,44 +1226,48 @@ class _MediaViewerState extends State<MediaViewer> {
               ),
             ),
           ),
+          // 悬浮在主图区底部：不占布局，出图页与参考图页的主图区几何完全一致
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _buildRail(),
+          ),
         ],
       ),
       bottomNavigationBar: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildRail(),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: context.accent,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: context.accent,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
                 ),
-                onPressed: _saving ? null : _saveToLocal,
-                icon: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(Icons.save_alt),
-                label: Text(
-                  _saving ? l.historySaving : l.historySaveToLocal,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+              ),
+              onPressed: _saving ? null : _saveToLocal,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.save_alt),
+              label: Text(
+                _saving ? l.historySaving : l.historySaveToLocal,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-          ],
+            ),
         ),
       ),
     );
