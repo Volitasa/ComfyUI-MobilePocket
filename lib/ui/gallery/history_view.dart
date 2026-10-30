@@ -13,6 +13,7 @@ import '../widgets/zoomable_image.dart';
 import '../../services/media_saver.dart';
 import '../../providers/task_manager.dart';
 import '../../providers/connection_provider.dart';
+import '../../providers/haptics_provider.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../models/task_history.dart';
 import '../../models/task_status.dart';
@@ -225,7 +226,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
               child: Text(l.historyDeleteRecordOnly),
             ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(
+              backgroundColor: ctx.dangerButtonFill,
+              foregroundColor: ctx.onDangerButtonFill,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(hasLocal ? l.historyDeleteWithImages : l.delete),
           ),
@@ -818,7 +822,7 @@ class _IconAction extends StatelessWidget {
 // 两组各自记「当前页」，长按只做一件事：临时翻到另一组的当前页，松手回来。
 // ⚠️ 刻意不做「输出第 N 张 ↔ 参考图第 N 张」这类配对 —— 输出与参考图之间是 1:N / N:M，
 // 任何自动配对都是我们替用户猜（§方案 2.3 ⑤）。
-class MediaViewer extends StatefulWidget {
+class MediaViewer extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>> mediaList;
   final int initialIndex;
   final String Function(Map<String, dynamic>) urlBuilder;
@@ -849,10 +853,10 @@ class MediaViewer extends StatefulWidget {
   });
 
   @override
-  State<MediaViewer> createState() => _MediaViewerState();
+  ConsumerState<MediaViewer> createState() => _MediaViewerState();
 }
 
-class _MediaViewerState extends State<MediaViewer> {
+class _MediaViewerState extends ConsumerState<MediaViewer> {
   late PageController _pageController;
   late int _currentIndex;
 
@@ -921,6 +925,10 @@ class _MediaViewerState extends State<MediaViewer> {
     if (_zoomed) return;
     if (target < 0 || target >= _total) return;
     if (target == _currentIndex) return; // 同一张，没有对比的意义
+    // 长按的震动走受控入口：之前这一震来自 InkResponse 的框架默认行为
+    // （HapticFeedback.vibrate），设置里全关也拦不住。
+    // 放在早退之后：没真的换图就不震，别让手上有感觉、屏幕没动静。
+    hapticFeedback(ref, HapticCategory.press, strength: HapticStrength.medium);
     setState(() => _peekIndex = target);
   }
 

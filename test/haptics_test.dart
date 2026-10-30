@@ -67,7 +67,17 @@ void main() {
 
       expect(container.read(hapticsProvider), isNot(contains(HapticCategory.reorder)));
       expect(container.read(hapticsProvider), contains(HapticCategory.nav));
-      expect(prefs.getString(kHapticsPrefsKey), 'nav,check,fold,submit');
+      // press 在枚举末尾追加，同样的开关组合永远多出最后一段
+      expect(
+        prefs.getString(kHapticsPrefsKey),
+        'nav,check,fold,submit,press',
+      );
+      // 落盘的同时记下「这次写入时知道哪些类别」，
+      // 之后再新增类别时才能区分「用户关掉了」和「当时还没这一项」
+      expect(
+        prefs.getString(kHapticsKnownPrefsKey),
+        'nav,check,reorder,fold,submit,press',
+      );
     });
 
     test('再点一次又开回来', () async {
@@ -77,9 +87,12 @@ void main() {
 
       await container.read(hapticsProvider.notifier).toggle(HapticCategory.fold);
 
+      // 老数据（只存了 nav）里没有 press，也没有 known 键：
+      // press 按「默认开启」补进来，而不是当成用户关掉了
       expect(container.read(hapticsProvider), {
         HapticCategory.nav,
         HapticCategory.fold,
+        HapticCategory.press,
       });
     });
 
@@ -104,7 +117,74 @@ void main() {
 
       await container.read(hapticsProvider.notifier).setAll(true);
 
-      expect(prefs.getString(kHapticsPrefsKey), 'nav,check,reorder,fold,submit');
+      expect(prefs.getString(kHapticsPrefsKey), 'nav,check,reorder,fold,submit,press');
+    });
+  });
+
+  group('新类别的存储迁移', () {
+    test('老数据：旧类别里被关掉的保持关，新类别按默认开启补上', () async {
+      // 老用户在 v1.4.1 里关掉了 reorder，那时还没有 press，
+      // 存的值里必然没有这两个名字 —— 只有 reorder 该维持关，press 要开。
+      final prefs = await _prefsWith({kHapticsPrefsKey: 'nav,check,fold,submit'});
+      final container = _container(prefs);
+      addTearDown(container.dispose);
+
+      expect(container.read(hapticsProvider), {
+        HapticCategory.nav,
+        HapticCategory.check,
+        HapticCategory.fold,
+        HapticCategory.submit,
+        HapticCategory.press,
+      });
+    });
+
+    test('老数据全关（空串）：一个都不补，新类别也不补', () async {
+      // 「全部关闭」表达的是「这个 App 别震」；拿默认值偷偷把新类别打开
+      // 等于违背这个选择。
+      final prefs = await _prefsWith({kHapticsPrefsKey: ''});
+      final container = _container(prefs);
+      addTearDown(container.dispose);
+
+      expect(container.read(hapticsProvider), isEmpty);
+    });
+
+    test('known 键在：缺的名字就是用户关掉的，不再补', () async {
+      // 用户升级后主动把 press 关掉 → 落盘的名单里没有 press，
+      // 但 known 里有 → 下次启动不能又把它补回来。
+      final prefs = await _prefsWith({
+        kHapticsPrefsKey: 'nav,check,reorder,fold,submit',
+        kHapticsKnownPrefsKey: 'nav,check,reorder,fold,submit,press',
+      });
+      final container = _container(prefs);
+      addTearDown(container.dispose);
+
+      expect(container.read(hapticsProvider), isNot(contains(HapticCategory.press)));
+      expect(container.read(hapticsProvider), contains(HapticCategory.nav));
+    });
+
+    test('关掉新类别 → 重启后仍然是关的（迁移不会反复生效）', () async {
+      final prefs = await _prefsWith(); // 新装，全部开启
+      final first = _container(prefs);
+      addTearDown(first.dispose);
+      await first.read(hapticsProvider.notifier).toggle(HapticCategory.press);
+
+      expect(
+        prefs.getString(kHapticsPrefsKey),
+        'nav,check,reorder,fold,submit',
+      );
+
+      final second = _container(prefs); // 模拟重开 App
+      addTearDown(second.dispose);
+      expect(second.read(hapticsProvider), isNot(contains(HapticCategory.press)));
+      expect(second.read(hapticsProvider), contains(HapticCategory.nav));
+    });
+
+    test('没存过 = 新装用户，全部开启且不需要迁移', () async {
+      final prefs = await _prefsWith();
+      final container = _container(prefs);
+      addTearDown(container.dispose);
+
+      expect(container.read(hapticsProvider), HapticCategory.values.toSet());
     });
   });
 

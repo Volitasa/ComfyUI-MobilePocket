@@ -145,15 +145,22 @@ class ReferenceRail extends StatelessWidget {
       ),
     );
 
-    return InkResponse(
-      onTap: item.onTap,
-      onLongPress: item.onLongPressStart,
-      radius: _hit / 2,
-      containedInkWell: true,
-      child: SizedBox(
-        width: _hit,
-        height: _hit,
-        child: Center(child: thumb),
+    // 长按不挂在 InkResponse 上：它只要看见 onLongPress 就会自动走
+    // Feedback.forLongPress → HapticFeedback.vibrate()，绕开设置里的震动开关
+    // （用户全部关掉之后长按这里依然会震，且无法单独关掉这一处）。
+    // 挪到外层 GestureDetector：点按的水波纹与系统音效仍归 InkResponse 管，
+    // 长按的震动由调用方在 onLongPressStart 里发受控的 hapticFeedback。
+    return GestureDetector(
+      onLongPressStart: (_) => item.onLongPressStart?.call(),
+      child: InkResponse(
+        onTap: item.onTap,
+        radius: _hit / 2,
+        containedInkWell: true,
+        child: SizedBox(
+          width: _hit,
+          height: _hit,
+          child: Center(child: thumb),
+        ),
       ),
     );
   }

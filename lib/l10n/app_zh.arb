@@ -863,9 +863,9 @@
       }
     }
   },
-  "runTitle": "运行: {name}",
+  "runTitle": "{name}",
   "@runTitle": {
-    "description": "运行页标题",
+    "description": "运行页标题：只放工作流名本身。不要再补「运行: 」这类前缀——顶栏只有一行且左边有返回键、右边有菜单，前缀吃掉 4 个字符后，稍长一点的名字就会被截成「运行: QwenImage…」，反而不如只显示名字好认。页内容是参数表单 + 生成按钮，「这是哪一页」不需要靠标题说。",
     "placeholders": {
       "name": {
         "type": "String"
@@ -1814,6 +1814,10 @@
   "hapticsSubmit": "提交成功",
   "@hapticsSubmit": {
     "description": "震动分类：任务下发成功"
+  },
+  "hapticsPress": "长按看图",
+  "@hapticsPress": {
+    "description": "震动分类：长按缩略图预览大图"
   },
   "hapticsAllOn": "全部开启",
   "@hapticsAllOn": {

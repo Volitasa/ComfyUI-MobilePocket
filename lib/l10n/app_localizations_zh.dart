@@ -595,7 +595,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String runTitle(String name) {
-    return '运行: $name';
+    return '$name';
   }
 
   @override
@@ -1366,6 +1366,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get hapticsSubmit => '提交成功';
+
+  @override
+  String get hapticsPress => '长按看图';
 
   @override
   String get hapticsAllOn => '全部开启';

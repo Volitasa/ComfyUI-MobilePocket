@@ -187,6 +187,21 @@ void main() {
         greaterThanOrEqualTo(4.5),
         reason: '$label·强调按钮（${_hex(ctx.accent)}）上的文字 ${_hex(ctx.onAccent)} 对比度不足',
       );
+      // 删除这类危险动作是**实底**按钮，底与字必须成对给：
+      // 只写 backgroundColor 的话，字色是 onPrimary（品牌绿那组），红底配它读不了。
+      expect(
+        _contrast(ctx.dangerButtonFill, ctx.onDangerButtonFill),
+        greaterThanOrEqualTo(4.5),
+        reason:
+            '$label·删除按钮 底 ${_hex(ctx.dangerButtonFill)} 与字 '
+            '${_hex(ctx.onDangerButtonFill)} 对比度不足',
+      );
+      // 实底不能偷懒复用提示条那套浅底：#FDECEA 上压白字只有 1.14:1
+      expect(
+        ctx.dangerButtonFill,
+        isNot(ctx.stateDangerFill),
+        reason: '删除按钮的底不能是提示条的浅底，色一样的话字就看不清了',
+      );
     }
 
     testWidgets('明色', (tester) async {

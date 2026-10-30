@@ -613,7 +613,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String runTitle(String name) {
-    return 'Run: $name';
+    return '$name';
   }
 
   @override
@@ -1418,6 +1418,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hapticsSubmit => 'Running a task';
+
+  @override
+  String get hapticsPress => 'Peeking an image';
 
   @override
   String get hapticsAllOn => 'Turn all on';

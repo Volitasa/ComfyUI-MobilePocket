@@ -173,6 +173,9 @@ class SettingsView extends ConsumerWidget {
 
   Future<void> _pickAppearance(BuildContext context, WidgetRef ref) async {
     final l = AppLocalizations.of(context);
+    // 弹窗选完即收，不存在「开着的时候偏好又变了」的场景，读一次当前值即可，
+    // 不必 watch 重建 —— 也让同时在读的语言 / 震动弹窗保持同一种写法
+    final current = ref.read(themeModeProvider);
     final choice = await showDialog<AppearanceChoice>(
       context: context,
       builder: (ctx) => SimpleDialog(
@@ -180,15 +183,24 @@ class SettingsView extends ConsumerWidget {
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.pop(ctx, AppearanceChoice.follow),
-            child: Text(l.settingsLanguageFollow),
+            child: _ChoiceRow(
+              label: l.settingsLanguageFollow,
+              selected: current == null,
+            ),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(ctx, AppearanceChoice.light),
-            child: Text(l.settingsAppearanceLight),
+            child: _ChoiceRow(
+              label: l.settingsAppearanceLight,
+              selected: current == ThemeMode.light,
+            ),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(ctx, AppearanceChoice.dark),
-            child: Text(l.settingsAppearanceDark),
+            child: _ChoiceRow(
+              label: l.settingsAppearanceDark,
+              selected: current == ThemeMode.dark,
+            ),
           ),
         ],
       ),
@@ -277,10 +289,13 @@ class SettingsView extends ConsumerWidget {
         HapticCategory.reorder => l.hapticsReorder,
         HapticCategory.fold => l.hapticsFold,
         HapticCategory.submit => l.hapticsSubmit,
+        HapticCategory.press => l.hapticsPress,
       };
 
   Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
     final l = AppLocalizations.of(context);
+    final current = ref.read(localeProvider);
+    final code = current?.languageCode;
     final choice = await showDialog<LanguageChoice>(
       context: context,
       builder: (ctx) => SimpleDialog(
@@ -288,15 +303,24 @@ class SettingsView extends ConsumerWidget {
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.pop(ctx, LanguageChoice.follow),
-            child: Text(l.settingsLanguageFollow),
+            child: _ChoiceRow(
+              label: l.settingsLanguageFollow,
+              selected: current == null,
+            ),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(ctx, LanguageChoice.zh),
-            child: Text(l.settingsLanguageZh),
+            child: _ChoiceRow(
+              label: l.settingsLanguageZh,
+              selected: code == 'zh',
+            ),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(ctx, LanguageChoice.en),
-            child: Text(l.settingsLanguageEn),
+            child: _ChoiceRow(
+              label: l.settingsLanguageEn,
+              selected: code == 'en',
+            ),
           ),
         ],
       ),
@@ -328,6 +352,34 @@ class _SectionTitle extends StatelessWidget {
     return SectionTitle(
       text,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+    );
+  }
+}
+
+/// 弹窗里的单选项：当前项结尾打勾。
+///
+/// 之前语言 / 外观两个弹窗只有一行文字，选中什么全靠自己记；
+/// 震动弹窗有勾，三个同样是「点开选」的弹窗长得不一样。
+///
+/// 未选中那行不是删掉图标，而是画一个透明的：图标宽度留在这儿，
+/// 三行的文字长度不同也不会各自错开。
+class _ChoiceRow extends StatelessWidget {
+  final String label;
+  final bool selected;
+
+  const _ChoiceRow({required this.label, required this.selected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Text(label)),
+        Icon(
+          Icons.check,
+          size: 20,
+          color: selected ? context.accent : Colors.transparent,
+        ),
+      ],
     );
   }
 }

@@ -1154,10 +1154,10 @@ abstract class AppLocalizations {
   /// **'提交失败 (HTTP {code}){detail}，请检查 ComfyUI 日志'**
   String runSubmitFailedHttp(String code, String detail);
 
-  /// 运行页标题
+  /// 运行页标题：只放工作流名本身。不要再补「运行: 」这类前缀——顶栏只有一行且左边有返回键、右边有菜单，前缀吃掉 4 个字符后，稍长一点的名字就会被截成「运行: QwenImage…」，反而不如只显示名字好认。页内容是参数表单 + 生成按钮，「这是哪一页」不需要靠标题说。
   ///
   /// In zh, this message translates to:
-  /// **'运行: {name}'**
+  /// **'{name}'**
   String runTitle(String name);
 
   /// 运行页：前往配置页按钮提示
@@ -2545,6 +2545,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'提交成功'**
   String get hapticsSubmit;
+
+  /// 震动分类：长按缩略图预览大图
+  ///
+  /// In zh, this message translates to:
+  /// **'长按看图'**
+  String get hapticsPress;
 
   /// 震动选择弹窗：一次打开所有分类
   ///

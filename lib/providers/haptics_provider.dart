@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'shared_preferences_provider.dart';
 
@@ -21,6 +22,12 @@ enum HapticCategory {
 
   /// 任务下发成功
   submit,
+
+  /// 长按（图轨缩略图长按预览这类动作）。
+  ///
+  /// ⚠️ 这一类是 v1.4.2 加的，追加在末尾：枚举顺序直接决定落盘字符串的排列，
+  /// 插到中间会让「同样的开关组合」写出不一样的值。
+  press,
 }
 
 /// 震动强度。只用系统给的三种，不自造「长震」「双击震」这类玩法。
@@ -28,6 +35,48 @@ enum HapticStrength { selection, light, medium }
 
 /// 存储键。值是逗号分隔的类别名，例如 `nav,check,reorder`。
 const String kHapticsPrefsKey = 'comfy_ui_haptics';
+
+/// 上一次写入时**知道有哪些类别**。
+///
+/// 为什么需要第二个键：这里存的是「开启的名单」，所以**缺一个名字有两种可能**
+/// ——用户把它关掉了，或者写这份数据的时候还没有这一项。
+/// 新增 `press` 之后，老用户存的值里必然没有它，光靠 [kHapticsPrefsKey]
+/// 无法区分这两种情况：要么让一路点「全部关闭」的人升级后莫名又震起来，
+/// 要么让老用户的长按升级后悄悄不震（误判成他关了）。
+const String kHapticsKnownPrefsKey = 'comfy_ui_haptics_known';
+
+/// 引进 `known` 键之前存在的类别。
+///
+/// 只用于「这份数据是老版本写的」这一档迁移。之后再新增类别不需要改这里——
+/// 那时写的数据已经带 `known`，按同样规则自动生效。
+const List<HapticCategory> kHapticsCategoriesBeforeKnown = [
+  HapticCategory.nav,
+  HapticCategory.check,
+  HapticCategory.reorder,
+  HapticCategory.fold,
+  HapticCategory.submit,
+];
+
+/// 从当前存储读出开关状态，并把**新加的类别按默认开启补上**。
+///
+/// 见 [kHapticsKnownPrefsKey] 里写的取舍。三条分支刻意分开：
+/// - 没存过 → 全开；
+/// - 存了空串（用户主动全关）→ 一个都不补，连新类别也不补：
+///   「全部关闭」表达的是「这 App 别震」，补一个开关进来等于违背这个选择；
+/// - 存了部分名单 → 名单照旧，再把上次写入时还不认识的类别开启。
+Set<HapticCategory> readHaptics(SharedPreferences prefs) {
+  final raw = prefs.getString(kHapticsPrefsKey);
+  if (raw == null) return HapticCategory.values.toSet();
+  final enabled = decodeHaptics(raw);
+  if (raw.trim().isEmpty) return enabled;
+
+  final knownNames =
+      prefs.getString(kHapticsKnownPrefsKey)?.split(',').toSet() ??
+      kHapticsCategoriesBeforeKnown.map((c) => c.name).toSet();
+  return enabled.union(
+    HapticCategory.values.where((c) => !knownNames.contains(c.name)).toSet(),
+  );
+}
 
 /// 解码。
 ///
@@ -53,7 +102,7 @@ String encodeHaptics(Set<HapticCategory> enabled) => HapticCategory.values
 class HapticsNotifier extends Notifier<Set<HapticCategory>> {
   @override
   Set<HapticCategory> build() =>
-      decodeHaptics(ref.watch(sharedPreferencesProvider).getString(kHapticsPrefsKey));
+      readHaptics(ref.watch(sharedPreferencesProvider));
 
   Future<void> toggle(HapticCategory category) async {
     final next = {...state};
@@ -69,6 +118,12 @@ class HapticsNotifier extends Notifier<Set<HapticCategory>> {
     state = next;
     final prefs = ref.read(sharedPreferencesProvider);
     await prefs.setString(kHapticsPrefsKey, encodeHaptics(next));
+    // 顺带记下「这次写入时知道有哪些类别」，见 readHaptics 的注释：
+    // 下次再新增类别时，才能把「用户关掉了」和「当时还没这一项」区分开。
+    await prefs.setString(
+      kHapticsKnownPrefsKey,
+      HapticCategory.values.map((c) => c.name).join(','),
+    );
   }
 }
 

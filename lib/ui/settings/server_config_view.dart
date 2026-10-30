@@ -218,10 +218,10 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
               onPressed: () => _showServerDialog(existing: server),
             ),
             IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.delete_outline,
                 size: 20,
-                color: Colors.redAccent,
+                color: context.stateDanger,
               ),
               tooltip: l.delete,
               onPressed: () => _confirmDelete(server),
@@ -269,7 +269,10 @@ class _ServerConfigViewState extends ConsumerState<ServerConfigView> {
             child: Text(l.cancel),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(
+              backgroundColor: ctx.dangerButtonFill,
+              foregroundColor: ctx.onDangerButtonFill,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l.delete),
           ),

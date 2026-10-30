@@ -213,7 +213,7 @@
   "runTaskSubmitted": "Task submitted!",
   "runErrorNodes": ", error nodes: {nodes}",
   "runSubmitFailedHttp": "Submit failed (HTTP {code}){detail}. Check the ComfyUI log",
-  "runTitle": "Run: {name}",
+  "runTitle": "{name}",
   "runNodeConfigTooltip": "Node configuration",
   "runSubmitting": "Submitting...",
   "runGenerateNow": "Generate",
@@ -654,6 +654,10 @@
   "hapticsSubmit": "Running a task",
   "@hapticsSubmit": {
     "description": "Haptic category: task submitted successfully"
+  },
+  "hapticsPress": "Peeking an image",
+  "@hapticsPress": {
+    "description": "Haptic category: long press a thumbnail to preview"
   },
   "hapticsAllOn": "Turn all on",
   "@hapticsAllOn": {

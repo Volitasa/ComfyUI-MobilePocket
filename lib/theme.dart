@@ -148,5 +148,23 @@ extension AppSemanticColors on BuildContext {
       _isDark ? const Color(0xFF4A1C1A) : const Color(0xFFFDECEA);
   Color get onStateDangerFill =>
       _isDark ? const Color(0xFFFFA9A0) : const Color(0xFFB3261E);
+
+  // ---- 危险动作的实底按钮（删除确认）----
+  // ⚠️ 不能拿 stateDangerFill 当按钮底：那是 #FDECEA 的浅底，白字在上面只有 1.14:1。
+  // ⚠️ 也不能拿 stateDanger 当按钮底：它是「深色下的文字色」#FF8A80（浅粉），
+  //    铺成实底再压白字只有 2.28:1，等于把删除按钮做成一块看不清字的粉饼。
+  // 实底按钮必须**底与字成对**，而且深色要反过来还不够——深色下再把这个
+  // 浅粉色当底铺满整块，会把「删除」做成全屏最亮的一块，抢走所有注意力。
+  // 这里两套都是「深红底 + 亮字」：明色 #D32F2F+白（4.97:1），
+  // 深色 #93000A+#FFDAD6（7.2:1），视觉重量与浅色那块一致。
+  Color get dangerButtonFill =>
+      _isDark ? const Color(0xFF93000A) : AppColors.danger;
+
+  /// [dangerButtonFill] 底上的文字 / 图标。
+  ///
+  /// 不写的话就是 FilledButton 默认的 `onPrimary`——那是品牌绿那一组的前景，
+  /// 跟这块红底毫无关系，深浅两套下都会配出「红底绿字」这种错色。
+  Color get onDangerButtonFill =>
+      _isDark ? const Color(0xFFFFDAD6) : Colors.white;
 }
 

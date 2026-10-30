@@ -6,6 +6,7 @@ import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import '../../models/task_history.dart';
 import '../../providers/gallery_revision_provider.dart';
+import '../../providers/haptics_provider.dart';
 import '../../providers/snapshot_provider.dart';
 import '../../providers/task_manager.dart';
 import '../../services/gallery_store.dart';
@@ -295,7 +296,12 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
             child: Text(AppLocalizations.of(ctx).cancel),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            // 之前这里是写死的 Colors.redAccent：亮的艺术红 #FF1744，
+            // 白字在上面只有 3.86:1，深色下也不跟着主题走。
+            style: FilledButton.styleFrom(
+              backgroundColor: ctx.dangerButtonFill,
+              foregroundColor: ctx.onDangerButtonFill,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(AppLocalizations.of(ctx).delete),
           ),
@@ -363,7 +369,8 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
                   onPressed: _share,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  // 与上面的「重跑」保持一致：图标色走语义色，深色下自动换成提亮版
+                  icon: Icon(Icons.delete_outline, color: context.stateDanger),
                   tooltip: l.delete,
                   onPressed: _delete,
                 ),
@@ -510,6 +517,9 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
       _warnServerRemoved();
       return;
     }
+    // 长按的震动走受控入口：之前这一震来自 InkResponse 的框架默认行为
+    // （HapticFeedback.vibrate），设置里全关也拦不住。
+    hapticFeedback(ref, HapticCategory.press, strength: HapticStrength.medium);
     setState(() {
       _refIndex = i;
       _refPeek = true;

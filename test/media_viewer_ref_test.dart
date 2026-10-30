@@ -3,9 +3,12 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
+import 'package:comfyui_mobilepocket/providers/shared_preferences_provider.dart';
 import 'package:comfyui_mobilepocket/services/image_ref.dart';
 import 'package:comfyui_mobilepocket/services/reference_image.dart';
 import 'package:comfyui_mobilepocket/ui/gallery/history_view.dart';
@@ -16,7 +19,11 @@ final Uint8List _png = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
 );
 
-ReferenceImage _ref(String filename, {String label = '加载图像', String id = '10'}) {
+ReferenceImage _ref(
+  String filename, {
+  String label = '加载图像',
+  String id = '10',
+}) {
   return ReferenceImage(
     nodeId: id,
     classType: 'LoadImage',
@@ -59,18 +66,26 @@ Future<void> _pumpViewer(
 }) async {
   final media = outputs.map(_media).toList();
 
+  // MediaViewer 已改为 ConsumerStatefulWidget（长按预览要读震动开关），
+  // 直接泵在裸 MaterialApp 下面会在取 provider 时炸
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(
-    MaterialApp(
-      locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: MediaViewer(
-        mediaList: media,
-        initialIndex: 0,
-        urlBuilder: (m) => 'http://127.0.0.1:1/view?filename=${m['filename']}',
-        isVideoChecker: (_) => false,
-        referenceImages: refs,
-        refBaseUrl: refBaseUrl,
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: MaterialApp(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: MediaViewer(
+          mediaList: media,
+          initialIndex: 0,
+          urlBuilder: (m) =>
+              'http://127.0.0.1:1/view?filename=${m['filename']}',
+          isVideoChecker: (_) => false,
+          referenceImages: refs,
+          refBaseUrl: refBaseUrl,
+        ),
       ),
     ),
   );
@@ -96,7 +111,10 @@ void main() {
     await _pumpViewer(
       tester,
       outputs: ['a.png', 'b.png'],
-      refs: [_ref('face.png'), _ref('cloth.png', label: '衣服', id: '11')],
+      refs: [
+        _ref('face.png'),
+        _ref('cloth.png', label: '衣服', id: '11'),
+      ],
     );
 
     expect(find.byType(ReferenceRail), findsOneWidget);
@@ -126,7 +144,10 @@ void main() {
     await _pumpViewer(
       tester,
       outputs: ['a.png'],
-      refs: [_ref('face.png'), _ref('cloth.png', label: '衣服', id: '11')],
+      refs: [
+        _ref('face.png'),
+        _ref('cloth.png', label: '衣服', id: '11'),
+      ],
     );
 
     // 顺序：出图 → 参考图 1 → 参考图 2
@@ -141,7 +162,10 @@ void main() {
     await _pumpViewer(
       tester,
       outputs: ['a.png'],
-      refs: [_ref('face.png'), _ref('cloth.png', label: '衣服', id: '11')],
+      refs: [
+        _ref('face.png'),
+        _ref('cloth.png', label: '衣服', id: '11'),
+      ],
     );
 
     // 先在参考图组停到第 2 张，再回出图组
@@ -167,7 +191,10 @@ void main() {
     await _pumpViewer(
       tester,
       outputs: ['a.png'],
-      refs: [_ref('face.png'), _ref('cloth.png', label: '衣服', id: '11')],
+      refs: [
+        _ref('face.png'),
+        _ref('cloth.png', label: '衣服', id: '11'),
+      ],
     );
 
     final gesture = await tester.startGesture(
