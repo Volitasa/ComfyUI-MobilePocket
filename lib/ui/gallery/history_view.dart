@@ -860,8 +860,9 @@ class _MediaViewerState extends ConsumerState<MediaViewer> {
   late PageController _pageController;
   late int _currentIndex;
 
-  /// 两组各自的当前页。**互不覆盖** —— 这是"长按看另一张"能成立的前提：
-  /// 回到另一组时落在你离开时那一页，而不是永远第 1 张。
+  /// 两组各自的当前页。**互不覆盖** —— 是为了 rail 上点「出图」那一堆时能回到
+  /// 你离开时的那一页（而不是永远第 1 张），顶部标题与动作条也靠它确定针对哪张参考图。
+  /// （它早年还承担过「大图长按换到另一组」的目标，那条路径 2026-10-31 已删。）
   late int _outputPage;
   int _refPage = 0;
 
@@ -910,14 +911,6 @@ class _MediaViewerState extends ConsumerState<MediaViewer> {
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
     );
-  }
-
-  /// 另一组的当前页；另一组不存在时返回 -1。
-  int _otherGroupIndex() {
-    if (_isRef(_currentIndex)) {
-      return _outputCount == 0 ? -1 : _outputPage.clamp(0, _outputCount - 1);
-    }
-    return _refCount == 0 ? -1 : _outputCount + _refPage.clamp(0, _refCount - 1);
   }
 
   void _startPeek(int target) {
@@ -1210,16 +1203,13 @@ class _MediaViewerState extends ConsumerState<MediaViewer> {
               _peekIndex = null;
             }),
             itemCount: _total,
-            itemBuilder: (context, index) {
-              return GestureDetector(
-                // 按住 = 临时翻到另一组的当前页。滚动手势要移动才 claim，
-                // 长按停住 500ms 一般能赢竞技场（真机验过；不灵还有 rail 长按兜底）
-                onLongPressStart: (_) => _startPeek(_otherGroupIndex()),
-                onLongPressEnd: (_) => _endPeek(),
-                onLongPressCancel: _endPeek,
-                child: _pageContent(context, index),
-              );
-            },
+            // ⚠️ 这里不要挂长按：大图区域长按去比对的语义在多图时不可预测。
+            // 原因是「另一组的当前页」=_outputPage / _refPage，而这两个值只在真正
+            // 翻过页时才更新——你从出图滑到参考图，_outputPage 必然停在最后一张出图；
+            // 从未进过参考图组时 _refPage 又是 0。于是「长按出图」永远只比第一张参考图、
+            // 「长按参考图」永远只比最后一张出图（2026-10-31 用户实测确认）。
+            // 对比就走 rail 缩略图长按：目标明确（按住哪张比哪张），和画廊页一致。
+            itemBuilder: (context, index) => _pageContent(context, index),
           ),
           Positioned.fill(
             child: IgnorePointer(

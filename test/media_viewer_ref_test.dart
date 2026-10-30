@@ -158,33 +158,41 @@ void main() {
     expect(find.text('加载图像'), findsOneWidget);
   });
 
-  testWidgets('出图页长按主图：临时翻到参考图组**停留过**的那一页，不是永远第一张', (tester) async {
+  testWidgets('大图区域长按**不再**换图：对比只认 rail 缩略图（2026-10-31 起）', (tester) async {
+    // 这条是替掉的：原来这里断言"长按主图能翻到另一组停留过的那一页"。
+    // 那条语义在多图下不可预测 —— 从出图滑到参考图时 _outputPage 必然停在
+    // 最后一张出图、没进过参考图组时 _refPage 又是 0，于是"长按出图"永远只比
+    // 第一张参考图、"长按参考图"永远只比最后一张出图（用户实测确认）。
+    // 现在大图长按应当**什么都不做**，且 "松开回到…" 提示条一次都不出现。
     await _pumpViewer(
       tester,
-      outputs: ['a.png'],
+      outputs: ['a.png', 'b.png'],
       refs: [
         _ref('face.png'),
         _ref('cloth.png', label: '衣服', id: '11'),
       ],
     );
 
-    // 先在参考图组停到第 2 张，再回出图组
+    // 先在参考图组停到第 2 张再回来，构造出原来那条最容易出错的场景
     await tester.tap(_railItems().at(2));
     await tester.pumpAndSettle();
     expect(find.text('输入 2 / 2'), findsOneWidget);
     await tester.tap(_railItems().at(0));
     await tester.pumpAndSettle();
-    expect(find.text('1 / 3'), findsOneWidget);
+    expect(find.text('1 / 4'), findsOneWidget);
 
-    // 长按主图 → 应看到参考图组的第 2 张（提示条带页码，这是唯一凭证）
     final gesture = await tester.startGesture(
       tester.getCenter(find.byType(PageView)),
     );
     await tester.pump(const Duration(milliseconds: 600));
-    expect(find.text('输入 2 / 2 · 松开回到出图'), findsOneWidget);
+
+    // 还在原来的出图页，没有任何对比提示条
+    expect(find.text('1 / 4'), findsOneWidget);
+    expect(find.textContaining('松开回到'), findsNothing);
+
     await gesture.up();
     await tester.pumpAndSettle();
-    expect(find.text('输入 2 / 2 · 松开回到出图'), findsNothing);
+    expect(find.text('1 / 4'), findsOneWidget);
   });
 
   testWidgets('长按 rail 项：主区域临时换成那一张，松手恢复', (tester) async {
