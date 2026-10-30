@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
 import 'media_route.dart';
+import 'zoomable_image.dart';
 
 /// 单图全屏查看器：卡片里的缩略图小，看细节得点开这里。
 ///
@@ -40,7 +41,8 @@ class FullscreenImageViewer extends StatelessWidget {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: InteractiveViewer(
+        // 双击放大走共用控件：手势仲裁、落点、复位都在里面处理
+        child: ZoomableImage(
           maxScale: 6,
           child: Center(
             child: bytes != null

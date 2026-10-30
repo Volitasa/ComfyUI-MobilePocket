@@ -8,6 +8,7 @@ import '../../providers/gallery_revision_provider.dart';
 import '../../services/gallery_store.dart';
 import '../../services/media_saver.dart';
 import '../widgets/media_route.dart';
+import '../widgets/zoomable_image.dart';
 import '../widgets/skeleton.dart';
 
 import '../../theme.dart';
@@ -179,6 +180,9 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
   late int _currentIndex;
   bool _saving = false;
 
+  /// 放大态：放大时把翻页关掉，否则横拖是「平移图片」还是「翻页」会打架。
+  bool _zoomed = false;
+
   @override
   void initState() {
     super.initState();
@@ -265,6 +269,11 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
     }
   }
 
+  void _handleZoomChanged(bool zoomed) {
+    if (_zoomed == zoomed) return;
+    setState(() => _zoomed = zoomed);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -289,13 +298,20 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
       ),
       body: PageView.builder(
         controller: _pageController,
-        onPageChanged: (idx) => setState(() => _currentIndex = idx),
+        // 放大态下禁止翻页：横拖应该平移图片，而不是滑走
+        physics: _zoomed ? const NeverScrollableScrollPhysics() : null,
+        onPageChanged: (idx) => setState(() {
+          _currentIndex = idx;
+          // 换页时清掉放大标记：新一页是新的缩放状态
+          _zoomed = false;
+        }),
         itemCount: widget.images.length,
         itemBuilder: (context, index) {
           final image = Center(
             child: Image.file(widget.images[index], fit: BoxFit.contain),
           );
-          return InteractiveViewer(
+          return ZoomableImage(
+            onZoomChanged: _handleZoomChanged,
             // 只给首帧挂 Hero：翻到第二张时不能有两个同标签的共享元素
             child: index == widget.initialIndex && widget.heroTag != null
                 ? Hero(tag: widget.heroTag!, child: image)

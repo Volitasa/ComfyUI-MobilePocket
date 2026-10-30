@@ -8,6 +8,7 @@ import 'dart:io';
 
 import '../../theme.dart';
 import '../widgets/media_route.dart';
+import '../widgets/zoomable_image.dart';
 import '../../services/media_saver.dart';
 import '../../providers/task_manager.dart';
 import '../../providers/connection_provider.dart';
@@ -900,6 +901,10 @@ class _MediaViewerState extends State<MediaViewer> {
   late int _currentIndex;
   bool _saving = false;
 
+  /// 当前图是否处于放大态：放大时要把 PageView 的翻页关掉，
+  /// 否则横拖是「平移图片」还是「翻页」会打架。
+  bool _zoomed = false;
+
   @override
   void initState() {
     super.initState();
@@ -959,6 +964,11 @@ class _MediaViewerState extends State<MediaViewer> {
     }
   }
 
+  void _handleZoomChanged(bool zoomed) {
+    if (_zoomed == zoomed) return;
+    setState(() => _zoomed = zoomed);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -972,7 +982,13 @@ class _MediaViewerState extends State<MediaViewer> {
       ),
       body: PageView.builder(
         controller: _pageController,
-        onPageChanged: (idx) => setState(() => _currentIndex = idx),
+        // 放大态下禁止翻页：横拖应该平移图片，而不是滑走
+        physics: _zoomed ? const NeverScrollableScrollPhysics() : null,
+        onPageChanged: (idx) => setState(() {
+          _currentIndex = idx;
+          // 换页时清掉放大标记：新一页是新的缩放状态
+          _zoomed = false;
+        }),
         itemCount: widget.mediaList.length,
         itemBuilder: (context, index) {
           final media = widget.mediaList[index];
@@ -995,7 +1011,10 @@ class _MediaViewerState extends State<MediaViewer> {
               : _RemoteImage(url: url, failedText: l.historyImageLoadFailed);
           // 只给首帧挂 Hero：翻到第二张时不能有两个同标签的共享元素
           if (tag != null) image = Hero(tag: tag, child: image);
-          return InteractiveViewer(child: Center(child: image));
+          return ZoomableImage(
+            onZoomChanged: _handleZoomChanged,
+            child: Center(child: image),
+          );
         },
       ),
       bottomNavigationBar: SafeArea(
