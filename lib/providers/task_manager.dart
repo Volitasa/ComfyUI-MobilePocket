@@ -24,11 +24,44 @@ class TaskState {
 class TaskManagerNotifier extends Notifier<TaskState> {
   late SharedPreferences _prefs;
 
+  /// 画廊文件绝对路径 → 那条生成记录。
+  ///
+  /// 画廊页面只有一个 `File`，与任务的唯一联系就是 `task.images[i]['localPath']`
+  /// 里存着的同一个路径。这里预先建好反查表，**不要在 build 里扫**：
+  /// 50 条 × 每条最多 4 张图，每帧扫一遍纯浪费。
+  final Map<String, TaskHistory> _byLocalPath = {};
+
   @override
   TaskState build() {
     _prefs = ref.watch(sharedPreferencesProvider);
-    return TaskState(history: _loadHistory());
+    final history = _loadHistory();
+    _reindexLocalPaths(history);
+    return TaskState(history: history);
   }
+
+  void _reindexLocalPaths(List<TaskHistory> history) {
+    _byLocalPath.clear();
+    for (final task in history) {
+      for (final img in task.images) {
+        final path = img['localPath'];
+        if (path is String && path.isNotEmpty) {
+          // 同一路径只可能属于一条记录；真撞上了留先出现的
+          _byLocalPath.putIfAbsent(_normPath(path), () => task);
+        }
+      }
+    }
+  }
+
+  /// 反查：这张画廊图片是哪次生成下载下来的；查不到返回 null
+  /// （记录被删了、或超过 50 条被截断）。
+  TaskHistory? taskByLocalPath(String path) => _byLocalPath[_normPath(path)];
+
+  /// 归一化路径分隔符再做键。
+  ///
+  /// 手机上是 POSIX，两种写法本来就一样；桌面构建下 `dir.path` 是反斜杠，
+  /// 而落盘时可能是拼接出来的正斜杠 —— 不归一就会出现"库里明明有记录、
+  /// 画廊却查不到"的静默失配。
+  String _normPath(String path) => path.replaceAll(r'\', '/');
 
   List<TaskHistory> _loadHistory() {
     final data = _prefs.getString('comfy_task_history');
@@ -47,6 +80,8 @@ class TaskManagerNotifier extends Notifier<TaskState> {
       jsonEncode(newHistory.map((e) => e.toJson()).toList()),
     );
     state = TaskState(history: newHistory);
+    // 图片本地化会回填 localPath（_localizeMedia），反查表必须跟着重建
+    _reindexLocalPaths(newHistory);
   }
 
   /// 通知画廊「目录内容变过了」。

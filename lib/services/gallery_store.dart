@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// 本地画廊存储服务：把生成的图片下载到 App 沙盒，保留原始文件
@@ -9,10 +9,21 @@ class GalleryStore {
   GalleryStore._();
   static final GalleryStore instance = GalleryStore._();
 
+  /// 仅测试用：指定根目录，跳过 `path_provider`。
+  ///
+  /// 走 path_provider 的话，widget 测试里得去 mock 平台通道（Windows 上还是
+  /// ffi 实现的），为了测一个"能不能列出文件"不值当。生产代码不碰它。
+  @visibleForTesting
+  static Directory? debugDirectoryOverride;
+
+  /// 仅测试用：清掉目录缓存（多个用例用不同根目录时必须调）。
+  @visibleForTesting
+  void resetCachedDir() => _dir = null;
+
   Directory? _dir;
   Future<Directory> _ensureDir() async {
     if (_dir != null) return _dir!;
-    final docs = await getApplicationDocumentsDirectory();
+    final docs = debugDirectoryOverride ?? await getApplicationDocumentsDirectory();
     final dir = Directory('${docs.path}/comfy_gallery');
     if (!await dir.exists()) {
       await dir.create(recursive: true);

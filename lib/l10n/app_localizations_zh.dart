@@ -167,6 +167,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get historyImageLoadFailed => '图片加载失败，请检查服务器连接';
 
   @override
+  String get historyRefGroupLabel => '输入';
+
+  @override
+  String historyRefPeekToInput(int index, int total) {
+    return '输入 $index / $total · 松开回到出图';
+  }
+
+  @override
+  String historyRefPeekToOutput(int index, int total) {
+    return '$index / $total · 松开回到参考图';
+  }
+
+  @override
+  String get historyRefUnavailable => '参考图已不在服务器上';
+
+  @override
+  String get historyRefServerRemoved => '原服务器已移除，无法查看参考图';
+
+  @override
   String get historyStopTooltip => '停止生成';
 
   @override
@@ -902,6 +921,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get galleryShareTooltip => '分享';
+
+  @override
+  String get galleryRerunNotice => '会用当时的工作流重新生成，不保证与这张完全一致';
 
   @override
   String get gallerySaving => '保存中...';

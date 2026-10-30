@@ -170,6 +170,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to load image. Check the server connection.';
 
   @override
+  String get historyRefGroupLabel => 'Input';
+
+  @override
+  String historyRefPeekToInput(int index, int total) {
+    return 'Input $index / $total · release to go back';
+  }
+
+  @override
+  String historyRefPeekToOutput(int index, int total) {
+    return '$index / $total · release to go back';
+  }
+
+  @override
+  String get historyRefUnavailable =>
+      'Reference image is no longer on the server';
+
+  @override
+  String get historyRefServerRemoved =>
+      'The original server was removed, so the reference image is unavailable';
+
+  @override
   String get historyStopTooltip => 'Stop generation';
 
   @override
@@ -930,6 +951,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galleryShareTooltip => 'Share';
+
+  @override
+  String get galleryRerunNotice =>
+      'This re-runs the workflow as it was; the result will not be identical to this image';
 
   @override
   String get gallerySaving => 'Saving...';

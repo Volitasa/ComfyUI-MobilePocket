@@ -386,6 +386,36 @@ abstract class AppLocalizations {
   /// **'图片加载失败，请检查服务器连接'**
   String get historyImageLoadFailed;
 
+  /// 看图页参考图分组的标题前缀，拼成「输入 1 / 2」
+  ///
+  /// In zh, this message translates to:
+  /// **'输入'**
+  String get historyRefGroupLabel;
+
+  /// 在出图页按住不放时的提示条
+  ///
+  /// In zh, this message translates to:
+  /// **'输入 {index} / {total} · 松开回到出图'**
+  String historyRefPeekToInput(int index, int total);
+
+  /// 在参考图页按住不放时的提示条
+  ///
+  /// In zh, this message translates to:
+  /// **'{index} / {total} · 松开回到参考图'**
+  String historyRefPeekToOutput(int index, int total);
+
+  /// 参考图 404 时的占位说明
+  ///
+  /// In zh, this message translates to:
+  /// **'参考图已不在服务器上'**
+  String get historyRefUnavailable;
+
+  /// 记录所属服务器被删除后的占位说明
+  ///
+  /// In zh, this message translates to:
+  /// **'原服务器已移除，无法查看参考图'**
+  String get historyRefServerRemoved;
+
   /// 进行中记录的停止按钮
   ///
   /// In zh, this message translates to:
@@ -1741,6 +1771,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'分享'**
   String get galleryShareTooltip;
+
+  /// 画廊里再次运行前的一次性说明
+  ///
+  /// In zh, this message translates to:
+  /// **'会用当时的工作流重新生成，不保证与这张完全一致'**
+  String get galleryRerunNotice;
 
   /// 画廊：保存中
   ///

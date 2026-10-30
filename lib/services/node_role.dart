@@ -53,7 +53,7 @@ Map<String, NodeRole> inferNodeRoles(Map<String, dynamic> jsonMap) {
   consumers.forEach((nodeId, list) {
     final links = <NodeLink>[];
     for (final c in list) {
-      final label = _nodeLabel(jsonMap[c.id]);
+      final label = nodeLabelFromJson(jsonMap[c.id]);
       if (label.isEmpty) continue;
       final link = (label: label, slot: c.slot);
       // 两个同名节点接同一个槽（两个文本编码都吃 `clip`）算同一处 ——
@@ -83,7 +83,13 @@ bool _isConditioningSlot(String slot) {
 /// ⚠️ 这两个都来自工作流本身，**不翻译、也不自己起名** ——
 /// 界面上出现「K采样器」「加载VAE」是 ComfyUI 自己的中文节点名，
 /// 我们只是把它读出来。
-String _nodeLabel(dynamic nodeData) {
+///
+/// 公开：参考图列表也要用同一套命名口径（`services/reference_image.dart`），
+/// 抄一份私有实现迟早两处漂移。
+///
+/// 名字带 `FromJson` 是为了和 `param_row_helpers.nodeLabelOf(WorkflowNode)` 区分：
+/// 那个吃已解析的模型，这个吃工作流里的原始节点 Map，语义一致、入口不同。
+String nodeLabelFromJson(dynamic nodeData) {
   if (nodeData is! Map) return '';
   final classType = nodeData['class_type']?.toString() ?? '';
   final meta = nodeData['_meta'];

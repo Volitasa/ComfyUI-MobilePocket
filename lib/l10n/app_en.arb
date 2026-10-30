@@ -53,6 +53,17 @@
   "historySaveFailed": "Save failed",
   "historyVideoLoadFailed": "Failed to load video",
   "historyImageLoadFailed": "Failed to load image. Check the server connection.",
+  "historyRefGroupLabel": "Input",
+  "historyRefPeekToInput": "Input {index} / {total} · release to go back",
+  "@historyRefPeekToInput": {
+    "placeholders": { "index": { "type": "int" }, "total": { "type": "int" } }
+  },
+  "historyRefPeekToOutput": "{index} / {total} · release to go back",
+  "@historyRefPeekToOutput": {
+    "placeholders": { "index": { "type": "int" }, "total": { "type": "int" } }
+  },
+  "historyRefUnavailable": "Reference image is no longer on the server",
+  "historyRefServerRemoved": "The original server was removed, so the reference image is unavailable",
   "historyStopTooltip": "Stop generation",
   "historyStopTitle": "Stop this generation?",
   "historyStopBody": "Progress already made will be lost and the server will drop this task.",
@@ -308,6 +319,7 @@
   "galleryDeleteTitle": "Delete image",
   "galleryDeleteBody": "Delete this image from the gallery?",
   "galleryShareTooltip": "Share",
+  "galleryRerunNotice": "This re-runs the workflow as it was; the result will not be identical to this image",
   "gallerySaving": "Saving...",
   "gallerySaveToAlbum": "Save to album",
   "galleryShareSoon": "Sharing is coming soon",

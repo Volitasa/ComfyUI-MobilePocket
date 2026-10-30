@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import '../../theme.dart';
 import '../widgets/media_route.dart';
@@ -16,13 +17,17 @@ import '../../providers/snapshot_provider.dart';
 import '../../models/task_history.dart';
 import '../../models/task_status.dart';
 import '../../models/workflow_snapshot.dart';
+import '../../services/reference_image.dart';
+import '../../services/image_ref.dart';
+import '../widgets/reference_rail.dart';
 import '../../utils.dart';
 import '../../utils/history_search.dart';
+import '../../utils/task_run.dart';
+import '../../utils/task_references.dart';
 import '../../utils/task_display.dart';
 import '../../utils/task_stop.dart';
 import '../widgets/compact_search_field.dart';
 import '../widgets/connection_status_badge.dart';
-import '../builder/run_view.dart';
 import '../settings/server_config_view.dart';
 
 class HistoryView extends ConsumerStatefulWidget {
@@ -133,74 +138,6 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  /// 「再次运行」：凭这条记录留下的快照还原表单，并预填当时的参数。
-  Future<void> _runAgain(TaskHistory task) async {
-    final l = AppLocalizations.of(context);
-    final snapshotId = task.snapshotId;
-
-    if (snapshotId == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l.historyNoSnapshot)));
-      return;
-    }
-
-    final snapshot = ref.read(snapshotProvider.notifier).byId(snapshotId);
-    if (snapshot == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l.historySnapshotDeleted)));
-      return;
-    }
-
-    // 服务器一致性：环境不同，模型/节点可能缺失，先让用户知情
-    final config = ref.read(connectionProvider);
-    final currentId = config.activeServerId;
-    if (task.serverId != currentId) {
-      String nameOf(String? id) {
-        if (id == null) return l.historyUnknownServer;
-        for (final s in config.servers) {
-          if (s.id == id) return s.name;
-        }
-        return l.historyUnknownServer;
-      }
-
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(l.historyServerMismatchTitle),
-          content: Text(
-            l.historyServerMismatchBody(
-              nameOf(task.serverId),
-              nameOf(currentId),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l.cancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l.historyRunAnyway),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true) return;
-    }
-
-    if (!mounted) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => RunView(
-          workflowId: task.workflowId,
-          snapshotId: snapshotId,
-          initialParams: task.params,
-        ),
       ),
     );
   }
@@ -432,12 +369,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
     return ['mp4', 'webm', 'mov'].contains(ext);
   }
 
-  void _openViewer(
-    List<Map<String, dynamic>> images,
-    int initialIndex, {
-    String? heroTag,
-  }) {
+  void _openViewer(TaskHistory task, int initialIndex, {String? heroTag}) {
+    final images = task.images;
     if (images.isEmpty) return;
+    final refs = referenceImagesOf(ref, task);
     Navigator.of(context).push(
       // 用专属路由：前半程页面透明，黑底在后半程才淡进来（见 media_route.dart）
       mediaViewerRoute(
@@ -449,6 +384,10 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
           // 首图与列表里那张缩略图之间做共享元素：点开时图自己长大，
           // 关掉时缩回原位，而不是「黑一下再出现」。
           heroTag: heroTag,
+          referenceImages: refs,
+          refBaseUrl: refs.isEmpty
+              ? null
+              : baseUrlForServer(ref, task.serverId),
         ),
       ),
     );
@@ -663,7 +602,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                   children: [
                     GestureDetector(
                       onTap: () => _openViewer(
-                        task.images,
+                        task,
                         0,
                         heroTag: _HistoryViewState.thumbHeroTagOf(task),
                       ),
@@ -761,7 +700,7 @@ class _HistoryViewState extends ConsumerState<HistoryView> {
                           : context.textSecondary,
                       tooltip: l.historyRerun,
                       // 置灰但仍可点：点击会说明具体原因，而不是静默无反应
-                      onTap: () => _runAgain(task),
+                      onTap: () => runTaskAgain(context, ref, task),
                     ),
                     if (task.status.isPending)
                       _stopOrDeleteAction(task, l)
@@ -874,6 +813,11 @@ class _IconAction extends StatelessWidget {
 }
 
 // 独立的媒体全屏浏览器
+//
+// 一条记录的图分两组：**输出**（服务端出的图 / 视频）和 **输入**（这次喂进去的参考图）。
+// 两组各自记「当前页」，长按只做一件事：临时翻到另一组的当前页，松手回来。
+// ⚠️ 刻意不做「输出第 N 张 ↔ 参考图第 N 张」这类配对 —— 输出与参考图之间是 1:N / N:M，
+// 任何自动配对都是我们替用户猜（§方案 2.3 ⑤）。
 class MediaViewer extends StatefulWidget {
   final List<Map<String, dynamic>> mediaList;
   final int initialIndex;
@@ -883,6 +827,16 @@ class MediaViewer extends StatefulWidget {
   /// 与列表缩略图共用的共享元素标签；只在 [initialIndex] 那一页挂。
   final String? heroTag;
 
+  /// 本次生成用到的参考图。空列表 → rail 整条不出现，查看器与加这个功能之前一致。
+  final List<ReferenceImage> referenceImages;
+
+  /// 拼参考图地址用的服务器地址。
+  ///
+  /// ⚠️ 必须是**这条记录所属服务器**的地址，不能图省事用当前 `comfyUrl`：
+  /// 换了服务器之后文件名在对面根本不存在，必然 404，看起来像"图丢了"。
+  /// null = 那台服务器已被移除。
+  final String? refBaseUrl;
+
   const MediaViewer({
     super.key,
     required this.mediaList,
@@ -890,6 +844,8 @@ class MediaViewer extends StatefulWidget {
     required this.urlBuilder,
     required this.isVideoChecker,
     this.heroTag,
+    this.referenceImages = const [],
+    this.refBaseUrl,
   });
 
   @override
@@ -899,16 +855,32 @@ class MediaViewer extends StatefulWidget {
 class _MediaViewerState extends State<MediaViewer> {
   late PageController _pageController;
   late int _currentIndex;
+
+  /// 两组各自的当前页。**互不覆盖** —— 这是"长按看另一张"能成立的前提：
+  /// 回到另一组时落在你离开时那一页，而不是永远第 1 张。
+  late int _outputPage;
+  int _refPage = 0;
+
   bool _saving = false;
 
   /// 当前图是否处于放大态：放大时要把 PageView 的翻页关掉，
   /// 否则横拖是「平移图片」还是「翻页」会打架。
   bool _zoomed = false;
 
+  /// 正在"按住对比"的目标页（绝对下标）；null = 没在对比。
+  int? _peekIndex;
+
+  int get _outputCount => widget.mediaList.length;
+  int get _refCount => widget.referenceImages.length;
+  int get _total => _outputCount + _refCount;
+
+  bool _isRef(int index) => index >= _outputCount;
+
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _outputPage = widget.initialIndex < _outputCount ? widget.initialIndex : 0;
     _pageController = PageController(initialPage: _currentIndex);
   }
 
@@ -926,29 +898,54 @@ class _MediaViewerState extends State<MediaViewer> {
     return f.existsSync() ? f : null;
   }
 
+  void _jumpTo(int index) {
+    if (index < 0 || index >= _total) return;
+    if (index == _currentIndex) return;
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  /// 另一组的当前页；另一组不存在时返回 -1。
+  int _otherGroupIndex() {
+    if (_isRef(_currentIndex)) {
+      return _outputCount == 0 ? -1 : _outputPage.clamp(0, _outputCount - 1);
+    }
+    return _refCount == 0 ? -1 : _outputCount + _refPage.clamp(0, _refCount - 1);
+  }
+
+  void _startPeek(int target) {
+    // 放大态下按住多半是想平移图片，这时候换图会吓人 —— 直接不响应
+    if (_zoomed) return;
+    if (target < 0 || target >= _total) return;
+    if (target == _currentIndex) return; // 同一张，没有对比的意义
+    setState(() => _peekIndex = target);
+  }
+
+  void _endPeek() {
+    if (_peekIndex == null) return;
+    setState(() => _peekIndex = null);
+  }
+
+  void _handleZoomChanged(bool zoomed) {
+    if (_zoomed == zoomed) return;
+    setState(() => _zoomed = zoomed);
+  }
+
   Future<void> _saveToLocal() async {
     if (_saving) return;
     final l = AppLocalizations.of(context);
     setState(() => _saving = true);
     try {
-      final currentMedia = widget.mediaList[_currentIndex];
-      final filename = currentMedia['filename']?.toString() ?? 'image.png';
-
-      // 优先读取已本地化的文件（避免重复下载，且与画廊页行为一致）；
-      // 没有本地文件（未下载过或已被删除）时才回退网络
-      final localFile = _localFileOf(currentMedia);
-      final bytes = localFile != null
-          ? await localFile.readAsBytes()
-          : await http
-                .readBytes(Uri.parse(widget.urlBuilder(currentMedia)))
-                .timeout(const Duration(seconds: 60));
+      final bytes = await _bytesOfCurrent();
       if (!mounted) return;
 
-      // 与画廊页共用保存逻辑：PNG 可选「带工作流原图」或「剔除信息」
       final saved = await MediaSaver.save(
         context,
         bytes: bytes,
-        filename: filename,
+        filename: _currentFilename(),
       );
       if (saved && mounted) {
         ScaffoldMessenger.of(context)
@@ -964,86 +961,309 @@ class _MediaViewerState extends State<MediaViewer> {
     }
   }
 
-  void _handleZoomChanged(bool zoomed) {
-    if (_zoomed == zoomed) return;
-    setState(() => _zoomed = zoomed);
+  String _currentFilename() {
+    if (_isRef(_currentIndex)) {
+      return widget.referenceImages[_refPage].ref.filename;
+    }
+    return widget.mediaList[_currentIndex]['filename']?.toString() ?? 'image.png';
+  }
+
+  /// 当前页的字节。本地已有就直接读，读不到才走网络——
+  /// 与画廊页行为一致，不为了存一张已经在本地的图再下载一遍。
+  Future<Uint8List> _bytesOfCurrent() async {
+    const timeout = Duration(seconds: 60);
+    if (_isRef(_currentIndex)) {
+      final base = widget.refBaseUrl;
+      if (base == null) throw StateError('server removed');
+      final url = imageViewUrl(
+        base,
+        widget.referenceImages[_refPage].ref,
+      );
+      return http.readBytes(Uri.parse(url)).timeout(timeout);
+    }
+    final media = widget.mediaList[_currentIndex];
+    final localFile = _localFileOf(media);
+    if (localFile != null) return localFile.readAsBytes();
+    return http
+        .readBytes(Uri.parse(widget.urlBuilder(media)))
+        .timeout(timeout);
+  }
+
+  /// 一页的内容：视频 / 出图 / 参考图。
+  ///
+  /// [withHero] 传 false 用于对比覆盖层：同一张图在 PageView 里可能已经挂过
+  /// 同标签的 Hero，两个同标签共享元素同时在场会直接断言失败。
+  Widget _pageContent(
+    BuildContext context,
+    int index, {
+    bool withHero = true,
+  }) {
+    final l = AppLocalizations.of(context);
+
+    if (_isRef(index)) {
+      final ref = widget.referenceImages[index - _outputCount];
+      final base = widget.refBaseUrl;
+      final child = base == null
+          ? _LoadFailed(text: l.historyRefServerRemoved)
+          : _RemoteImage(
+              url: imageViewUrl(base, ref.ref),
+              failedText: l.historyRefUnavailable,
+            );
+      return ZoomableImage(
+        onZoomChanged: _handleZoomChanged,
+        child: Center(child: child),
+      );
+    }
+
+    final media = widget.mediaList[index];
+    final url = widget.urlBuilder(media);
+    if (widget.isVideoChecker(media['filename'])) {
+      return _VideoItem(url: url);
+    }
+    // 与缩略图一致：已经存进画廊的图直接读本地文件，
+    // 不再为了看一眼就把整张原图从服务器重新拉一遍
+    final localFile = _localFileOf(media);
+    final tag = withHero && index == widget.initialIndex
+        ? widget.heroTag
+        : null;
+    Widget image = localFile != null
+        ? Image.file(
+            localFile,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => _LoadFailed(text: l.historyImageLoadFailed),
+          )
+        : _RemoteImage(url: url, failedText: l.historyImageLoadFailed);
+    // 只给首帧挂 Hero：翻到第二张时不能有两个同标签的共享元素
+    if (tag != null) image = Hero(tag: tag, child: image);
+    return ZoomableImage(
+      onZoomChanged: _handleZoomChanged,
+      child: Center(child: image),
+    );
+  }
+
+  /// rail 里的出图缩略图。视频没有可用封面，给个图标。
+  Widget _outputThumb() {
+    if (widget.mediaList.isEmpty) return const SizedBox.shrink();
+    final media = widget.mediaList.first;
+    if (widget.isVideoChecker(media['filename'])) {
+      return const ColoredBox(
+        color: Colors.white10,
+        child: Center(child: Icon(Icons.videocam, size: 16, color: Colors.white54)),
+      );
+    }
+    final localFile = _localFileOf(media);
+    if (localFile != null) {
+      return Image.file(
+        localFile,
+        fit: BoxFit.cover,
+        cacheWidth: 108,
+        errorBuilder: (_, _, _) => _brokenThumb(),
+      );
+    }
+    return Image.network(
+      widget.urlBuilder(media),
+      fit: BoxFit.cover,
+      cacheWidth: 108,
+      errorBuilder: (_, _, _) => _brokenThumb(),
+    );
+  }
+
+  /// rail 里的参考图缩略图。服务端转成 webp，一张约 45KB。
+  Widget _refThumb(ReferenceImage ref) {
+    final base = widget.refBaseUrl;
+    if (base == null) return _brokenThumb();
+    return Image.network(
+      imageViewUrl(base, ref.ref, preview: 'webp;75'),
+      fit: BoxFit.cover,
+      cacheWidth: 108,
+      errorBuilder: (_, _, _) => _brokenThumb(),
+    );
+  }
+
+  Widget _brokenThumb() => const ColoredBox(
+    color: Colors.white10,
+    child: Center(
+      child: Icon(Icons.broken_image, size: 16, color: Colors.white38),
+    ),
+  );
+
+  /// 底部缩略图条：出图组（带张数角标）+ 竖分隔 + 参考图。
+  Widget _buildRail() {
+    if (_refCount == 0) return const SizedBox.shrink();
+    final onRefPage = _isRef(_currentIndex);
+
+    final items = <RailItem>[
+      RailItem(
+        thumb: _outputThumb(),
+        badge: '$_outputCount',
+        selected: !onRefPage,
+        onTap: () => _jumpTo(_outputPage),
+        onLongPressStart: () => _startPeek(_outputPage),
+      ),
+      for (var i = 0; i < _refCount; i++)
+        RailItem(
+          thumb: _refThumb(widget.referenceImages[i]),
+          selected: onRefPage && _refPage == i,
+          onTap: () => _jumpTo(_outputCount + i),
+          onLongPressStart: () => _startPeek(_outputCount + i),
+        ),
+    ];
+
+    return ReferenceRail(items: items, dividerAfter: 0, onPeekEnd: _endPeek);
+  }
+
+  String _titleText(AppLocalizations l) {
+    if (_isRef(_currentIndex)) {
+      return '${l.historyRefGroupLabel} ${_refPage + 1} / $_refCount';
+    }
+    // 分母是总数：与"实际翻得动的页数"一致，不会出现划到第 6 页却写着 1 / 5
+    return '${_outputPage + 1} / $_total';
+  }
+
+  /// 对比提示条。**必须带页码** —— 它是"我正在看哪一张"的唯一凭证。
+  Widget _peekHint(AppLocalizations l) {
+    final target = _peekIndex!;
+    final text = _isRef(target)
+        ? l.historyRefPeekToInput(target - _outputCount + 1, _refCount)
+        : l.historyRefPeekToOutput(target + 1, _total);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 12, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _peekOverlay(AppLocalizations l) {
+    final target = _peekIndex;
+    if (target == null) return const SizedBox.shrink();
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(
+          color: Colors.black,
+          child: Center(
+            child: _pageContent(context, target, withHero: false),
+          ),
+        ),
+        Positioned(top: 14, left: 0, right: 0, child: Center(child: _peekHint(l))),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final onRefPage = _isRef(_currentIndex);
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text('${_currentIndex + 1} / ${widget.mediaList.length}'),
         centerTitle: true,
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _titleText(l),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+            ),
+            if (onRefPage)
+              // 节点官方名：不翻译、不改写（同名节点也不加后缀，靠画面区分）
+              Text(
+                widget.referenceImages[_refPage].label,
+                style: const TextStyle(fontSize: 12, color: Colors.white70),
+              ),
+          ],
+        ),
       ),
-      body: PageView.builder(
-        controller: _pageController,
-        // 放大态下禁止翻页：横拖应该平移图片，而不是滑走
-        physics: _zoomed ? const NeverScrollableScrollPhysics() : null,
-        onPageChanged: (idx) => setState(() {
-          _currentIndex = idx;
-          // 换页时清掉放大标记：新一页是新的缩放状态
-          _zoomed = false;
-        }),
-        itemCount: widget.mediaList.length,
-        itemBuilder: (context, index) {
-          final media = widget.mediaList[index];
-          final url = widget.urlBuilder(media);
-
-          if (widget.isVideoChecker(media['filename'])) {
-            return _VideoItem(url: url);
-          }
-          // 与缩略图一致：已经存进画廊的图直接读本地文件，
-          // 不再为了看一眼就把整张原图从服务器重新拉一遍
-          final localFile = _localFileOf(media);
-          final tag = index == widget.initialIndex ? widget.heroTag : null;
-          Widget image = localFile != null
-              ? Image.file(
-                  localFile,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) =>
-                      _LoadFailed(text: l.historyImageLoadFailed),
-                )
-              : _RemoteImage(url: url, failedText: l.historyImageLoadFailed);
-          // 只给首帧挂 Hero：翻到第二张时不能有两个同标签的共享元素
-          if (tag != null) image = Hero(tag: tag, child: image);
-          return ZoomableImage(
-            onZoomChanged: _handleZoomChanged,
-            child: Center(child: image),
-          );
-        },
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: context.accent,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            // 放大态下禁止翻页：横拖应该平移图片，而不是滑走
+            physics: _zoomed ? const NeverScrollableScrollPhysics() : null,
+            onPageChanged: (idx) => setState(() {
+              _currentIndex = idx;
+              if (_isRef(idx)) {
+                _refPage = idx - _outputCount;
+              } else {
+                _outputPage = idx;
+              }
+              // 换页时清掉放大标记：新一页是新的缩放状态
+              _zoomed = false;
+              _peekIndex = null;
+            }),
+            itemCount: _total,
+            itemBuilder: (context, index) {
+              return GestureDetector(
+                // 按住 = 临时翻到另一组的当前页。滚动手势要移动才 claim，
+                // 长按停住 500ms 一般能赢竞技场（真机验过；不灵还有 rail 长按兜底）
+                onLongPressStart: (_) => _startPeek(_otherGroupIndex()),
+                onLongPressEnd: (_) => _endPeek(),
+                onLongPressCancel: _endPeek,
+                child: _pageContent(context, index),
+              );
+            },
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 120),
+                child: _peekIndex == null
+                    ? const SizedBox.shrink()
+                    : KeyedSubtree(
+                        key: ValueKey<int>(_peekIndex!),
+                        child: _peekOverlay(l),
+                      ),
               ),
             ),
-            onPressed: _saving ? null : _saveToLocal,
-            icon: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Icon(Icons.save_alt),
-            label: Text(
-              _saving ? l.historySaving : l.historySaveToLocal,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
           ),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildRail(),
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: context.accent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                onPressed: _saving ? null : _saveToLocal,
+                icon: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.save_alt),
+                label: Text(
+                  _saving ? l.historySaving : l.historySaveToLocal,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

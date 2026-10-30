@@ -4,10 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:comfyui_mobilepocket/l10n/app_localizations.dart';
 
+import '../../models/task_history.dart';
 import '../../providers/gallery_revision_provider.dart';
+import '../../providers/snapshot_provider.dart';
+import '../../providers/task_manager.dart';
 import '../../services/gallery_store.dart';
 import '../../services/media_saver.dart';
+import '../../services/image_ref.dart';
+import '../../services/reference_image.dart';
+import '../../utils/task_references.dart';
+import '../../utils/task_run.dart';
+import '../widgets/image_viewer.dart';
 import '../widgets/media_route.dart';
+import '../widgets/reference_rail.dart';
 import '../widgets/zoomable_image.dart';
 import '../widgets/skeleton.dart';
 
@@ -183,11 +192,34 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
   /// 放大态：放大时把翻页关掉，否则横拖是「平移图片」还是「翻页」会打架。
   bool _zoomed = false;
 
+  /// 当前这一张反查到的生成记录。null = 查不到（记录被删了，或超过 50 条被截断）。
+  TaskHistory? _task;
+
+  /// 那次生成喂进去的参考图。
+  List<ReferenceImage> _refs = const [];
+
+  /// 拼参考图地址用的服务器；null = 原服务器已移除。
+  String? _refBaseUrl;
+
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
+    _syncTaskContext();
+  }
+
+  /// 画廊里前后两张可能来自**不同**的任务，翻页就得重算。
+  ///
+  /// 反查走 `taskByLocalPath`（预建的表，O(1)），不在 build 里扫记录列表。
+  void _syncTaskContext() {
+    final task = ref
+        .read(taskManagerProvider.notifier)
+        .taskByLocalPath(_current.path);
+    final refs = task == null ? const <ReferenceImage>[] : referenceImagesOf(ref, task);
+    _task = task;
+    _refs = refs;
+    _refBaseUrl = refs.isEmpty ? null : baseUrlForServer(ref, task!.serverId);
   }
 
   @override
@@ -284,6 +316,14 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
         title: Text('${_currentIndex + 1} / ${widget.images.length}'),
         centerTitle: true,
         actions: [
+          // 只有"这张图能反查到生成记录、且快照还在"时才出现——
+          // 查不到就整个不建（不置灰），免得用户反复点、猜原因
+          if (_canRunAgain)
+            IconButton(
+              icon: Icon(Icons.replay, color: context.stateSuccess),
+              tooltip: AppLocalizations.of(context).historyRerun,
+              onPressed: _runAgain,
+            ),
           IconButton(
             icon: const Icon(Icons.share),
             tooltip: AppLocalizations.of(context).galleryShareTooltip,
@@ -304,6 +344,8 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
           _currentIndex = idx;
           // 换页时清掉放大标记：新一页是新的缩放状态
           _zoomed = false;
+          // 下一张可能来自另一条记录：重新反查，rail 与「再次运行」跟着变
+          _syncTaskContext();
         }),
         itemCount: widget.images.length,
         itemBuilder: (context, index) {
@@ -320,36 +362,116 @@ class _GalleryViewerState extends ConsumerState<_GalleryViewer> {
         },
       ),
       bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: context.accent,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildRail(context),
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: context.accent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                onPressed: _saving ? null : _saveToGallery,
+                icon: _saving
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: context.onAccent,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.save_alt),
+                label: Text(
+                  _saving
+                      ? AppLocalizations.of(context).gallerySaving
+                      : AppLocalizations.of(context).gallerySaveToAlbum,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
-            onPressed: _saving ? null : _saveToGallery,
-            icon: _saving
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      color: context.onAccent,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Icon(Icons.save_alt),
-            label: Text(
-              _saving
-                  ? AppLocalizations.of(context).gallerySaving
-                  : AppLocalizations.of(context).gallerySaveToAlbum,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ),
+          ],
         ),
       ),
+    );
+  }
+
+  /// 当前这张图能不能「再次运行」。
+  ///
+  /// 两个条件缺一不可：反查得到记录（`_task`）+ 那条记录的快照还在
+  /// （用户可能在设置页把快照删了）。缺任一条就**不提供入口**。
+  bool get _canRunAgain {
+    final id = _task?.snapshotId;
+    if (id == null) return false;
+    return ref.read(snapshotProvider.notifier).exists(id);
+  }
+
+  Future<void> _runAgain() async {
+    final task = _task;
+    if (task == null) return;
+    final l = AppLocalizations.of(context);
+    // 画廊里点"再次运行"最容易被误解成"复现这张"：出图是随机的，说清楚一次
+    await runTaskAgain(context, ref, task, notice: l.galleryRerunNotice);
+  }
+
+  /// 底部 rail：**只做入口**，不并入画廊的翻页。
+  ///
+  /// 画廊的 PageView 是"全库图片"的连续列表，而参考图是跟着当前页变的；
+  /// 一旦并进去，页码会被不属于这一页的内容污染，翻到下一张还会凭空少几页。
+  /// 所以点 rail 里的参考图 = 用单图查看器盖一层打开。
+  Widget _buildRail(BuildContext context) {
+    if (_refs.isEmpty) return const SizedBox.shrink();
+
+    final items = <RailItem>[
+      for (final ref in _refs)
+        RailItem(
+          thumb: _refThumb(ref),
+          onTap: () => _openRef(ref),
+        ),
+    ];
+    return ReferenceRail(items: items);
+  }
+
+  Widget _refThumb(ReferenceImage ref) {
+    final base = _refBaseUrl;
+    if (base == null) return _brokenThumb();
+    return Image.network(
+      imageViewUrl(base, ref.ref, preview: 'webp;75'),
+      fit: BoxFit.cover,
+      cacheWidth: 108,
+      errorBuilder: (_, _, _) => _brokenThumb(),
+    );
+  }
+
+  Widget _brokenThumb() => const ColoredBox(
+    color: Colors.white10,
+    child: Center(
+      child: Icon(Icons.broken_image, size: 16, color: Colors.white38),
+    ),
+  );
+
+  void _openRef(ReferenceImage ref) {
+    final base = _refBaseUrl;
+    if (base == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).historyRefServerRemoved),
+        ),
+      );
+      return;
+    }
+    openImageViewer(
+      context,
+      url: imageViewUrl(base, ref.ref),
+      title: ref.label,
     );
   }
 
