@@ -339,9 +339,33 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     _extractableNodes = nodes;
   }
 
-  // 重新解析：放弃已保存的映射，用工作流当前结构重新提取参数。
-  // 用于服务器端工作流更新后，让 App 重新识别新参数。
+  /// 界面上的「当前配置」，供重新解析时合并。
+  ///
+  /// 别名以输入框里的文字为准 —— 用户可能刚改完还没点保存，那种改动同样该留住。
+  /// 清空输入框（trim 后为空）按「没自定义过」处理，交回新解析给的默认别名。
+  List<WorkflowNode> _currentConfigSnapshot() => [
+    for (final n in _extractableNodes)
+      n.copyWith(
+        alias:
+            _aliasControllers[nodeParamKey(n.id, n.key)]?.text.trim() ??
+            n.alias,
+      ),
+  ];
+
+  /// 重新解析：按工作流当前结构重新提取参数，**但保留你起的名字与勾选**。
+  ///
+  /// 用于服务器端工作流更新后补上新参数。基准取「界面上的当前配置」而不是 prefs
+  /// 里那份：刚改完没保存的别名也要留住。参数集合 / 类型 / 当前值仍以新解析为准，
+  /// 工作流里已经没有的参数自然消失。
+  ///
+  /// ⚠️ 早先是 `useSavedConfig: false` —— 会把别名与勾选一并打回默认，而页面只
+  /// 提示「已重新解析」，用户看不出配置已经被重置（README 长期把它写成「会尽量
+  /// 保留」，代码与文档从 10-12 起就不一致）。2026-10-31 按文档语义改回来。
   Future<void> _reparse() async {
+    // ⚠️ 必须在清空之前拍快照：下面第一件事就是把 _extractableNodes 清成空，
+    // 等解析完再取就只剩默认值了。
+    final baseline = _currentConfigSnapshot();
+
     setState(() {
       _extractableNodes = [];
       _isReady = false;
@@ -409,7 +433,12 @@ class _WorkflowViewState extends ConsumerState<WorkflowView> {
     _specs = await _loadSpecs(jsonMap);
     // 同上：重新解析也要等两秒，这期间用户按了返回就不能再碰 context
     if (!mounted) return;
-    _parseWorkflow(jsonMap, useSavedConfig: false, specs: _specs);
+    _parseWorkflow(
+      jsonMap,
+      // 合并基准 = 改动前界面上的配置（含未保存的别名）
+      savedConfig: baseline.isEmpty ? null : baseline,
+      specs: _specs,
+    );
     _specIssues = WorkflowNodeParser.computeIssues(_extractableNodes, _specs);
     _nodeRoles = inferNodeRoles(jsonMap);
 

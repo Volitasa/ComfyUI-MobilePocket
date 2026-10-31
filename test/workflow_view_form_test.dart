@@ -105,6 +105,17 @@ Future<void> _toggleRow(WidgetTester tester, String alias) async {
   await tester.pumpAndSettle();
 }
 
+/// 点 AppBar 上的「重新解析参数」。
+///
+/// ⚠️ 这里**不能用 `pumpAndSettle`**：解析期间页面是加载态，转圈是无限动画，
+/// 永远等不到「settle」，用例会一直挂到 10 分钟超时。按帧推进即可。
+Future<void> _tapReparse(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.refresh));
+  for (var i = 0; i < 8; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+}
+
 void main() {
   testWidgets('主视图只放已选参数，没勾的不占地方', (tester) async {
     await _pumpConfig(tester);
@@ -228,5 +239,47 @@ void main() {
     await tester.tap(find.text('CheckpointLoaderSimple'));
     await tester.pumpAndSettle();
     expect(find.byType(ParamConfigTile), findsNWidgets(3));
+  });
+
+  testWidgets('重新解析保留改过的别名（含还没保存的改动）', (tester) async {
+    await _pumpConfig(tester);
+
+    final row = find.ancestor(
+      of: find.text('采样步数'),
+      matching: find.byType(ParamConfigTile),
+    );
+    final field = find.descendant(of: row, matching: find.byType(TextField));
+    await tester.tap(field);
+    await tester.pumpAndSettle();
+    await tester.enterText(field, '我的步数');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+
+    await _tapReparse(tester);
+
+    // ⚠️ 曾经这里会被打回默认：重新解析走的是「不使用旧配置」那条路，
+    // 用户起的名字连同勾选一起丢掉，而页面只提示「已重新解析」。
+    expect(find.text('我的步数'), findsOneWidget);
+    expect(find.text('采样步数'), findsNothing);
+  });
+
+  testWidgets('重新解析保留勾选状态，未勾的仍然不占地方', (tester) async {
+    await _pumpConfig(tester);
+
+    await tester.tap(find.textContaining('添加参数'));
+    await tester.pumpAndSettle();
+    await _toggleRow(tester, '随机种子');
+    await tester.tap(find.text('完成'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('已放进表单 2 项'), findsOneWidget);
+
+    await _tapReparse(tester);
+
+    // 勾选要跟着走；没勾的「大模型」不能被顺手全勾上
+    expect(find.textContaining('已放进表单 2 项'), findsOneWidget);
+    expect(find.text('随机种子'), findsOneWidget);
+    expect(find.text('大模型'), findsNothing);
+    // 移出/勾选都只动这份表单，工作流本身与参数集合不变
+    expect(find.text('添加参数（还有 1 项）'), findsOneWidget);
   });
 }
