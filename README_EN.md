@@ -14,7 +14,7 @@
 
 <p><strong>Your ComfyUI server is already running — this app lets you pick parameters, submit jobs and collect results from your phone.</strong></p>
 
-<p>Connect to your server, browse its workflows, turn the parameters you care about into a form, submit a job with one tap, watch the progress live and get the results back in your phone's album.</p>
+<p>Connect to your server, browse its workflows, turn the parameters you care about into a form, submit a job with one tap, watch the progress live and get the results back in your phone's album — and when a prompt refuses to come out right, hand it to your own AI service (optional).</p>
 
 <p><sub>This is a third-party app and is not affiliated with or endorsed by the ComfyUI team.</sub></p>
 
@@ -39,7 +39,7 @@
 
 </div>
 
-<p align="center"><i>Captured on an Android emulator: workflow list → parameter form → job progress → local gallery</i></p>
+<p align="center"><i>Captured on an Android emulator: workflow list → parameter form → run page → local gallery</i></p>
 
 > Every screenshot in this document was taken from the app actually running on an Android emulator: `docs/screenshots/en` for the English UI, `docs/screenshots/zh` for the Chinese UI.
 
@@ -113,11 +113,11 @@ The four headline capabilities are at the top of this page; here is everything, 
 | Dropdowns with real option lists | On opening the run page, the app asks the server once; dropdowns for models (Checkpoint / UNET / CLIP / VAE / LoRA / ControlNet), samplers and schedulers are then filled with the **list that really exists on the server**, with a manual refresh in the top-right corner. If the model written in the workflow is missing there, it is flagged and submission is blocked |
 | Live progress | Progress is pushed over WebSocket, showing the node currently executing plus a percentage; reconnects automatically and reconciles with the server, **including when the app returns to the foreground** |
 | Five task states | Queued / Running / Completed / Failed / Interrupted, with the server's actual error message shown on failure |
-| Run again | Every run keeps a snapshot (reused when the workflow content hasn't changed), so any history entry can restore the exact form and values it was run with — one tap to run it again |
+| Run again | Every run keeps a snapshot (one copy per distinct workflow content), so any history entry can restore the exact form and values it was run with — one tap to run it again |
 | History search & filter | Search history by workflow name, prompt text or parameter alias; filter by 5 statuses; each hit explains *why* it matched |
 | Drag to reorder parameters | The config page groups parameters into one card per node; **long-press any card** to drag the whole section. The order is saved, and the run page follows it |
 | Pick images from the server | Besides your phone's album, an image parameter can pick **an existing image on the server** (Output / Input tabs). The value keeps its directory annotation, so nothing is uploaded again |
-| Compare with reference images | The full-screen viewer in History and Gallery has a **thumbnail rail of the images that were fed in**: tap to switch, hold to compare, release to go back. Double-tap zooms, and all three viewers share the same gestures |
+| Compare with reference images | The full-screen viewer in History and Gallery has a **thumbnail rail of the images that were fed in**: hold to compare and release to return (in History a tap switches to it). Double-tap zooms, and all three viewers share the same gestures |
 | Appearance & dark mode | Settings → General → Appearance: follow system / light / dark. Dark mode is a full semantic palette, not an inversion; the launch background follows it too, so the app never flashes white first |
 | Haptic feedback | Optional, six categories you can switch independently (tab switch / tick a parameter / drag to reorder / expand-collapse / submit succeeded / long-press to view) |
 | Prompt AI assistant | Optional, using your own OpenAI-compatible service: rewrite prompts, caption images; four checks before writing, undo available |
@@ -169,7 +169,7 @@ Four tabs at the bottom:
 | **Gallery** | Everything downloaded to this device, in a grid |
 | **Settings** | Three groups: Connection (server connections, AI service) / Data (workflow storage, snapshots) / General (language, appearance, haptics, GitHub token, about) |
 
-A **connection status badge** (server name + status dot) sits in the top bar of the **Workflows** and **History** tabs; tapping it jumps straight to the server config page. The Gallery and Settings tabs don't carry it.
+A **connection status badge** (server name + status dot) sits in the top bar of the **Workflows** and **History** tabs; tapping it jumps straight to the server config page. While it is reconnecting the badge says "Reconnecting" and the dot breathes, instead of showing a green dot that isn't true. The Gallery and Settings tabs don't carry it.
 
 <p align="center">
   <img src="docs/screenshots/en/01-workflows.png" width="23%" />
@@ -288,7 +288,7 @@ Pull node parameters out of the workflow and turn them into a phone form. Open i
 3. Skips **link references** (values shaped like `["nodeId", 0]`) — those aren't yours to fill in.
 4. Selected parameters go to the main view, the rest stay in "Add parameters" — **coverage is never narrowed away**: for nodes the rule table doesn't know, every fillable parameter is still listed (that's what covers community nodes and `LoadImage`'s upload box).
 
-**Same-name nodes, told apart by wiring**: when a workflow has two `CLIPTextEncode` nodes (positive and negative prompts), each card in "Add parameters" carries a second line saying **which node's which input it feeds** (e.g. `Feeds KSampler · positive`). Model / LoRA loaders follow the same rule — which file they load is already shown as the current value in their parameter row. The node name is ComfyUI's own node title and the input name is the workflow's own parameter key — **both are shown as-is, never translated**; when an output feeds several places it shows the first one plus "N targets in total", and a node with no downstream simply omits the line instead of guessing.
+**Same-name nodes, told apart by wiring**: when a workflow has two `CLIPTextEncode` nodes (positive and negative prompts), each card in "Add parameters" carries a second line in its header saying **which node's which input it feeds** (e.g. `Feeds KSampler · positive`). Model / LoRA loaders follow the same rule — which file they load is already shown as the current value in their parameter row. The node name is ComfyUI's own node title and the input name is the workflow's own parameter key — **both are shown as-is, never translated**; when an output feeds several places it prefers the `positive` / `negative` slot (the pair people confuse most), then notes "N targets in total"; a node with no downstream simply omits the line instead of guessing.
 
 **What's covered**: the rule table is grouped by *purpose*, not by class name (the same feature has different class names on different machines):
 
@@ -355,7 +355,7 @@ At the bottom, "Generate" is the primary button; the narrow **AI** button beside
 
 **Dropdowns are filled with what the server really has**: opening the run page asks `/object_info` once per **node that owns the parameter**, so every dropdown-type parameter gets the server's real option list — models (Checkpoint / UNET / CLIP / VAE / LoRA / ControlNet), samplers and schedulers are the classic cases, and third-party enums (`type`, `device`, `bit_depth`, …) are fetched too. Install a new model on the PC and tap refresh in the top-right corner to pick it up.
 
-Two boundaries: **image upload parameters deliberately do not fetch** (they would become a list of server filenames and you could no longer upload a new image), and **the pre-submit block only applies to model/sampler keys** — if such a value is missing on the server it is flagged and submission is blocked, whereas other dropdowns are not blocked even when their value isn't among the server's options. With no connection or a failed request, dropdowns fall back to "just the current value", exactly as before.
+Two boundaries: **image parameters never become dropdowns** — they get their own picker card (phone album or server directory), since a dropdown would just be a list of filenames you cannot upload past; and **the pre-submit block only applies to model/sampler keys** — if such a value is missing on the server it is flagged and submission is blocked, whereas other dropdowns are not blocked even when their value isn't among the server's options. With no connection or a failed request, dropdowns fall back to "just the current value", exactly as before.
 
 **What "Generate" does**
 
@@ -559,7 +559,7 @@ The same reference rail sits at the bottom (the images fed into that generation)
 
 **A typical round trip**
 
-1. **Inputs** (multi-select): tick the nodes worth referencing — prompt text, or images (up to 4).
+1. **Inputs** (multi-select): tick the nodes worth referencing — prompt text, or images (up to 4). For example, the positive prompt plus one reference image.
 2. **Output** (single select): choose one **text parameter** as the write target.
 3. Type an instruction, or pick a template (Custom / Caption an image / Rewrite) — a template just pre-fills one sentence, it is not a different model.
 4. Tap "Generate"; you can stop it at any time. Image captioning reads the originals first (the footer shows "Reading image x/y").
@@ -571,8 +571,9 @@ The same reference rail sits at the bottom (the images fed into that generation)
 - Only **text parameters** — images, numbers, dropdowns and toggles are never touched;
 - Only the **one target you picked**: if the model proposes changes to other nodes, they are rejected;
 - If the workflow or the parameters changed in the meantime (node gone, key no longer matching) → refused, with a reason;
-- Longer than 8000 characters → refused;
-- There is a context budget (~6000 characters): when it overflows, model info goes first, then the oldest text — never the passage you're editing.
+- Longer than 8000 characters → refused.
+
+There is also a capacity limit: a context budget of about 6000 characters. When it overflows, model info goes first, then the oldest text — never the passage you are editing.
 
 **Privacy and cost**
 
