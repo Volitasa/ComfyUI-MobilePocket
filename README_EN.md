@@ -374,7 +374,7 @@ Two boundaries: **image upload parameters deliberately do not fetch** (they woul
   <img src="docs/screenshots/en/02-run.png" width="45%" />
 </p>
 
-<p align="center"><i>Run page: controls rendered by type, with "Generate" pinned at the bottom</i></p>
+<p align="center"><i>Run page: one card per node, paired parameters two per row; image parameters are an "image left, actions right" card, with "Generate" and AI pinned at the bottom</i></p>
 
 ### 5.5 Task tracking
 
@@ -516,6 +516,12 @@ The same reference rail sits at the bottom (the images fed into that generation)
 - Follows the system by default, or can be pinned to light / dark; the choice is stored locally too.
 - Dark mode isn't an inversion of light: the whole semantic palette (cards, borders, state colours, input fields) is defined separately, and the launch background follows it so the app never flashes white before turning dark.
 - The one exception is the image viewer, which stays pure black regardless of theme.
+
+<p align="center">
+  <img src="docs/screenshots/en/18-dark.png" width="45%" />
+</p>
+
+<p align="center"><i>The workflow list in dark mode (same layout, different palette)</i></p>
 
 **About haptic feedback**
 

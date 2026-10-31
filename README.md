@@ -374,7 +374,7 @@ flowchart LR
   <img src="docs/screenshots/zh/02-run.png" width="45%" />
 </p>
 
-<p align="center"><i>运行页：按类型渲染控件，底部固定「立即生成」</i></p>
+<p align="center"><i>运行页：按节点分卡、成对参数两列；图片参数是「图左操作右」的卡片，底部固定「立即生成」与 AI</i></p>
 
 ### 5.5 任务跟踪
 
@@ -516,6 +516,12 @@ stateDiagram-v2
 - 默认跟随系统，也可以锁定浅色 / 深色，选择同样记在本地。
 - 深色不是把浅色反一下：整套语义色（卡片、边框、状态色、输入框）都单独定过；冷启动底色也跟着明暗走，不会先闪白再变深。
 - 唯一的例外是看图页：全屏查看器固定纯黑底，跟主题无关。
+
+<p align="center">
+  <img src="docs/screenshots/zh/18-dark.png" width="45%" />
+</p>
+
+<p align="center"><i>深色外观下的工作流列表（同一页，不换布局只换色板）</i></p>
 
 **关于震动反馈**
 
