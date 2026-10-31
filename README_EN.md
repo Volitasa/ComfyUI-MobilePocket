@@ -374,7 +374,7 @@ Two boundaries: **image parameters never become dropdowns** — they get their o
   <img src="docs/screenshots/en/02-run.png" width="45%" />
 </p>
 
-<p align="center"><i>Run page: one card per node, paired parameters two per row; image parameters are an "image left, actions right" card, with "Generate" and AI pinned at the bottom</i></p>
+<p align="center"><i>Run page: one card per node, paired parameters two per row, seed with its dice button, with "Generate" and AI pinned at the bottom</i></p>
 
 ### 5.5 Task tracking
 
@@ -431,7 +431,7 @@ Each entry is a compact card: a status colour bar and thumbnail on the left (mul
   <img src="docs/screenshots/en/06-history-search.png" width="45%" />
 </p>
 
-<p align="center"><i>Left: default view with the status filter row　Right: searching "test" matches all 6 entries by workflow name</i></p>
+<p align="center"><i>Left: the default view (three real records) with the status filter row　Right: searching sunset matches one record by prompt, with the match summary on the card</i></p>
 
 **Run again** — one of the most useful things this app does:
 
@@ -527,6 +527,12 @@ The same reference rail sits at the bottom (the images fed into that generation)
 
 - Six categories, each switchable on its own, plus all-on / all-off; everything is on for a fresh install.
 - It governs haptics the app itself triggers (tab switch, ticking, dragging, folding, submitting, long-press viewing). Haptics the system adds, like text-selection feedback inside a field, are outside its control.
+
+<p align="center">
+  <img src="docs/screenshots/en/17-haptics.png" width="45%" />
+</p>
+
+<p align="center"><i>Haptic feedback: six categories, each switchable, plus all on / all off</i></p>
 
 <p align="center">
   <img src="docs/screenshots/en/10-settings.png" width="30%" />
@@ -685,6 +691,7 @@ These are real boundaries of the current version, not bugs:
 - **AI sessions aren't saved**: close the sheet and the conversation is gone; only the text you write lands in the form, so copy anything you want to keep.
 - **Search covers the latest 50 records only**: that's the history cap itself, and search is a plain local filter with no index; a much larger history would need a redesign.
 - **Primarily Android**: in-app updates, album saving and APK installation are all Android implementations; other platforms compile but aren't fully verified, and when an update is found they only point you to the Release page (no in-app install).
+- **English plurals are not handled**: strings like `{count} servers configured` keep the plural suffix at count=1 ("1 servers configured"). Cosmetic only.
 - **No background update checks**; it's manual, on the About page.
 
 ---

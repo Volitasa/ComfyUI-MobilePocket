@@ -374,7 +374,7 @@ flowchart LR
   <img src="docs/screenshots/zh/02-run.png" width="45%" />
 </p>
 
-<p align="center"><i>运行页：按节点分卡、成对参数两列；图片参数是「图左操作右」的卡片，底部固定「立即生成」与 AI</i></p>
+<p align="center"><i>运行页：按节点分卡、成对参数两列、种子带随机按钮；底部固定「立即生成」与 AI</i></p>
 
 ### 5.5 任务跟踪
 
@@ -431,7 +431,7 @@ stateDiagram-v2
   <img src="docs/screenshots/zh/06-history-search.png" width="45%" />
 </p>
 
-<p align="center"><i>左：默认视图（状态筛选条）　右：搜 "test" 按工作流名命中全部 6 条</i></p>
+<p align="center"><i>左：默认视图（三条真实生成记录 + 状态筛选条）　右：搜 sunset 按提示词命中一条，卡片上显示命中摘要</i></p>
 
 **再次运行**——这是本 App 最实用的能力之一：
 
@@ -527,6 +527,12 @@ stateDiagram-v2
 
 - 6 类动作可分别关掉、互不影响，也可以一键全开 / 全关；新装默认全开。
 - 管的是 App 自己触发的震动（切页、勾选、拖动、折叠、提交、长按看图）；输入框里选词这类系统自带的触感不在此列。
+
+<p align="center">
+  <img src="docs/screenshots/zh/17-haptics.png" width="45%" />
+</p>
+
+<p align="center"><i>震动反馈：六类分别开关，也可以一键全开 / 全关</i></p>
 
 <p align="center">
   <img src="docs/screenshots/zh/10-settings.png" width="30%" />
@@ -685,6 +691,7 @@ flowchart TD
 - **AI 会话不保存**：关掉抽屉就没了，只有点「写入」的文本会进表单，想留档就自己复制出来。
 - **搜索只覆盖最近 50 条记录**：这是生成记录本身的上限，搜索是纯本地过滤、没有索引；记录量级大幅增长后需要重新设计。
 - **主要面向 Android**：应用内更新、相册保存、APK 安装均按 Android 实现；其它平台可编译但未做完整验证，检查到新版本时只提示去 Release 手动下载，不提供应用内安装。
+- **英文复数未做**：`{count} servers configured` 这类句子在 count=1 时仍带复数后缀（如「1 servers configured」），不影响功能。
 - **不做后台自动检查更新**，只在关于页手动触发。
 
 ---
