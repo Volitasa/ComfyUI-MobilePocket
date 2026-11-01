@@ -35,6 +35,7 @@
   <img src="https://img.shields.io/badge/platform-Android-3ddc84?style=flat-square&logo=android&logoColor=white" alt="platform">
   <img src="https://img.shields.io/badge/Flutter-3.x-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Flutter">
   <img src="https://img.shields.io/badge/ComfyUI-compatible-8957e5?style=flat-square" alt="ComfyUI">
+  <img src="https://img.shields.io/badge/license-MIT-2ea043?style=flat-square" alt="license">
 </p>
 
 </div>
@@ -790,6 +791,7 @@ Pure logic — parsing, search, language resolution — is extracted into functi
 | `README.md` / `README_EN.md` | Chinese / English docs (cross-linked at the top) |
 | `docs/screenshots/zh`, `docs/screenshots/en` | Real device screenshots (Android emulator) |
 | `design/app_icon_1024.png` | App icon source |
+| `LICENSE` | The MIT license text |
 
 **Release conventions**
 
@@ -818,3 +820,13 @@ Details and ordering are still open.
 ## Icon
 
 The app uses a custom icon generated to the Android adaptive-icon spec: the background layer fills the full 108dp canvas and the foreground sits inside the central 72dp safe circle, so it never shows a bleed or gets cropped under circular, rounded-square or teardrop launcher masks. Source file: `design/app_icon_1024.png`.
+
+---
+
+## License
+
+This project is released under the **MIT License**, copyright © Volitasa. You may use, modify and redistribute it freely — including commercial and closed-source distribution — as long as you keep the copyright notice and the license text (see [LICENSE](LICENSE)).
+
+- Names and trademarks related to "ComfyUI" belong to their respective owners. This is a third-party app: it is not affiliated with, or endorsed by, the ComfyUI project.
+- Dependencies (Flutter, Riverpod, webview_flutter, gal, …) keep their own licenses (BSD-3 / MIT / Apache-2.0), all of which are compatible with MIT.
+

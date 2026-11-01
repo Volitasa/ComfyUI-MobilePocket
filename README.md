@@ -35,6 +35,7 @@
   <img src="https://img.shields.io/badge/platform-Android-3ddc84?style=flat-square&logo=android&logoColor=white" alt="platform">
   <img src="https://img.shields.io/badge/Flutter-3.x-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Flutter">
   <img src="https://img.shields.io/badge/ComfyUI-compatible-8957e5?style=flat-square" alt="ComfyUI">
+  <img src="https://img.shields.io/badge/license-MIT-2ea043?style=flat-square" alt="license">
 </p>
 
 </div>
@@ -790,6 +791,7 @@ flutter test         # 单元测试与组件测试（当前 610 个用例全绿�
 | `README.md` / `README_EN.md` | 中文 / 英文说明（页首可互相切换） |
 | `docs/screenshots/zh`、`docs/screenshots/en` | 实机截图（Android 模拟器） |
 | `design/app_icon_1024.png` | 应用图标源文件 |
+| `LICENSE` | MIT 许可原文 |
 
 **发布约定**
 
@@ -818,3 +820,13 @@ flutter test         # 单元测试与组件测试（当前 610 个用例全绿�
 ## 图标
 
 App 使用自定义图标，并按 Android 自适应图标规范输出：背景层铺满 108dp 画布，前景内容位于中央 72dp 安全圆内，因此在圆形、圆角方形、水滴形等不同 launcher 遮罩下都不会露底或被裁切。图标源文件见 `design/app_icon_1024.png`。
+
+---
+
+## 许可
+
+本项目以 **MIT 许可**开源，版权归 Volitasa 所有。你可以自由使用、修改、分发，包括商用与闭源分发，只需保留版权声明与许可原文（见 [LICENSE](LICENSE)）。
+
+- 「ComfyUI」相关名称与商标归其作者所有。本应用是第三方工具，与 ComfyUI 官方无隶属关系，也不代表官方立场。
+- 项目依赖（Flutter、Riverpod、webview_flutter、gal 等）各自遵循其原许可（BSD-3 / MIT / Apache-2.0），与本项目的 MIT 许可兼容。
+
