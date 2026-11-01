@@ -2,3 +2,6 @@
 # Windows 上默认 checkout 成 CRLF，于是每跑一次构建这三个文件就被标记成「已修改」，
 # 而 git diff 又是空的（只在换行上不同）。固定成 LF，省掉这份噪音。
 lib/l10n/*.dart text eol=lf
+
+# LICENSE 也固定 LF：CRLF 会让 GitHub 的许可识别/比对多一层噪音。
+LICENSE text eol=lf
